@@ -48,3 +48,15 @@ File timestamps on the Client side are January and February 2026, versus August 
 2. The client has not seen much recent work. IAM looks the furthest behind.
 3. Once a domain diffs clean against Original, a diff of the generated output against the Client folder is a free changelog of what has been delivered since.
 4. Much of the divergence from the Client copy is content growth, not layout. Check section structure against the Client copy before changing any layout, since restructuring something the client has already seen is a harder call than adding content.
+
+## Correction: what the client folder actually is (2026-10-06)
+
+The client repo (`solution-design-documentation`, now at `C:\Git\MiEdWorkforce\solution-design-documentation`) holds its content in a single commit dated 2026-02-24, "Add updated solution design documentation", on the branch `NicholsM11/solution_docs`. Its `main` branch has only a README. So it is the version cleaned and delivered in February, not a lighter copy of the current docs.
+
+Compared with `design/working-docs/` file by file (whitespace ignored), measured 2026-10-06:
+- It has no files the working docs lack. 24 of 56 common files are identical.
+- The rest differ in both directions, and the differences are design changes made after February, not formatting. Examples: Professional Practices status values changed from `Cleared/UnderReview/Blocked` to `Clear/ConditionalClearance/Hold/Blocked`; the event `ProfessionalPracticeClearanceUpdated` became `PPRClearanceAssessmentChanged`; the Worklist platform capability was removed (routing is now "the application list endpoint filtered by status", not a separate service); Staffing no longer calls Mi-Key directly and goes through IAM's identity-resolution API; EPP's worklist aggregates became filtered views. The titles also changed from "X - Domain Documentation" to "X" plus a Display Name line.
+- The largest gaps are IAM (about 430 more lines of sequences, 230 of domain doc and 550 of API in the working docs) and the credentialing and staffing API specs.
+- The graph follows the newer design: the old event name and `EPPWorklist` appear 0 times in it, against 2 and 3 times in the client docs.
+
+So the client has an earlier design than the graph and the working docs. The working docs (identical in content to `as-ingested`) are the right source for the graph. The client repo is the right diff target when delivering the next version, as a record of what has changed since February.

@@ -71,3 +71,11 @@ A side finding that matters for tracking the graph in git. The editor's old Save
 - The re-ingest has not been applied to the live graph. It is best applied after the first commit of `design`, so the change shows up as a reviewable diff.
 - The 8 conflicts need a decision on which text is right.
 - The export dialog has not been run through a real export from the browser, since the folder picker is a native dialog. The same export code was verified from the command line, and the dialog was checked for rendering against the demo graph.
+
+## Applied (2026-10-05)
+
+After the first commit of `design`, the re-ingest was applied to the live graph with doc text winning for all 8 conflicts. The git diff of the graph was 109 lines added and 72 removed: the 72 old flattened text values replaced, plus 18 `sd:stateChanges`, 18 `sd:order` values and 1 `sd:notes`. Nothing else changed.
+
+The unconfirmed-status callout moved to `sd:notes` on its sequence. The exporter prints `sd:notes` as a blockquote before What/When/Who only while a sequence is not `confirmed`. On a confirmed sequence, notes stay in the graph as an internal design note and are not exported (the one existing case is "View Definition History").
+
+Result: the generated sequences doc is identical to the baseline when whitespace is ignored. Two small export rules were added to get there: dashes in the diagram title become a plain hyphen (the baseline's front matter style), and there is no separator after the last section. The raw diff of 159 lines is whitespace only, mostly trailing spaces inside the diagrams.

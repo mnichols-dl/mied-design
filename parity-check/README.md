@@ -2,7 +2,7 @@
 
 A plan and working log for verifying that the Solution Design Graph can reproduce the delivered solution design docs, and for getting the design to a state we are confident calling complete enough to start development.
 
-Started 2026-10-04. Status: credentialing survey done ([credentialing-survey.md](credentialing-survey.md)); permissions slice ([permissions-slice-results.md](permissions-slice-results.md)) and sequences slice ([sequences-slice-results.md](sequences-slice-results.md)) built and diffed; editor export dialog added. Next: apply the sequences re-ingest after the first commit, then the domain doc slice.
+Started 2026-10-04. Status: credentialing survey done ([credentialing-survey.md](credentialing-survey.md)); permissions slice ([permissions-slice-results.md](permissions-slice-results.md)) and sequences slice ([sequences-slice-results.md](sequences-slice-results.md)) built and diffed; editor export dialog added. domain doc slice built and tried on a scratch copy ([domain-slice-results.md](domain-slice-results.md)). Next: commit, apply the domain and permissions re-ingest to the live graph, then the technical design doc and the other 10 domains.
 
 Related tracked content, kept in its proper home rather than repeated here:
 - Decisions made for this effort: see [DECISIONS.md](../../hub/DECISIONS.md), entry dated 2026-10-04.
