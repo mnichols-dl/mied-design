@@ -257,13 +257,13 @@ CEPI <--> EEM
 
 **Backend Services:**
 - **Runtime:** .NET (current LTS version - currently .NET 10)
-- **Hosting:** Azure Kubernetes Service (AKS)
+- **Hosting:** Azure Kubernetes Service (AKS), one private cluster and one private container registry per environment. Istio through the AKS service mesh add-on (revision asm-1-29). Deployed by Flux from a GitHub config repo (images pinned `tag@digest`, built in Azure DevOps, promoted by registry copy, never rebuilt)
 - **Async Messaging:** Azure Service Bus (at-least-once delivery guarantees)
 - **Event Pattern:** Domain events published to Service Bus topics; consumers subscribe to relevant events
 
 **Frontend Applications:**
 - **Framework:** React 18 Single-Page Applications (SPAs)
-- **Hosting:** Azure Static Web Apps (shared hosting for all SPAs)
+- **Hosting:** Azure Static Web Apps (shared hosting for all SPAs). Standard plan with a private endpoint and no public access, behind Application Gateway in every environment; not hosted on AKS. Regional, not multi-region. Cloudflare is the edge and cache in Staging and Prod only
 - **Authentication:** Microsoft Authentication Library (MSAL.js) for MiLogin OIDC integration
 
 **Data Storage:**
@@ -278,23 +278,32 @@ CEPI <--> EEM
 
 ### API Architecture
 
-**Internal APIs:**
-- Service-to-service communication within AKS cluster
-- Direct HTTP calls using Kubernetes DNS service discovery
-- Authentication: Service principal tokens or mutual TLS (mTLS)
-- URL pattern: `http://{service-name}.{namespace}.svc.cluster.local/api/v1`
+There are three kinds of API. The request path is: (Cloudflare, Staging and Prod only) to Application Gateway (WAF), which sends the UI hostname to the Static Web App, and `/api` on that hostname plus the whole API hostname to API Management (internal VNet mode), then to the Istio internal ingress gateway and the services in AKS. Dev and QA are internal-only (reached from a VDI session, administered through a Linux jump box); Staging and Prod are public through Cloudflare.
+
+**Application APIs:**
+- The surface the frontend calls with the signed-in user's delegated token
+- Served on the UI hostname under `/api`, so the page and its API share one origin (no CORS)
+- Authentication: MiLogin OIDC delegated user token, validated at APIM and by the service
+- Routed through APIM, then the Istio internal ingress gateway to the owning service
 
 **External APIs:**
-- Azure API Management (APIM) gateway for public-facing endpoints
-- Public access for external integrations (e.g., removal request forms, third-party integrations)
-- Authentication: MiLogin OIDC for authenticated users, API keys for system integrations
-- Rate limiting and DDoS protection at APIM layer
-- URL pattern: `https://api.miedworkforce.mi.gov/{domain}/api/v1`
+- The surface for OAuth integrations with external systems and providers (for example removal request forms, third-party integrations, webhooks)
+- Served on a separate API hostname, through the same APIM instance and AKS cluster but handled by different services than the application APIs
+- Authentication: OAuth 2.0 client credentials. Each kind requires its own token audience, because APIM serves every API on every hostname
+- Rate limiting and policy at APIM; WAF and DDoS protection at Application Gateway and Cloudflare
+- Hostnames are proposed, not decided (see the infra notes in the hub); do not hard-code them in this document
+
+**Service APIs:**
+- Service-to-service communication within the AKS cluster; never exposed through APIM or the Application Gateway
+- Direct HTTP calls using Kubernetes DNS service discovery
+- Authentication: Istio STRICT mTLS. The caller's identity is its Kubernetes service account; a default-deny AuthorizationPolicy applies and each caller is allowed explicitly
+- URL pattern: `http://{service-name}.{namespace}.svc.cluster.local/api/v1`
+- Calls from a pod to Azure services (SQL, Key Vault, Service Bus) use workload identity, with no connection strings or secrets. Identities, federated credentials and role assignments are defined only in the environment Terraform
 
 **API Design Principles:**
 - RESTful conventions (resource-based URLs, HTTP verbs)
 - Versioning: URL-based (`/api/v1/...`)
-- Internal vs External: Same API container may expose different endpoints; external endpoints routed through APIM for rate limiting and security
+- Application and external APIs are handled by different services in the same cluster, both behind APIM. Service APIs stay inside the mesh
 - Keep endpoint listings succinct in this document (resource names, not full schemas)
 
 **Worklist / Pending-Items Pattern (working assumption):** Stakeholder language like "add to

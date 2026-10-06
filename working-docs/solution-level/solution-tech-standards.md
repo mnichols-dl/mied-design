@@ -82,7 +82,8 @@ All solution domains in MiEdWorkforce will follow these technology standards unl
 | Layer                   | Technology               | Use Case                   | Rationale                                      |
 | ----------------------- | ------------------------ | -------------------------- | ---------------------------------------------- |
 | User Authentication     | MiLogin (OpenID Connect) | SSO for all user types     | State standard, no user credentials in MEWF    |
-| Service-to-Service Auth | Azure Managed Identity   | Microservice communication | Passwordless, Azure-native, automatic rotation |
+| Service-to-Service Auth | Istio STRICT mTLS (service account identity) | Microservice communication inside the mesh | Default-deny AuthorizationPolicy, explicit allow per caller |
+| Pod-to-Azure Auth       | Workload identity (federated credential to managed identity) | SQL, Key Vault, Service Bus and other Azure services | Passwordless, no connection strings; identities and role assignments live only in the environment Terraform |
 | API Authorization       | JWT Bearer Tokens        | API security               | Industry standard, stateless, claims-based     |
 
 ### Monitoring & Observability
@@ -117,7 +118,8 @@ All solution domains in MiEdWorkforce will follow these technology standards unl
 - **Platform:** Azure API Management (APIM)
 - **External Endpoints:** All public APIs routed through APIM
 - **Security:** Rate limiting (1000 req/min per user), DDoS protection, WAF
-- **Internal Endpoints:** Direct service-to-service within AKS (no APIM overhead)
+- **Service APIs:** Direct service-to-service within AKS (no APIM, no route from outside the mesh)
+- **Application and External APIs:** Through APIM (internal VNet mode) behind Application Gateway, then the Istio internal ingress gateway. Application APIs are on the UI hostname under `/api`; external APIs are on a separate API hostname. WAF is at Application Gateway (and Cloudflare in Staging and Prod)
 
 ### Data Services
 - **Azure SQL:** Managed service with automated backups, point-in-time restore
