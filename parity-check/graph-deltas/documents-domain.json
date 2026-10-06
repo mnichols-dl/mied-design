@@ -1,0 +1,284 @@
+[
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Document Attachment",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:documents:UT_DocumentAttachment",
+    "relation": "graph-has-more",
+    "docText": "The business entity to which a document is attached (e.g., credential application ID, staffing roster ID, professional learning session ID); replaces overloaded term \"context\"",
+    "graphText": "The business entity to which a document is attached (e.g., credential application ID, staffing roster ID, professional learning session ID); replaces the overloaded term 'context'.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Hard Delete",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:documents:UT_HardDelete",
+    "relation": "graph-has-more",
+    "docText": "Permanently removing document blob from storage after retention period expires or legal hold is released",
+    "graphText": "Permanently removing a document blob from storage after the retention period expires or a legal hold is released.",
+    "onlyInGraph": [
+      "a",
+      "the",
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "events",
+    "item": "DocumentReplaced",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:documents:DocumentReplacedEvent",
+    "relation": "graph-has-more",
+    "docText": "User uploads new version",
+    "graphText": "User uploads new version (scan clean)",
+    "onlyInGraph": [
+      "scan clean"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Malware Scan Blocking",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_MalwareScanBlocking",
+    "relation": "both",
+    "docText": "- User uploads `transcript.pdf` for credential application\n- Azure Defender detects embedded macro with suspicious behavior\n- System returns `MalwareScanResult.Infected` with threat type \"Macro.Trojan\"\n- Upload fails; document not saved to blob storage\n- User notified: \"File could not be uploaded due to security concerns. Please verify file integrity and try again.\"\n- Security team alerted via `DocumentMalwareDetected` event",
+    "graphText": "Azure Defender detects an embedded macro in transcript.pdf with suspicious behavior; system returns MalwareScanResult.Infected with threat type 'Macro.Trojan'; upload fails, document not saved; user notified; security team alerted via DocumentMalwareDetected.",
+    "onlyInGraph": [
+      "an",
+      "in transcript pdf"
+    ],
+    "onlyInDoc": [
+      "user uploads transcript pdf for credential application",
+      "to blob storage",
+      "file could not be uploaded due to",
+      "concerns please verify file integrity and try again security",
+      "event"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "File Size Limit Enforcement",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_FileSizeLimitEnforcement",
+    "relation": "both",
+    "docText": "- DocumentCategory \"Credential Supporting Documents\" configured with 50 MB file size limit\n- User attempts to upload 75 MB scanned transcript PDF\n- System validates file size during upload request before blob upload\n- Upload rejected with 400 Bad Request\n- User notified: \"File size (75 MB) exceeds maximum allowed (50 MB) for this document type. Please compress or split the file.\"",
+    "graphText": "Category configured with 50 MB limit; user attempts to upload a 75 MB PDF; system rejects with 400 Bad Request before blob upload.",
+    "onlyInGraph": [
+      "category",
+      "a",
+      "rejects",
+      "before blob upload"
+    ],
+    "onlyInDoc": [
+      "documentcategory credential supporting documents",
+      "file size",
+      "scanned transcript",
+      "validates file size during upload request before blob upload upload rejected",
+      "user notified file size 75 mb exceeds maximum allowed 50 mb for this document type please compress or split the file"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Retention Period Enforcement",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_RetentionPeriodEnforcement",
+    "relation": "both",
+    "docText": "- Document uploaded January 1, 2026 to \"Credential Supporting Documents\" category\n- Category retention policy: 7 years\n- Retention expiry date calculated: January 1, 2033\n- Administrator soft-deletes document March 15, 2026\n- Hard delete job runs nightly, evaluates document on March 16, 2026\n- Document not deleted (2026 < 2033)\n- Hard delete job runs January 2, 2033\n- Document eligible for hard delete; blob permanently removed\n- If legal hold active on January 2, 2033, hard delete blocked until hold released",
+    "graphText": "Document uploaded Jan 1 2026 with 7-year retention (expiry Jan 1 2033); soft-deleted Mar 15 2026; nightly hard-delete job leaves it alone until Jan 2 2033, and even then only if no legal hold is active.",
+    "onlyInGraph": [
+      "jan",
+      "with",
+      "year",
+      "jan",
+      "deleted mar",
+      "leaves it alone until jan",
+      "and even then only",
+      "no",
+      "is"
+    ],
+    "onlyInDoc": [
+      "january",
+      "to credential supporting documents category category retention policy",
+      "years",
+      "date calculated january",
+      "administrator",
+      "deletes document march",
+      "hard delete job runs",
+      "evaluates document on march 16 2026 document not deleted 2026 2033",
+      "runs january",
+      "document eligible for hard delete blob permanently removed",
+      "on january 2 2033 hard delete blocked until hold released"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Document Replacement Versioning",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_DocumentReplacementVersioning",
+    "relation": "both",
+    "docText": "- User uploads `official_transcript.pdf` (version 1.0) on January 1, 2026\n- User realizes wrong file uploaded, replaces with correct transcript on January 5, 2026\n- System behavior:\n  - Original `official_transcript.pdf` (v1.0) moved to `document-versions` archive container\n  - Original metadata updated: `current_version = false`, `soft_deleted_at = 2026-01-05`, `replaced_by_version_id = v2.0`\n  - New `official_transcript.pdf` (v2.0) stored in primary container\n  - New metadata created: `version_number = 2.0`, `current_version = true`, `replaces_version_id = v1.0`\n- User can only view v2.0 (current version)\n- Administrator can view version history and access archived v1.0 for audit",
+    "graphText": "official_transcript.pdf v1.0 uploaded Jan 1 2026; user replaces it Jan 5 2026; v1.0 archived and soft-deleted, v2.0 becomes current; user can only view v2.0, admin can view version history.",
+    "onlyInGraph": [
+      "v1",
+      "uploaded jan",
+      "it jan",
+      "archived and",
+      "becomes",
+      "admin"
+    ],
+    "onlyInDoc": [
+      "user uploads",
+      "version 1",
+      "on january",
+      "realizes wrong file uploaded",
+      "with correct transcript on january",
+      "system behavior original official transcript pdf",
+      "moved to document versions archive container original metadata updated current version false",
+      "at 2026 01 05 replaced by version id",
+      "new official transcript pdf v2 0 stored in primary container new metadata created version number 2 0",
+      "version true replaces version id v1 0",
+      "current version administrator",
+      "and access archived v1 0 for audit"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Soft Delete vs. Hard Delete Separation",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:documents:Rule_SoftDeleteHardDeleteSeparation",
+    "relation": "graph-has-more",
+    "docText": "Protects against accidental permanent data loss, ensures compliance with retention schedules, and provides recovery window for deleted documents.",
+    "graphText": "Protects against accidental permanent data loss, ensures compliance with retention schedules, and provides a recovery window for deleted documents.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Soft Delete vs. Hard Delete Separation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_SoftDeleteHardDeleteSeparation",
+    "relation": "both",
+    "docText": "- User deletes uploaded document via UI on January 1, 2026\n- System performs soft delete:\n  - `soft_deleted = true`, `soft_deleted_at = 2026-01-01`, `soft_deleted_by_user_id = 12345`\n  - Document hidden from user searches and filtered document list views\n  - Blob remains in storage (still incurring costs but preserved for compliance)\n- Retention policy: 90 days\n- Hard delete eligibility date: April 1, 2026\n- Nightly hard delete job runs April 2, 2026:\n  - Queries soft-deleted documents where `soft_deleted_at + retention_days < NOW()`\n  - Validates no legal holds active\n  - Permanently deletes blob from Azure Storage\n  - Updates metadata: `hard_deleted = true`, `hard_deleted_at = 2026-04-02`\n  - Publishes `DocumentHardDeleted` event",
+    "graphText": "User soft-deletes a document Jan 1 2026 (90-day retention); nightly job hard-deletes it Apr 2 2026 once no legal hold is active; hard-deleted documents cannot be recovered.",
+    "onlyInGraph": [
+      "soft",
+      "a",
+      "jan",
+      "day retention",
+      "hard deletes it apr",
+      "once",
+      "hold is",
+      "documents cannot be recovered"
+    ],
+    "onlyInDoc": [
+      "uploaded",
+      "via ui on january",
+      "system performs soft delete soft deleted true soft deleted at 2026 01 01 soft deleted by user id 12345 document hidden from user searches and filtered document list views blob remains in storage still incurring costs but preserved for compliance retention policy",
+      "days hard delete eligibility date april 1 2026",
+      "hard delete",
+      "runs april",
+      "queries soft deleted documents where soft deleted at retention days now validates",
+      "holds",
+      "permanently deletes blob from azure storage updates metadata",
+      "true hard deleted at 2026 04 02 publishes documentharddeleted event"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Bulk Operation Retention Validation",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:documents:Rule_BulkOperationRetentionValidation",
+    "relation": "graph-has-more",
+    "docText": "Bulk delete operations must validate retention policies and legal holds for ALL documents in the batch before starting. If any document violates retention rules, the operation is blocked or marked partially failed.",
+    "graphText": "Bulk delete operations must validate retention policies and legal holds for ALL documents in the batch before starting. If any document violates retention rules, the operation is blocked (strict mode) or marked partially failed (permissive mode, the default).",
+    "onlyInGraph": [
+      "strict mode",
+      "permissive mode the default"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Bulk Operation Retention Validation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_BulkOperationRetentionValidation",
+    "relation": "both",
+    "docText": "- Administrator selects 100 documents for bulk soft delete\n- System pre-validation:\n  - Checks each document's retention expiry date\n  - Checks for active legal holds\n  - Result: 98 documents eligible, 2 documents have active legal holds\n- Administrator options:\n  - **Strict mode:** Entire operation blocked; error message lists 2 ineligible documents\n  - **Permissive mode:** Operation proceeds for 98 eligible documents; 2 skipped with warnings\n- Operation executes in permissive mode:\n  - 98 documents soft-deleted successfully\n  - 2 documents unchanged\n  - Operation status: `Partially Failed`\n  - Summary: \"98 documents deleted, 2 skipped due to legal holds\"",
+    "graphText": "Admin selects 100 documents for bulk soft delete; 2 have active legal holds; permissive mode proceeds with the 98 eligible and marks the operation Partially Failed, listing the 2 skipped.",
+    "onlyInGraph": [
+      "admin",
+      "the",
+      "eligible and marks the",
+      "listing the"
+    ],
+    "onlyInDoc": [
+      "administrator",
+      "system pre validation checks each document s retention expiry date checks for active legal holds result 98 documents eligible",
+      "documents",
+      "administrator options strict mode entire operation blocked error message lists 2 ineligible documents",
+      "operation",
+      "for 98 eligible documents 2 skipped",
+      "warnings operation executes in permissive mode",
+      "documents soft deleted successfully 2 documents unchanged",
+      "status",
+      "summary 98 documents deleted",
+      "due to legal holds"
+    ]
+  },
+  {
+    "area": "documents",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Original Filename Preservation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:documents:Rule_OriginalFilenamePreservation",
+    "relation": "both",
+    "docText": "- User uploads file: `John_Doe_Official_Transcript_2025.pdf`\n- System generates UUID: `a7f3c9d2-4e5b-4a8c-9d1f-2e3a4b5c6d7e`\n- Blob storage path: `documents-credential-supporting-docs/2026/01/application/app-12345/a7f3c9d2-4e5b-4a8c-9d1f-2e3a4b5c6d7e.pdf`\n- Document metadata stored:\n  ```json\n  {\n    \"document_id\": \"a7f3c9d2-4e5b-4a8c-9d1f-2e3a4b5c6d7e\",\n    \"original_filename\": \"John_Doe_Official_Transcript_2025.pdf\",\n    \"sanitized_filename\": \"John_Doe_Official_Transcript_2025.pdf\",\n    \"blob_path\": \"documents-credential-supporting-docs/2026/01/application/app-12345/a7f3c9d2-4e5b-4a8c-9d1f-2e3a4b5c6d7e.pdf\",\n    \"mime_type\": \"application/pdf\",\n    \"file_size_bytes\": 2457600\n  }\n  ```\n- User views document in UI: \"John_Doe_Official_Transcript_2025.pdf\"\n- User downloads document: Browser saves as \"John_Doe_Official_Transcript_2025.pdf\"",
+    "graphText": "User uploads John_Doe_Official_Transcript_2025.pdf; blob is stored under a UUID-based path; the UI and downloads still show the original filename.",
+    "onlyInGraph": [
+      "is",
+      "under a uuid based",
+      "the",
+      "and",
+      "still show the original filename"
+    ],
+    "onlyInDoc": [
+      "file",
+      "system generates uuid a7f3c9d2 4e5b 4a8c 9d1f 2e3a4b5c6d7e",
+      "storage path documents credential supporting docs 2026 01 application app 12345 a7f3c9d2 4e5b 4a8c 9d1f 2e3a4b5c6d7e pdf document metadata",
+      "json document id a7f3c9d2 4e5b 4a8c 9d1f 2e3a4b5c6d7e original filename john doe official transcript 2025 pdf sanitized filename john doe official transcript 2025 pdf blob",
+      "documents credential supporting docs 2026 01 application app 12345 a7f3c9d2 4e5b 4a8c 9d1f 2e3a4b5c6d7e pdf mime type application pdf file size bytes 2457600 user views document in",
+      "john doe official transcript 2025 pdf user",
+      "document browser saves as john doe official transcript 2025 pdf"
+    ]
+  }
+]

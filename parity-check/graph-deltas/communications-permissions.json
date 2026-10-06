@@ -1,0 +1,635 @@
+[
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.credentialing-templates.create",
+    "item": "communications.credentialing-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CredentialingTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.credentialing-templates.edit",
+    "item": "communications.credentialing-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CredentialingTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.credentialing-templates.activate",
+    "item": "communications.credentialing-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CredentialingTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.credentialing-templates.delete",
+    "item": "communications.credentialing-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CredentialingTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.staffing-templates.create",
+    "item": "communications.staffing-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_StaffingTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.staffing-templates.edit",
+    "item": "communications.staffing-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_StaffingTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.staffing-templates.activate",
+    "item": "communications.staffing-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_StaffingTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.staffing-templates.delete",
+    "item": "communications.staffing-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_StaffingTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.proflearning-templates.create",
+    "item": "communications.proflearning-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProflearningTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.proflearning-templates.edit",
+    "item": "communications.proflearning-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProflearningTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.proflearning-templates.activate",
+    "item": "communications.proflearning-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProflearningTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.proflearning-templates.delete",
+    "item": "communications.proflearning-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProflearningTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.epp-templates.create",
+    "item": "communications.epp-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EppTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.epp-templates.edit",
+    "item": "communications.epp-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EppTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.epp-templates.activate",
+    "item": "communications.epp-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EppTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.epp-templates.delete",
+    "item": "communications.epp-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EppTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.profpractice-templates.create",
+    "item": "communications.profpractice-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProfpracticeTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.profpractice-templates.edit",
+    "item": "communications.profpractice-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProfpracticeTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.profpractice-templates.activate",
+    "item": "communications.profpractice-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProfpracticeTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.profpractice-templates.delete",
+    "item": "communications.profpractice-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_ProfpracticeTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.payments-templates.create",
+    "item": "communications.payments-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_PaymentsTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.payments-templates.edit",
+    "item": "communications.payments-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_PaymentsTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.payments-templates.activate",
+    "item": "communications.payments-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_PaymentsTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.payments-templates.delete",
+    "item": "communications.payments-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_PaymentsTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.iam-templates.create",
+    "item": "communications.iam-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_IamTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.iam-templates.edit",
+    "item": "communications.iam-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_IamTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.iam-templates.activate",
+    "item": "communications.iam-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_IamTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.iam-templates.delete",
+    "item": "communications.iam-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_IamTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.documents-templates.create",
+    "item": "communications.documents-templates.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_DocumentsTemplatesCreate",
+    "relation": "graph-has-more",
+    "docText": "Can create drafts; activation requires separate permission",
+    "graphText": "Can create drafts; activation requires a separate permission.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.documents-templates.edit",
+    "item": "communications.documents-templates.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_DocumentsTemplatesEdit",
+    "relation": "graph-has-more",
+    "docText": "Creates new template version; does not auto-activate",
+    "graphText": "Creates a new template version; does not auto-activate.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.documents-templates.activate",
+    "item": "communications.documents-templates.activate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_DocumentsTemplatesActivate",
+    "relation": "graph-has-more",
+    "docText": "Sets template version as current/active",
+    "graphText": "Sets a template version as current/active.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.documents-templates.delete",
+    "item": "communications.documents-templates.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_DocumentsTemplatesDelete",
+    "relation": "graph-has-more",
+    "docText": "Soft delete; templates remain in audit trail",
+    "graphText": "Soft delete; templates remain in the audit trail.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.email.send-adhoc",
+    "item": "communications.email.send-adhoc",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EmailSendAdhoc",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; bypasses template framework",
+    "graphText": "System Admin only; bypasses the template framework.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.email.customize",
+    "item": "communications.email.customize",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EmailCustomize",
+    "relation": "graph-has-more",
+    "docText": "Customize template content for one-time send",
+    "graphText": "Customize template content for a one-time send",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.email.customize",
+    "item": "communications.email.customize",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EmailCustomize",
+    "relation": "both",
+    "docText": "Modify template content without altering base template",
+    "graphText": "Modifies template content for this send only, without altering the base template.",
+    "onlyInGraph": [
+      "modifies",
+      "for this send only",
+      "the"
+    ],
+    "onlyInDoc": [
+      "modify"
+    ]
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.email.view-details",
+    "item": "communications.email.view-details",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_EmailViewDetails",
+    "relation": "graph-has-more",
+    "docText": "Requires corresponding view-history permission",
+    "graphText": "Requires the corresponding functional-area view-history permission.",
+    "onlyInGraph": [
+      "the",
+      "functional area"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.comments.view-internal",
+    "item": "communications.comments.view-internal",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CommentsViewInternal",
+    "relation": "graph-has-more",
+    "docText": "Internal staff only; scoped to their org level",
+    "graphText": "Internal staff only; scoped to their org level, transitive (Building/District/ISD per source; Building modeled as shared scope:Entity).",
+    "onlyInGraph": [
+      "transitive building district isd per source building modeled as shared scope entity"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.comments.create-internal",
+    "item": "communications.comments.create-internal",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CommentsCreateInternal",
+    "relation": "both",
+    "docText": "Comments not visible to external users; scoped to their org level",
+    "graphText": "Comments not visible to external users; scoped to the caller's org level, transitive.",
+    "onlyInGraph": [
+      "the caller s",
+      "transitive"
+    ],
+    "onlyInDoc": [
+      "their"
+    ]
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.comments.create-external",
+    "item": "communications.comments.create-external",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CommentsCreateExternal",
+    "relation": "both",
+    "docText": "Comments may be shared with citizens/applicants; scoped to their org level",
+    "graphText": "Comments may be shared with citizens/applicants; scoped to the caller's org level, transitive.",
+    "onlyInGraph": [
+      "the caller s",
+      "transitive"
+    ],
+    "onlyInDoc": [
+      "their"
+    ]
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.comments.edit",
+    "item": "communications.comments.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CommentsEdit",
+    "relation": "both",
+    "docText": "Cannot edit after included in sent email; scoped to their org level",
+    "graphText": "Cannot edit after the comment has been included in a sent email; scoped to the caller's org level.",
+    "onlyInGraph": [
+      "the comment has been",
+      "a",
+      "the caller s"
+    ],
+    "onlyInDoc": [
+      "their"
+    ]
+  },
+  {
+    "area": "communications",
+    "docKind": "permissions",
+    "section": "communications.comments.delete",
+    "item": "communications.comments.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:communications:Perm_CommentsDelete",
+    "relation": "both",
+    "docText": "Soft delete; remains in audit trail; scoped to their org level",
+    "graphText": "Soft delete; remains in the audit trail; scoped to the caller's org level.",
+    "onlyInGraph": [
+      "the",
+      "the caller s"
+    ],
+    "onlyInDoc": [
+      "their"
+    ]
+  }
+]

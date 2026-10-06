@@ -1,0 +1,334 @@
+[
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.view",
+    "item": "profpractice.disclosure.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureView",
+    "relation": "graph-has-more",
+    "docText": "Educators see own; reviewers see assigned/all",
+    "graphText": "Educators see own; reviewers see assigned/all. Source lists 'Worklist-specific' as a third applicable scope — see file header note on the Worklist-specific scope-vocabulary gap; scope:AssignedOnly is the closest existing proxy.",
+    "onlyInGraph": [
+      "source lists worklist specific as a third applicable scope see file header note on the worklist specific scope vocabulary gap scope assignedonly is the closest existing proxy"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.search",
+    "item": "profpractice.disclosure.search",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureSearch",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; includes advanced filters",
+    "graphText": "PPR Reviewer role; includes advanced filters. Source lists 'Worklist-specific' as an applicable scope — see file header note.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.edit",
+    "item": "profpractice.disclosure.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureEdit",
+    "relation": "graph-has-more",
+    "docText": "Can modify date, type, description, attachments while status is \"Under PPR Review\"",
+    "graphText": "Can modify date, type, description, attachments while status is 'Under PPR Review'. Source lists 'Worklist-specific' as an applicable scope — see file header note.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.status.update",
+    "item": "profpractice.status.update",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_StatusUpdate",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; enforce valid status transitions",
+    "graphText": "PPR Reviewer role; enforce valid status transitions. Source lists 'Worklist-specific' as an applicable scope — see file header note. profpractice-sequences.md's 'Review Disclosure and Update Status' sequence header instead names the permission id 'profpractice.disclosure.update-status', which does not exist in this catalog — a genuine documented naming discrepancy between the two source documents, left unresolved rather than silently reconciled.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note profpractice sequences md s review disclosure and update status sequence header instead names the permission id profpractice disclosure update status which does not exist in this catalog a genuine documented naming discrepancy between the two source documents left unresolved rather than silently reconciled"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.remarks.add",
+    "item": "profpractice.remarks.add",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_RemarksAdd",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; remark type determined by API parameter",
+    "graphText": "PPR Reviewer role; remark type determined by API parameter. Source lists 'Worklist-specific' as an applicable scope — see file header note.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.finalize",
+    "item": "profpractice.disclosure.finalize",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureFinalize",
+    "relation": "graph-has-more",
+    "docText": "Transitions to \"Reviewed-*\" status; prevents further edits",
+    "graphText": "Transitions to 'Reviewed-*' status; prevents further edits. Source lists 'Worklist-specific' as an applicable scope — see file header note.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.revert",
+    "item": "profpractice.disclosure.revert",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureRevert",
+    "relation": "graph-has-more",
+    "docText": "PPR Admin role only; allows corrections after finalization",
+    "graphText": "PPR Admin role only; allows corrections after finalization. No API operation or sequence currently models this permission — profpractice-api.yml has no revert endpoint and no sequence exercises it; a documented gap, not modeled with a PermissionRequirement.",
+    "onlyInGraph": [
+      "no api operation or sequence currently models this permission profpractice api yml has no revert endpoint and no sequence exercises it a documented gap not modeled with a permissionrequirement"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.disclosure.delete",
+    "item": "profpractice.disclosure.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_DisclosureDelete",
+    "relation": "graph-has-more",
+    "docText": "PPR Admin role only; educator cannot delete own disclosures",
+    "graphText": "PPR Admin role only; educator cannot delete own disclosures. No API operation or sequence currently models this permission — profpractice-api.yml has no disclosure-delete endpoint; a documented gap.",
+    "onlyInGraph": [
+      "no api operation or sequence currently models this permission profpractice api yml has no disclosure delete endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.markers.manage",
+    "item": "profpractice.markers.manage",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_MarkersManage",
+    "relation": "graph-has-more",
+    "docText": "PPR Admin or Credentialing Admin role; requires justification; fully audited",
+    "graphText": "PPR Admin or Credentialing Admin role; requires justification; fully audited. profpractice-sequences.md's 'Manage Account Markers' sequence instead names finer-grained permission ids per marker (account-marker.set-mandatory-hold, account-marker.clear-mandatory-hold, account-marker.set-enhanced-monitoring, account-marker.set-rereview), none of which exist in this catalog — a genuine documented naming discrepancy, left unresolved rather than silently reconciled or split into new permissions.",
+    "onlyInGraph": [
+      "profpractice sequences md s manage account markers sequence instead names finer grained permission ids per marker account marker set mandatory hold account marker clear mandatory hold account marker set enhanced monitoring account marker set rereview none of which exist in this catalog a genuine documented naming discrepancy left unresolved rather than silently reconciled or split into new permissions"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.rapback.view",
+    "item": "profpractice.rapback.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_RapbackView",
+    "relation": "both",
+    "docText": "PPR Reviewer role; see notification date, TCN, judicial marker",
+    "graphText": "PPR Reviewer role; sees notification date, TCN, judicial marker",
+    "onlyInGraph": [
+      "sees"
+    ],
+    "onlyInDoc": [
+      "see"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.rapsheet.retrieve",
+    "item": "profpractice.rapsheet.retrieve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_RapsheetRetrieve",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; display-only, never stored",
+    "graphText": "PPR Reviewer role; display-only, never stored. profpractice-sequences.md's 'Retrieve Full Rap Sheet for Review' sequence header instead names 'profpractice.rapback.retrieve-rapsheet', which does not exist in this catalog — a genuine documented naming discrepancy.",
+    "onlyInGraph": [
+      "profpractice sequences md s retrieve full rap sheet for review sequence header instead names profpractice rapback retrieve rapsheet which does not exist in this catalog a genuine documented naming discrepancy"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.nasdtec.access",
+    "item": "profpractice.nasdtec.access",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_NasdtecAccess",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; opens clearinghouse URL in new tab",
+    "graphText": "PPR Reviewer role; opens clearinghouse URL in new tab. No API operation models this permission — it gates an outbound browser navigation, not a MiEdWorkforce endpoint; a documented, expected non-gap.",
+    "onlyInGraph": [
+      "no api operation models this permission it gates an outbound browser navigation not a miedworkforce endpoint a documented expected non gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.actions.log",
+    "item": "profpractice.actions.log",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_ActionsLog",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; creates audit trail for offline actions",
+    "graphText": "PPR Reviewer role; creates audit trail for offline actions. Source lists 'Worklist-specific' as an applicable scope — see file header note. profpractice-sequences.md's 'Log Non-System Action' sequence header instead names 'profpractice.disclosure.log-non-system-action', which does not exist in this catalog — a genuine documented naming discrepancy.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note profpractice sequences md s log non system action sequence header instead names profpractice disclosure log non system action which does not exist in this catalog a genuine documented naming discrepancy"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.audit.view",
+    "item": "profpractice.audit.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_AuditView",
+    "relation": "graph-has-more",
+    "docText": "Scope-aware audit visibility",
+    "graphText": "Scope-aware audit visibility. No API operation or sequence currently models this permission — profpractice-api.yml has no dedicated audit-log endpoint; a documented gap.",
+    "onlyInGraph": [
+      "no api operation or sequence currently models this permission profpractice api yml has no dedicated audit log endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.worklist.view",
+    "item": "profpractice.worklist.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_WorklistView",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer assigned to specific worklists",
+    "graphText": "PPR Reviewer assigned to specific worklists. Source lists this scope as 'Worklist-specific' — see file header note; scope:AssignedOnly is the closest existing proxy.",
+    "onlyInGraph": [
+      "source lists this scope as worklist specific see file header note scope assignedonly is the closest existing proxy"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.worklist.assign",
+    "item": "profpractice.worklist.assign",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_WorklistAssign",
+    "relation": "graph-has-more",
+    "docText": "PPR Admin role only",
+    "graphText": "PPR Admin role only. No dedicated API operation models this permission separately — profpractice-api.yml's PUT /worklists/{worklistId} (assignedReviewerIds field of WorklistCreate schema) is the closest match but is gated by profpractice.worklist.configure, not this permission; a documented gap between the permissions catalog's granularity and the API's actual gating.",
+    "onlyInGraph": [
+      "no dedicated api operation models this permission separately profpractice api yml s put worklists worklistid assignedreviewerids field of worklistcreate schema is the closest match but is gated by profpractice worklist configure not this permission a documented gap between the permissions catalog s granularity and the api s actual gating"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.questions.manage",
+    "item": "profpractice.questions.manage",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_QuestionsManage",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; creates versioned changes",
+    "graphText": "System Admin only; creates versioned changes. No API operation currently models this permission — profpractice-api.yml only exposes GET endpoints for question configuration (getDisclosureQuestions, getPprQuestions), no create/update/activate endpoint; a documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission profpractice api yml only exposes get endpoints for question configuration getdisclosurequestions getpprquestions no create update activate endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.attachments.view",
+    "item": "profpractice.attachments.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_AttachmentsView",
+    "relation": "graph-has-more",
+    "docText": "Educators see own; reviewers see assigned disclosures",
+    "graphText": "Educators see own; reviewers see assigned disclosures. Source lists 'Worklist-specific' as an applicable scope — see file header note. Not modeled with a PermissionRequirement here: document retrieval for a disclosure is a Documents-capability call (GET /documents?disclosureId=...) shown in profpractice-sequences.md, not one of profpractice's own ApiOperations.",
+    "onlyInGraph": [
+      "source lists worklist specific as an applicable scope see file header note not modeled with a permissionrequirement here document retrieval for a disclosure is a documents capability call get documents disclosureid shown in profpractice sequences md not one of profpractice s own apioperations"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.attachments.upload",
+    "item": "profpractice.attachments.upload",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_AttachmentsUpload",
+    "relation": "graph-has-more",
+    "docText": "Educators upload to their own disclosures during submission",
+    "graphText": "Educators upload to their own disclosures during submission. Not modeled with a PermissionRequirement here for the same reason as profpractice.attachments.view — the upload call (POST /upload) belongs to the Documents capability's own API, not profpractice's.",
+    "onlyInGraph": [
+      "not modeled with a permissionrequirement here for the same reason as profpractice attachments view the upload call post upload belongs to the documents capability s own api not profpractice s"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.attachments.delete",
+    "item": "profpractice.attachments.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_AttachmentsDelete",
+    "relation": "graph-has-more",
+    "docText": "PPR Reviewer role; requires justification",
+    "graphText": "PPR Reviewer role; requires justification. Same Documents-capability-ownership reasoning as profpractice.attachments.view/.upload — no PermissionRequirement modeled here.",
+    "onlyInGraph": [
+      "same documents capability ownership reasoning as profpractice attachments view upload no permissionrequirement modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.report.view",
+    "item": "profpractice.report.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_ReportView",
+    "relation": "graph-has-more",
+    "docText": "Scope-aware; includes export",
+    "graphText": "Scope-aware; includes export. profpractice-sequences.md's 'Generate PPR Compliance Report' sequence header instead names 'profpractice.reports.disclosure-metrics.view' or 'profpractice.reports.compliance.view', neither of which exists in this catalog — a genuine documented naming discrepancy.",
+    "onlyInGraph": [
+      "profpractice sequences md s generate ppr compliance report sequence header instead names profpractice reports disclosure metrics view or profpractice reports compliance view neither of which exists in this catalog a genuine documented naming discrepancy"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "permissions",
+    "section": "profpractice.notifications.view",
+    "item": "profpractice.notifications.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:profpractices:Perm_NotificationsView",
+    "relation": "graph-has-more",
+    "docText": "District HR sees alerts for educators they're hiring/employing",
+    "graphText": "District HR sees alerts for educators they're hiring/employing. No API operation or sequence currently models this permission — profpractice-api.yml has no district-notifications endpoint; a documented gap.",
+    "onlyInGraph": [
+      "no api operation or sequence currently models this permission profpractice api yml has no district notifications endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  }
+]

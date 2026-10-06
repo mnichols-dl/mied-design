@@ -1,0 +1,283 @@
+[
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Active Authorization",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:iam:UT_ActiveAuthorization",
+    "relation": "graph-has-more",
+    "docText": "The specific authorization context a user is currently operating under (users may have multiple authorizations but must select one at a time)",
+    "graphText": "The specific authorization context a user is currently operating under (users may have multiple authorizations but must select one at a time). A UI state management concern, not a backend domain flow — the backend is stateless and validates the scope supplied on each request.",
+    "onlyInGraph": [
+      "a ui state management concern not a backend domain flow the backend is stateless and validates the scope supplied on each request"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "IdentityResolutionRequest",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:iam:IdentityResolutionRequestAggregate",
+    "relation": "both",
+    "docText": "- A citizen cannot access MiEdWorkforce functionality while their most recent `AccountCreation`-type request is not yet resolved (Match, NoMatch-CreateNew, or admin-resolved)\n- An `AccountUpdate`-type request that results in Near Match does NOT block dashboard access for the citizen — the update itself is held, but the citizen keeps using the system (contrast with `AccountCreation`, which fully blocks)\n- While a `CitizenSelfService` `AccountUpdate` request is `RequiresResolution`, the associated user's Primary and Secondary demographic fields are locked; Contact fields (email, phone, address) remain editable\n- `NoSSNStatus` can only be set at Account Creation (self-service or Identity-Admin-assisted) and can only be cleared (SSN added) by the citizen, an Identity Administrator, or as a side effect of the record being added to a district Employee Roster (see `staffing-domain.md`)\n- A Unique ID assigned with `NoSSNStatus = true` may only be used for Student Intern or Credential Applicant purposes; adding such a record to an Employee Roster requires the SSN to be supplied first (enforced by `staffing`, not `iam`)\n- A citizen may cancel their own pending `AccountUpdate` request; `AccountCreation` requests cannot be self-cancelled once `RequiresResolution` (only Identity Admin can resolve)\n- **Self-resolution differs by origin:** on a `BusinessUserStaffing`-origin Near Match, the requesting district user may resolve it themselves — either selecting a presented potential match, or (for `NewId` only) escalating to Identity Administrator review by requesting a new ID with justification. A `CitizenSelfService`-origin Near Match always escalates to Identity Administrator review; the citizen is never shown candidate match data and cannot self-resolve (only self-cancel, for `AccountUpdate`)\n- A `DemographicUpdate` Near Match only ever presents the single candidate sharing the submitted Unique ID; the requester may confirm (optionally replacing the Mi-Key Master Record) or cancel — there is no \"request new ID\" escalation on this path, and it normally never requires Identity Administrator review except via the auto-cancel timeout\n- A `LinkId` request always goes directly to Identity Administrator review (no Mi-Key match phase, no self-resolution) — the Identity Administrator approves (Mi-Key retires the secondary ID and merges to primary) or denies",
+    "graphText": "A citizen cannot access MiEdWorkforce functionality while their most recent AccountCreation-type request is not yet resolved. An AccountUpdate-type request that results in Near Match does NOT block dashboard access. While a CitizenSelfService AccountUpdate request is RequiresResolution, Primary/Secondary demographic fields are locked; Contact fields remain editable. NoSSNStatus can only be set at Account Creation and can only be cleared by the citizen, an Identity Administrator, or as a side effect of Employee Roster addition (enforced by staffing). A Unique ID assigned with NoSSNStatus=true may only be used for Student Intern or Credential Applicant purposes. A citizen may cancel their own pending AccountUpdate request; AccountCreation requests cannot be self-cancelled once RequiresResolution. Self-resolution differs by origin: BusinessUserStaffing Near Match may be self-resolved by the requesting district user (or, for NewId only, escalated); CitizenSelfService Near Match always escalates to Identity Administrator review. A DemographicUpdate Near Match only ever presents the single candidate sharing the submitted Unique ID, with confirm/cancel and no escalation path. A LinkId request always goes directly to Identity Administrator review (no Mi-Key match phase, no self-resolution).",
+    "onlyInGraph": [
+      "addition enforced by",
+      "may be self resolved by",
+      "escalated",
+      "with",
+      "and"
+    ],
+    "onlyInDoc": [
+      "match nomatch createnew or admin resolved",
+      "for the citizen the update itself is held but the citizen keeps using the system contrast with accountcreation which fully blocks",
+      "the associated user s",
+      "and",
+      "email phone address",
+      "self service or identity admin assisted",
+      "ssn added",
+      "the record being added to a district",
+      "see",
+      "domain md",
+      "adding such",
+      "record to an employee roster requires the ssn to be supplied first enforced by staffing not iam a",
+      "only identity admin can resolve",
+      "on a",
+      "origin",
+      "may resolve it themselves either selecting a presented potential match",
+      "escalating to identity administrator review by requesting a new id with justification a",
+      "origin",
+      "the citizen is never shown candidate match data and cannot self resolve only self cancel for accountupdate",
+      "the requester may",
+      "optionally replacing the mi key master record or",
+      "there is",
+      "request new id",
+      "on this",
+      "and it normally never requires identity administrator review except via the auto cancel timeout",
+      "the identity administrator approves mi key retires the secondary id and merges to primary or denies"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "events",
+    "item": "AuthorizationApproved",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:iam:AuthorizationApprovedEvent",
+    "relation": "graph-has-more",
+    "docText": "Scope approver approves request",
+    "graphText": "Scope approver approves request (or system bootstrap/manual grant)",
+    "onlyInGraph": [
+      "or system bootstrap manual grant"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "events",
+    "item": "AuthorizationRevoked",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:iam:AuthorizationRevokedEvent",
+    "relation": "graph-has-more",
+    "docText": "Authorization removed (self, admin, external request)",
+    "graphText": "Authorization removed (self, admin, external request, or inactivity job)",
+    "onlyInGraph": [
+      "or inactivity job"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "events",
+    "item": "NewCitizenUserAuthorized",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:iam:NewCitizenUserAuthorizedEvent",
+    "relation": "graph-has-more",
+    "docText": "Citizen completes account creation",
+    "graphText": "Citizen completes account creation (identity resolution reaches a Unique ID)",
+    "onlyInGraph": [
+      "identity resolution reaches a unique id"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Transitive Authorization Resolution",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:iam:Rule_TransitiveAuthorizationResolution",
+    "relation": "both",
+    "docText": "When evaluating if a user has permission for a target organization, the system checks:\n1. Direct authorization for that organization\n2. Authorization at any parent organization (District for a Building, ISD for a District or Building)",
+    "graphText": "When evaluating if a user has permission for a target organization, the system checks direct authorization for that organization, then authorization at any parent organization (District for a Building, ISD for a District or Building).",
+    "onlyInGraph": [
+      "then"
+    ],
+    "onlyInDoc": [
+      "1",
+      "2"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Transitive Authorization Resolution",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_TransitiveAuthorizationResolution",
+    "relation": "both",
+    "docText": "- User has \"Staffing Administrator\" at ISD 50\n- Request to view employees at Building 123 (which is in District 10, which is in ISD 50)\n- Organization Reference Data confirms Building 123 is descendant of ISD 50\n- Permission check returns AUTHORIZED",
+    "graphText": "User has 'Staffing Administrator' at ISD 50; request to view employees at Building 123 (in District 10, in ISD 50); Organizations API confirms Building 123 is a descendant of ISD 50; permission check returns AUTHORIZED.",
+    "onlyInGraph": [
+      "organizations api",
+      "a"
+    ],
+    "onlyInDoc": [
+      "which is",
+      "which is",
+      "organization reference data"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Role-Scope Assignment Compatibility",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_RoleScopeAssignmentCompatibility",
+    "relation": "both",
+    "docText": "- \"District HR Administrator\" role has ApplicableScopes: [District, ISD]\n- Role contains: `staffing.employee.view` (scope-sensitive), `iam.report.export` (scope-agnostic)\n- When assigned at District 42:\n  - `staffing.employee.view` requires organization context (filters to District 42 + buildings)\n  - `iam.report.export` works system-wide (no organization filtering)",
+    "graphText": "'District HR Administrator' role has ApplicableScopes [District, ISD] and contains both staffing.employee.view (scope-sensitive) and iam.report.export (scope-agnostic); when assigned at District 42, the scope-sensitive permission filters to District 42 + buildings while the scope-agnostic one works system-wide.",
+    "onlyInGraph": [
+      "and",
+      "both",
+      "and",
+      "the scope sensitive permission",
+      "while the scope agnostic one"
+    ],
+    "onlyInDoc": [
+      "role",
+      "staffing employee view requires organization context",
+      "iam report export",
+      "no organization filtering"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Approval Link Expiration",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_ApprovalLinkExpiration",
+    "relation": "both",
+    "docText": "User submits request on Jan 1. Lead Admin receives email with 7-day link. On Jan 9, if not acted upon, link is expired; request status updated to Expired; user notified.",
+    "graphText": "User submits request on Jan 1; Lead Admin receives a 7-day link; on Jan 9, if not acted upon, link expires, request status updates to Expired, user is notified.",
+    "onlyInGraph": [
+      "a",
+      "expires",
+      "updates",
+      "is"
+    ],
+    "onlyInDoc": [
+      "email with",
+      "is expired",
+      "updated"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "MiLogin Context Enforcement",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_MiLoginContextEnforcement",
+    "relation": "both",
+    "docText": "- Maria Teacher has:\n  - MiLogin Citizen identity (for personal credential viewing)\n  - MiLogin Business identity (for District HR role)\n- When authenticated as Citizen:\n  - Can access Individual scope (view own credentials)\n  - Cannot access District HR authorization\n- When authenticated as Business:\n  - Can access District HR authorization\n  - Cannot access Citizen-only features\n- UI detects if user has alternate identity types and suggests re-login if attempting unauthorized action",
+    "graphText": "Maria Teacher has both a Citizen identity (personal credential viewing) and a Business identity (District HR role); when authenticated as Citizen she can access Individual scope but not the District HR authorization, and vice versa.",
+    "onlyInGraph": [
+      "both a",
+      "and a",
+      "she",
+      "but not the",
+      "vice versa"
+    ],
+    "onlyInDoc": [
+      "milogin",
+      "for",
+      "milogin",
+      "for",
+      "view own credentials cannot access district hr authorization when authenticated as business can access",
+      "cannot access citizen only features ui detects if user has alternate identity types",
+      "suggests re login if attempting unauthorized action"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Citizen Near Match Resolution",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_CitizenNearMatchResolution",
+    "relation": "both",
+    "docText": "Citizen submits Account Update changing Last Name. Mi-Key returns Near Match.\n`IdentityResolutionRequest.status` = `RequiresResolution`. Citizen can still log in and use\nMiEdWorkforce, and can still edit their phone number, but cannot resubmit demographic\nchanges or see the pending request outcome beyond a \"pending review\" indicator, until an\nIdentity Administrator resolves it (Match / Create New / Cancel).",
+    "graphText": "Citizen submits Account Update changing Last Name; Mi-Key returns Near Match; IdentityResolutionRequest.status = RequiresResolution; citizen can still log in and edit contact fields but cannot resubmit demographic changes until an Identity Administrator resolves it.",
+    "onlyInGraph": [
+      "contact fields"
+    ],
+    "onlyInDoc": [
+      "use miedworkforce and can still",
+      "their phone number",
+      "or see the pending request outcome beyond a pending review indicator",
+      "match create new cancel"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Link ID Resolution",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_LinkIdResolution",
+    "relation": "both",
+    "docText": "District user notices an employee appears to have two Unique IDs from\nseparate prior employers. They submit a Link ID request naming the primary and secondary\nIDs with justification. An Identity Administrator reviews both records, approves the link,\nand Mi-Key merges the secondary into the primary; the district's employee record is\nupdated to the primary ID once the merge completes.",
+    "graphText": "District user notices an employee appears to have two Unique IDs from separate prior employers; submits a Link ID request naming primary and secondary IDs with justification; Identity Administrator approves; Mi-Key merges secondary into primary.",
+    "onlyInGraph": [
+      "submits"
+    ],
+    "onlyInDoc": [
+      "they submit",
+      "the",
+      "an",
+      "reviews both records",
+      "the link and",
+      "the",
+      "the",
+      "the district s employee record is updated to the primary id once the merge completes"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "No-SSN Citizen Accounts",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:iam:Rule_NoSSNCitizenAccounts",
+    "relation": "both",
+    "docText": "Pre-service teaching candidate has no SSN yet. Identity Administrator creates\nthe citizen account with \"No SSN\" checked; Mi-Key does not require SSN for matching. The\ncitizen can later add their SSN once issued (from their own Account Update flow, per FDD\n15.10.3), or a hiring district can require it when adding the person to an Employee\nRoster (staffing's validation, not IAM's).",
+    "graphText": "Pre-service teaching candidate has no SSN yet; Identity Administrator creates the citizen account with 'No SSN' checked; the citizen can later add their SSN via their own Account Update flow, or a hiring district can require it when adding the person to an Employee Roster (staffing's validation).",
+    "onlyInGraph": [
+      "via"
+    ],
+    "onlyInDoc": [
+      "mi key does not require ssn for matching",
+      "once issued from",
+      "per fdd 15 10 3",
+      "not iam s"
+    ]
+  }
+]

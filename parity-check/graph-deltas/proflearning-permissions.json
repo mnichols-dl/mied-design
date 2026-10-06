@@ -1,0 +1,430 @@
+[
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.sponsor.view",
+    "item": "proflearning.sponsor.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SponsorView",
+    "relation": "graph-has-more",
+    "docText": "Coordinators have this for their sponsor",
+    "graphText": "Entity resolves to a specific sponsor. Coordinators have this for their own sponsor.",
+    "onlyInGraph": [
+      "entity resolves to a specific sponsor",
+      "own"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.sponsor.edit",
+    "item": "proflearning.sponsor.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SponsorEdit",
+    "relation": "graph-has-more",
+    "docText": "Coordinators for their sponsor, admins system-wide",
+    "graphText": "Coordinators for their sponsor, admins system-wide. No distinct 'update sponsor' API operation exists in proflearning-api.yml (only GET /sponsors/{sponsorId}) — the proflearning-domain.md aggregate description says MiEdWorkforce 'edits contact info' but no corresponding endpoint was found; an honest gap, left with no PermissionRequirement.",
+    "onlyInGraph": [
+      "no distinct update sponsor api operation exists in proflearning api yml only get sponsors sponsorid the proflearning domain md aggregate description says miedworkforce edits contact info but no corresponding endpoint was found an honest gap left with no permissionrequirement"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.sponsor.approve",
+    "item": "proflearning.sponsor.approve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SponsorApprove",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin only",
+    "graphText": "Professional Learning Admin only. GENUINE GAP, already flagged in proflearning-domain.ttl's own aggregate design note and plrn:Question_SponsorApprovalWorkflowContradiction (Open Question #9): the ProfessionalLearningSponsor aggregate says sponsor creation is EEM-only with no PendingApproval state inside MiEdWorkforce, yet this permission — and FDD 26's described new-Sponsor application / Lead-Administrator e-signature workflow — presumes such a workflow exists. No SponsorApplication aggregate or API operation is modeled for it (proflearning-api.yml has no sponsor-application endpoints at all); left with no PermissionRequirement as an honest, documented gap rather than fabricating the missing workflow.",
+    "onlyInGraph": [
+      "genuine gap already flagged in proflearning domain ttl s own aggregate design note and plrn question sponsorapprovalworkflowcontradiction open question 9 the professionallearningsponsor aggregate says sponsor creation is eem only with no pendingapproval state inside miedworkforce yet this permission and fdd 26 s described new sponsor application lead administrator e signature workflow presumes such a workflow exists no sponsorapplication aggregate or api operation is modeled for it proflearning api yml has no sponsor application endpoints at all left with no permissionrequirement as an honest documented gap rather than fabricating the missing workflow"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.sponsor.delete",
+    "item": "proflearning.sponsor.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SponsorDelete",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin only",
+    "graphText": "Professional Learning Admin only. No DELETE/deactivate sponsor endpoint exists in proflearning-api.yml at all — same class of gap as sponsor.approve above, compounded by the aggregate's own Design Note that sponsor lifecycle (creation, presumably deletion) belongs to EEM, not MiEdWorkforce. Left with no PermissionRequirement.",
+    "onlyInGraph": [
+      "no delete deactivate sponsor endpoint exists in proflearning api yml at all same class of gap as sponsor approve above compounded by the aggregate s own design note that sponsor lifecycle creation presumably deletion belongs to eem not miedworkforce left with no permissionrequirement"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.program.create",
+    "item": "proflearning.program.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_ProgramCreate",
+    "relation": "graph-has-more",
+    "docText": "Coordinators for their sponsor",
+    "graphText": "Entity resolves to sponsor-scoped. Coordinators for their sponsor.",
+    "onlyInGraph": [
+      "entity resolves to sponsor scoped"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.program.edit",
+    "item": "proflearning.program.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_ProgramEdit",
+    "relation": "both",
+    "docText": "Coordinators for programs under their sponsor",
+    "graphText": "Entity resolves to program-scoped. PARTIAL GAP: for the sponsor-initiated path this is effectively covered by POST /program-applications with applicationType=Modify (plrn:Op_SubmitProgramApplication, gated by proflearning.program.create, not this permission) — proflearning-api.yml has no distinct 'edit program' endpoint gated by proflearning.program.edit itself. The domain doc's own 'Modified Programs Require Re-Approval' business rule (plrn:Rule_ModifiedProgramsRequireReapproval) also describes a second path — Professional Learning Admin editing an approved program directly, with no re-approval — that has no API operation at all. Left with no PermissionRequirement; the permission ID doesn't map cleanly to modeled operations either way.",
+    "onlyInGraph": [
+      "entity resolves to program scoped partial gap",
+      "the",
+      "initiated path this is effectively covered by post program applications with applicationtype modify plrn op submitprogramapplication gated by proflearning program create not this permission proflearning api yml has no distinct edit program endpoint gated by proflearning program edit itself the domain doc s own modified programs require re approval business rule plrn rule modifiedprogramsrequirereapproval also describes a second path professional learning admin editing an approved program directly with no re approval that has no api operation at all left with no permissionrequirement the permission id doesn t map cleanly to modeled operations either way"
+    ],
+    "onlyInDoc": [
+      "coordinators",
+      "programs under their"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.program.view",
+    "item": "proflearning.program.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_ProgramView",
+    "relation": "graph-has-more",
+    "docText": "Coordinators, admins, or public for active programs",
+    "graphText": "Entity resolves to program-scoped; coordinators, admins, or public for active programs. Backs listProgramApplications, getProgramApplication, listPrograms, and getProgram (internal-user access pattern) — matches proflearning-api.yml's x-permissions-required exactly.",
+    "onlyInGraph": [
+      "entity resolves to program scoped",
+      "backs listprogramapplications getprogramapplication listprograms and getprogram internal user access pattern matches proflearning api yml s x permissions required exactly"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.program.approve",
+    "item": "proflearning.program.approve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_ProgramApprove",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin only",
+    "graphText": "Professional Learning Admin only. Backs approve, reject, and request-info — matches proflearning-api.yml exactly.",
+    "onlyInGraph": [
+      "backs approve reject and request info matches proflearning api yml exactly"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.program.withdraw",
+    "item": "proflearning.program.withdraw",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_ProgramWithdraw",
+    "relation": "graph-has-more",
+    "docText": "Coordinators for their programs, admins system-wide",
+    "graphText": "Entity resolves to program-scoped. Coordinators for their programs, admins system-wide.",
+    "onlyInGraph": [
+      "entity resolves to program scoped"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.session.create",
+    "item": "proflearning.session.create",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SessionCreate",
+    "relation": "both",
+    "docText": "Coordinators, Professional Learning Admin",
+    "graphText": "Entity resolves to program-scoped. GAP: proflearning-api.yml has no distinct session-creation endpoint — sessions are created inline as part of ProgramDetails.sessions within POST /program-applications (submitProgramApplication, gated by proflearning.program.create). Left with no PermissionRequirement of its own.",
+    "onlyInGraph": [
+      "entity resolves to program scoped gap proflearning api yml has no distinct session creation endpoint sessions are created inline as part of programdetails sessions within post program applications submitprogramapplication gated by proflearning program create left with no permissionrequirement of its own"
+    ],
+    "onlyInDoc": [
+      "coordinators professional learning admin"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.session.edit",
+    "item": "proflearning.session.edit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_SessionEdit",
+    "relation": "both",
+    "docText": "Coordinators, Professional Learning Admin",
+    "graphText": "Entity resolves to session-scoped. GAP: no session-edit endpoint exists anywhere in proflearning-api.yml. Left with no PermissionRequirement.",
+    "onlyInGraph": [
+      "entity resolves to session scoped gap no session edit endpoint exists anywhere in proflearning api yml left with no permissionrequirement"
+    ],
+    "onlyInDoc": [
+      "coordinators professional learning admin"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.attendance.add",
+    "item": "proflearning.attendance.add",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AttendanceAdd",
+    "relation": "both",
+    "docText": "Coordinators for their programs",
+    "graphText": "Entity resolves to session-scoped. Backs addAttendee and bulkUploadAttendees.",
+    "onlyInGraph": [
+      "entity resolves to session scoped backs addattendee and bulkuploadattendees"
+    ],
+    "onlyInDoc": [
+      "coordinators for their programs"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.attendance.view",
+    "item": "proflearning.attendance.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AttendanceView",
+    "relation": "graph-has-more",
+    "docText": "Coordinators for their programs, admins system-wide",
+    "graphText": "Entity resolves to session-scoped; coordinators for their programs, admins system-wide.",
+    "onlyInGraph": [
+      "entity resolves to session scoped"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.attendance.adjust",
+    "item": "proflearning.attendance.adjust",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AttendanceAdjust",
+    "relation": "both",
+    "docText": "Coordinators for their programs",
+    "graphText": "Entity resolves to session-scoped. Backs adjustScechAward.",
+    "onlyInGraph": [
+      "entity resolves to session scoped backs adjustscechaward"
+    ],
+    "onlyInDoc": [
+      "coordinators for their programs"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.attendance.certify",
+    "item": "proflearning.attendance.certify",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AttendanceCertify",
+    "relation": "both",
+    "docText": "Coordinators for their programs",
+    "graphText": "Entity resolves to session-scoped. Backs certifyAttendance.",
+    "onlyInGraph": [
+      "entity resolves to session scoped backs certifyattendance"
+    ],
+    "onlyInDoc": [
+      "coordinators for their programs"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.attendance.override",
+    "item": "proflearning.attendance.override",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AttendanceOverride",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin only",
+    "graphText": "Professional Learning Admin only. GAP: no API operation is gated by this permission specifically — post-certification adjustment is instead handled entirely through the SCECHCorrectionRequest workflow (submitCorrectionRequest / approveCorrectionRequest / denyCorrectionRequest), gated by the distinct proflearning.correction.* permissions. This permission appears to describe the same capability the correction-request workflow already provides, under a different name; left with no PermissionRequirement rather than double-gating approveCorrectionRequest under two permission IDs.",
+    "onlyInGraph": [
+      "gap no api operation is gated by this permission specifically post certification adjustment is instead handled entirely through the scechcorrectionrequest workflow submitcorrectionrequest approvecorrectionrequest denycorrectionrequest gated by the distinct proflearning correction permissions this permission appears to describe the same capability the correction request workflow already provides under a different name left with no permissionrequirement rather than double gating approvecorrectionrequest under two permission ids"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.evaluation.view",
+    "item": "proflearning.evaluation.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_EvaluationView",
+    "relation": "both",
+    "docText": "Coordinators, Professional Learning Admin",
+    "graphText": "Entity resolves to program-scoped. GAP: proflearning-api.yml has no endpoint for listing/viewing submitted EvaluationSubmission records at all. Left with no PermissionRequirement.",
+    "onlyInGraph": [
+      "entity resolves to program scoped gap proflearning api yml has no endpoint for listing viewing submitted evaluationsubmission records at all left with no permissionrequirement"
+    ],
+    "onlyInDoc": [
+      "coordinators professional learning admin"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.evaluation.submit",
+    "item": "proflearning.evaluation.submit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_EvaluationSubmit",
+    "relation": "graph-has-more",
+    "docText": "Attendees for programs they attended",
+    "graphText": "Attendees for programs they attended. SIGNIFICANT GAP: neither proflearning-api.yml (no evaluation-submission endpoint) nor proflearning-sequences.md (no 'Attendee Submits Evaluation' sequence, despite the EvaluationTemplate aggregate's own 'Referenced In' list naming one) actually models this capability end-to-end, even though the domain doc's certification workflow (plrn:Rule_EvaluationRequirementProgramSpecific) depends on evaluations being submitted before certification can proceed. Left with no PermissionRequirement — a real, load-bearing gap, not a minor one.",
+    "onlyInGraph": [
+      "significant gap neither proflearning api yml no evaluation submission endpoint nor proflearning sequences md no attendee submits evaluation sequence despite the evaluationtemplate aggregate s own referenced in list naming one actually models this capability end to end even though the domain doc s certification workflow plrn rule evaluationrequirementprogramspecific depends on evaluations being submitted before certification can proceed left with no permissionrequirement a real load bearing gap not a minor one"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.collegecourse.apply",
+    "item": "proflearning.collegecourse.apply",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CollegeCourseApply",
+    "relation": "graph-has-more",
+    "docText": "Educators for their own courses",
+    "graphText": "Educators for their own courses. Backs getEligibleCollegeCourses and applyCollegeCourse.",
+    "onlyInGraph": [
+      "backs geteligiblecollegecourses and applycollegecourse"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.admin.categories",
+    "item": "proflearning.admin.categories",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AdminCategories",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin",
+    "graphText": "Professional Learning Admin. Backs listProgramCategories, createProgramCategory, updateProgramCategory, createSubcategory, deactivateProgramCategory.",
+    "onlyInGraph": [
+      "backs listprogramcategories createprogramcategory updateprogramcategory createsubcategory deactivateprogramcategory"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.admin.questions",
+    "item": "proflearning.admin.questions",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AdminQuestions",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin",
+    "graphText": "Professional Learning Admin. LIKELY-STALE / GAP: proflearning-domain.md's own Scope section explicitly says the Question Set framework is a cross-cutting capability this domain does NOT own, and no API operation in proflearning-api.yml is gated by this permission — evaluation-templates endpoints are gated by the separate proflearning.admin.evaluationtemplates instead, which only lets an admin select existing question-set IDs, not manage question content itself. Left with no PermissionRequirement.",
+    "onlyInGraph": [
+      "likely stale gap proflearning domain md s own scope section explicitly says the question set framework is a cross cutting capability this domain does not own and no api operation in proflearning api yml is gated by this permission evaluation templates endpoints are gated by the separate proflearning admin evaluationtemplates instead which only lets an admin select existing question set ids not manage question content itself left with no permissionrequirement"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.catalog.search",
+    "item": "proflearning.catalog.search",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CatalogSearch",
+    "relation": "graph-has-more",
+    "docText": "No login required",
+    "graphText": "Unauthenticated; no login required. Consistent with searchCatalog's x-permissions-required: [] in proflearning-api.yml and plrn:Op_SearchCatalog's sd:requiresAuth false — no PermissionRequirement is modeled for that operation since ApiOperationRequiresPermissionShape only applies to non-public operations and searchCatalog is genuinely external-public with zero permission gating.",
+    "onlyInGraph": [
+      "unauthenticated",
+      "consistent with searchcatalog s x permissions required in proflearning api yml and plrn op searchcatalog s sd requiresauth false no permissionrequirement is modeled for that operation since apioperationrequirespermissionshape only applies to non public operations and searchcatalog is genuinely external public with zero permission gating"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.catalog.bookmark",
+    "item": "proflearning.catalog.bookmark",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CatalogBookmark",
+    "relation": "graph-has-more",
+    "docText": "Requires login",
+    "graphText": "Requires login (System-wide (authenticated) per the source). Backs listBookmarks, createBookmark, deleteBookmark.",
+    "onlyInGraph": [
+      "system wide authenticated per the source backs listbookmarks createbookmark deletebookmark"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.correction.submit",
+    "item": "proflearning.correction.submit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CorrectionSubmit",
+    "relation": "graph-has-more",
+    "docText": "Coordinators for their programs",
+    "graphText": "Entity resolves to session-scoped; coordinators for their programs. Backs submitCorrectionRequest. Scoped to coordinators only — FDD 27 describes a distinct educator-initiated correction/dispute pathway with no corresponding permission here; see plrn:SCECHCorrectionRequestAggregate's notes and plrn:Question_EducatorInitiatedCorrectionPathway (Open Question #11).",
+    "onlyInGraph": [
+      "entity resolves to session scoped",
+      "backs submitcorrectionrequest scoped to coordinators only fdd 27 describes a distinct educator initiated correction dispute pathway with no corresponding permission here see plrn scechcorrectionrequestaggregate s notes and plrn question educatorinitiatedcorrectionpathway open question 11"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.correction.view",
+    "item": "proflearning.correction.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CorrectionView",
+    "relation": "graph-has-more",
+    "docText": "Coordinators see their requests, admins see all",
+    "graphText": "Entity resolves to sponsor/session-scoped; coordinators see their own requests, admins see all. Backs listCorrectionRequests. No single-resource GET /correction-requests/{id} exists in proflearning-api.yml (see plrn:Op_ListCorrectionRequests's own notes) — the list endpoint plus this permission is the only modeled coverage.",
+    "onlyInGraph": [
+      "entity resolves to sponsor session scoped",
+      "own",
+      "backs listcorrectionrequests no single resource get correction requests id exists in proflearning api yml see plrn op listcorrectionrequests s own notes the list endpoint plus this permission is the only modeled coverage"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.correction.approve",
+    "item": "proflearning.correction.approve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_CorrectionApprove",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin only",
+    "graphText": "Professional Learning Admin only. Backs approveCorrectionRequest and denyCorrectionRequest.",
+    "onlyInGraph": [
+      "backs approvecorrectionrequest and denycorrectionrequest"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "permissions",
+    "section": "proflearning.admin.evaluationtemplates",
+    "item": "proflearning.admin.evaluationtemplates",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:proflearning:Perm_AdminEvaluationTemplates",
+    "relation": "graph-has-more",
+    "docText": "Professional Learning Admin",
+    "graphText": "Professional Learning Admin. Backs listEvaluationTemplates, createEvaluationTemplate, updateEvaluationTemplate.",
+    "onlyInGraph": [
+      "backs listevaluationtemplates createevaluationtemplate updateevaluationtemplate"
+    ],
+    "onlyInDoc": []
+  }
+]

@@ -1,0 +1,661 @@
+[
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "context",
+    "item": "purpose",
+    "property": "purpose",
+    "iri": "urn:solutiondesign:instance:profpractices:ProfessionalPracticesContext",
+    "relation": "both",
+    "docText": "The Professional Practice Review (PPR) domain manages the disclosure, review, and processing of criminal history and professional disciplinary events for Michigan educators. It enables educators to self-disclose incidents, integrates with external background check systems (Rap Back/CHRISS, NASDTEC), and provides administrative workflows for reviewing disclosures and determining eligibility for credential issuance and employment. This domain ensures state compliance with background check requirements and protects the safety of Michigan students.",
+    "graphText": "Manages the disclosure, review, and processing of criminal history and professional disciplinary events for Michigan educators. Enables self-disclosure, integrates with external background check systems (Rap Back/CHRISS, NASDTEC), and provides administrative workflows for reviewing disclosures and determining eligibility for credential issuance and employment.",
+    "onlyInGraph": [
+      "disclosure"
+    ],
+    "onlyInDoc": [
+      "the professional practice review ppr domain",
+      "it",
+      "educators to",
+      "disclose incidents",
+      "this domain ensures state compliance with background check requirements and protects the safety of michigan students"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "context",
+    "item": "displayName",
+    "property": "displayName",
+    "iri": "urn:solutiondesign:instance:profpractices:ProfessionalPracticesContext",
+    "relation": "both",
+    "docText": "Professional Practice Review (PPR)",
+    "graphText": "Professional Practices",
+    "onlyInGraph": [
+      "practices"
+    ],
+    "onlyInDoc": [
+      "practice review ppr"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "PPR Clearance Assessment",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:profpractices:UT_PPRClearanceAssessment",
+    "relation": "both",
+    "docText": "Calculated outcome from PPR domain indicating whether an educator has any PPR-related concerns affecting credential applications. Provides PPR-specific clearance information to Credentialing domain. Computed on-demand from current disclosure statuses and account-level markers.",
+    "graphText": "Calculated outcome from PPR domain indicating whether an educator has any PPR-related concerns affecting credential applications. Provides PPR-specific clearance information to Credentialing. Computed on-demand from current disclosure statuses and account-level markers, never cached or stored.",
+    "onlyInGraph": [
+      "never cached or stored"
+    ],
+    "onlyInDoc": [
+      "domain"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "EducatorPPRStatus",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:profpractices:EducatorPPRStatusAggregate",
+    "relation": "graph-has-more",
+    "docText": "Tracks account-level markers and provides query interface for PPR clearance assessments. Does NOT store a single \"clearance status\" - assessments are calculated on-demand from current disclosure statuses and markers.",
+    "graphText": "Tracks account-level markers and provides a query interface for PPR clearance and roster-eligibility assessments. Does NOT store a single \"clearance status\" — assessments are calculated on-demand from current disclosure statuses and markers.",
+    "onlyInGraph": [
+      "a",
+      "and roster eligibility"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "events",
+    "item": "PPRAccountMarkerChanged",
+    "property": "payloadHighlights",
+    "iri": "urn:solutiondesign:instance:profpractices:PPRAccountMarkerChangedEvent",
+    "relation": "graph-has-more",
+    "docText": "`{ educatorId, markerType: \"MandatoryHoldRequirement\"",
+    "graphText": "educatorId, markerType (MandatoryHoldRequirement|EnhancedMonitoringStatus|ReReviewRequirement), markerActive, reason, changedBy, changedAt",
+    "onlyInGraph": [
+      "enhancedmonitoringstatus rereviewrequirement markeractive reason changedby changedat"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "events",
+    "item": "PPRClearanceAssessmentChanged",
+    "property": "payloadHighlights",
+    "iri": "urn:solutiondesign:instance:profpractices:PPRClearanceAssessmentChangedEvent",
+    "relation": "graph-has-more",
+    "docText": "`{ educatorId, previousAssessment: {...}, newAssessment: {...}, triggeredBy: \"DisclosureStatusChange\"",
+    "graphText": "educatorId, previousAssessment, newAssessment, triggeredBy (DisclosureStatusChange|MarkerChange|ComplianceRecalculation), changedAt",
+    "onlyInGraph": [
+      "markerchange compliancerecalculation changedat"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "events",
+    "item": "NonSystemActionLogged",
+    "property": "payloadHighlights",
+    "iri": "urn:solutiondesign:instance:profpractices:NonSystemActionLoggedEvent",
+    "relation": "graph-has-more",
+    "docText": "`{ disclosureId, actionType: \"NotifiedSchoolDistrict\"",
+    "graphText": "disclosureId, actionType (NotifiedSchoolDistrict|ReferredToPPR|NotifiedMSPRemoval), actionDescription, loggedBy, loggedAt",
+    "onlyInGraph": [
+      "referredtoppr notifiedmspremoval actiondescription loggedby loggedat"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "PPR Clearance Assessment Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_PPRClearanceAssessment",
+    "relation": "both",
+    "docText": "When a credential application is submitted (or re-evaluated during processing), the system calculates PPR clearance by evaluating **in priority order**:\n\n1. **Mandatory Hold Requirement active** -> `Hold` (credentialing sets application status: PPR Hold)\n2. **\"Reviewed - Listed\" disclosure exists** -> `Blocked` (credentialing prevents application creation)\n3. **\"Reviewed - Felony\" disclosure exists** -> `ConditionalClearance` + felony acknowledgment required\n4. **Active review disclosure exists** (\"Under PPR Review\", \"PPR Hold\", \"PPR Document Hold\") -> `Hold` (application paused)\n5. **Other reviewed disclosures exist** (\"Reviewed - Misdemeanor\", \"Reviewed - Arraignment\", \"Reviewed - Non-Enumerated\") -> `ConditionalClearance` or `Clear` (optional district message)\n6. **Enhanced Monitoring Status active** -> `ConditionalClearance` (alert sent, processing continues)\n7. **No concerns** -> `Clear` (normal processing)",
+    "graphText": "When a credential application is submitted (or re-evaluated during processing), the system calculates PPR clearance by evaluating in priority order: (1) Mandatory Hold Requirement active -> Hold; (2) \"Reviewed - Listed\" disclosure exists -> Blocked; (3) \"Reviewed - Felony\" disclosure exists -> ConditionalClearance + felony acknowledgment required; (4) active review disclosure exists (Under PPR Review, PPR Hold, PPR Document Hold) -> Hold; (5) other reviewed disclosures exist (Reviewed - Misdemeanor, Reviewed - Arraignment, Reviewed - Non-Enumerated) -> ConditionalClearance or Clear (optional district message); (6) Enhanced Monitoring Status active -> ConditionalClearance; (7) no concerns -> Clear. Most restrictive condition takes precedence.",
+    "onlyInGraph": [
+      "most restrictive condition takes precedence"
+    ],
+    "onlyInDoc": [
+      "credentialing sets application status ppr hold",
+      "credentialing prevents application creation",
+      "application paused",
+      "alert sent processing continues",
+      "normal processing"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "PPR Clearance Assessment Rule",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_PPRClearanceAssessment",
+    "relation": "both",
+    "docText": "Keeps decision logic flexible and auditable. Changing business rules doesn't require database migrations - just update the evaluation method. Most restrictive condition takes precedence. This is PPR's assessment only - Credentialing makes final approval/denial decisions combining PPR clearance with other factors.",
+    "graphText": "Keeps decision logic flexible and auditable — changing business rules doesn't require database migrations, just updating the evaluation method. This is PPR's assessment only; Credentialing makes the final approval/denial decision combining PPR clearance with other factors.",
+    "onlyInGraph": [
+      "updating",
+      "the",
+      "decision"
+    ],
+    "onlyInDoc": [
+      "update",
+      "most restrictive condition takes precedence",
+      "decisions"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Mandatory Hold Requirement Auto-Hold Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_MandatoryHoldAutoHold",
+    "relation": "both",
+    "docText": "When Mandatory Hold Requirement is active for an educator (BRD 9.1.19):\n- All credential applications receive `Hold` clearance status upon submission\n- Citizen is notified: \"application under review that may delay or deny\"\n- Applications cannot proceed until marker is cleared by PPR Review role\n- Rap Back and NASDTEC checks may still occur in background",
+    "graphText": "When Mandatory Hold Requirement is active for an educator (BRD 9.1.19): all credential applications receive Hold clearance status upon submission; the citizen is notified that the application is under review and may be delayed or denied; applications cannot proceed until the marker is cleared by PPR Review role; Rap Back and NASDTEC checks may still occur in background.",
+    "onlyInGraph": [
+      "the",
+      "that the",
+      "is",
+      "and",
+      "be delayed",
+      "denied",
+      "the"
+    ],
+    "onlyInDoc": [
+      "that",
+      "delay",
+      "deny"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Mandatory Hold Requirement Auto-Hold Rule",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_MandatoryHoldAutoHold",
+    "relation": "graph-has-more",
+    "docText": "An educator is under criminal investigation. PPR Admin activates Mandatory Hold Requirement. When the educator applies for a permit, PPR returns `Hold` status and Credentialing sets application to \"PPR Hold\" - cannot auto-approve regardless of other eligibility factors.",
+    "graphText": "An educator is under criminal investigation. PPR Admin activates Mandatory Hold Requirement. When the educator applies for a permit, PPR returns Hold status and Credentialing sets the application to 'PPR Hold' — cannot auto-approve regardless of other eligibility factors.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Reviewed - Listed Absolute Block Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReviewedListedAbsoluteBlock",
+    "relation": "both",
+    "docText": "When an educator has ANY disclosure in \"Reviewed - Listed\" status (BRD 9.1.6):\n- **Cannot create new credential applications** - PPR returns `Blocked` status; Credentialing displays error\n- **Cannot be added to employment roster** - PPR returns `Ineligible` status; Staffing displays error\n- No exceptions, no overrides (without changing disclosure status)",
+    "graphText": "When an educator has ANY disclosure in \"Reviewed - Listed\" status (BRD 9.1.6): new credential applications cannot be created (PPR returns Blocked; Credentialing displays error); the educator cannot be added to an employment roster (PPR returns Ineligible; Staffing displays error); no exceptions or overrides exist without changing the disclosure status itself.",
+    "onlyInGraph": [
+      "cannot be created",
+      "the educator",
+      "an",
+      "or",
+      "exist",
+      "the",
+      "itself"
+    ],
+    "onlyInDoc": [
+      "cannot create",
+      "status",
+      "status",
+      "no"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Reviewed - Listed Absolute Block Rule",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReviewedListedAbsoluteBlock",
+    "relation": "both",
+    "docText": "A district HR user tries to add a new teacher to their roster. The teacher has a disclosure with status \"Reviewed - Listed\" (child abuse conviction). PPR returns `Ineligible`. Staffing blocks the addition and displays error: \"This individual has a disqualifying conviction and cannot be employed in Michigan schools.\"",
+    "graphText": "A district HR user tries to add a new teacher to their roster. The teacher has a disclosure with status \"Reviewed - Listed\" (child abuse conviction). PPR returns Ineligible. Staffing blocks the addition and displays an error.",
+    "onlyInGraph": [
+      "an"
+    ],
+    "onlyInDoc": [
+      "this individual has a disqualifying conviction and cannot be employed in michigan schools"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Reviewed - Felony Conditional Processing Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReviewedFelonyConditionalProcessing",
+    "relation": "both",
+    "docText": "When an educator has ANY disclosure in \"Reviewed - Felony\" status (BRD 9.1.9b):\n- Credential application can be created and submitted\n- PPR returns `ConditionalClearance` with `requiresFelonyAcknowledgment = true`\n- Application **cannot auto-approve** - requires manual review\n- District must complete felony disclosure acknowledgment form before application proceeds\n- District sees message: \"Please complete the felony disclosure form to confirm understanding...\"",
+    "graphText": "When an educator has ANY disclosure in \"Reviewed - Felony\" status (BRD 9.1.9b): a credential application can still be created and submitted; PPR returns ConditionalClearance with RequiresFelonyAcknowledgment=true; the application cannot auto-approve and requires manual review; the district must complete a felony disclosure acknowledgment form before the application proceeds.",
+    "onlyInGraph": [
+      "a",
+      "still",
+      "the",
+      "and",
+      "the",
+      "a",
+      "the"
+    ],
+    "onlyInDoc": [
+      "district sees message please complete the felony disclosure form to confirm understanding"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Reviewed - Felony Conditional Processing Rule",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReviewedFelonyConditionalProcessing",
+    "relation": "graph-has-more",
+    "docText": "Felonies don't automatically disqualify, but require district acknowledgment and informed hiring decision.",
+    "graphText": "Felonies don't automatically disqualify, but require district acknowledgment and an informed hiring decision.",
+    "onlyInGraph": [
+      "an"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Reviewed - Felony Conditional Processing Rule",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReviewedFelonyConditionalProcessing",
+    "relation": "graph-has-more",
+    "docText": "An educator with a past felony DUI conviction applies for a teaching certificate. PPR returns `ConditionalClearance` with felony acknowledgment requirement. Credentialing flags application for manual review and notifies district to complete acknowledgment form before hire can proceed.",
+    "graphText": "An educator with a past felony DUI conviction applies for a teaching certificate. PPR returns ConditionalClearance with felony acknowledgment requirement. Credentialing flags the application for manual review and notifies the district to complete the acknowledgment form before hire can proceed.",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rap Back-Triggered Disclosure Requirement",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_RapBackTriggeredDisclosure",
+    "relation": "both",
+    "docText": "When a Rap Back notification is received indicating new criminal activity (Integration A from spec), the system automatically:\n1. Creates a placeholder disclosure record linked to the external check\n2. Routes disclosure to OEE worklist for review\n3. Publishes `RapBackNotificationReceived` event (Communications sends notification to educator requiring disclosure or explanation)\n4. Any subsequent clearance evaluation will reflect active review status (`Hold`)",
+    "graphText": "When a Rap Back notification is received indicating new criminal activity (Integration A from spec), the system automatically: (1) creates a placeholder disclosure record linked to the external check; (2) routes the disclosure to the OEE worklist for review; (3) publishes RapBackNotificationReceived (Communications sends notification to the educator requiring disclosure or explanation); (4) any subsequent clearance evaluation reflects the active review status (Hold).",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the",
+      "reflects the"
+    ],
+    "onlyInDoc": [
+      "event",
+      "will reflect"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rap Back-Triggered Disclosure Requirement",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_RapBackTriggeredDisclosure",
+    "relation": "graph-has-more",
+    "docText": "An educator with a valid teaching certificate is arrested for DUI. Rap Back sends notification. System creates a disclosure requiring educator response, routes to worklist, publishes event. Communications sends email to educator. Next time Credentialing evaluates clearance, active review disclosure triggers `Hold` status.",
+    "graphText": "An educator with a valid teaching certificate is arrested for DUI. Rap Back sends notification. The system creates a disclosure requiring educator response, routes it to worklist, and publishes the event. Communications sends an email to the educator. The next time Credentialing evaluates clearance, the active-review disclosure triggers Hold status.",
+    "onlyInGraph": [
+      "the",
+      "it",
+      "and",
+      "the",
+      "an",
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "NASDTEC Nightly Batch Processing Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_NASDTECNightlyBatchProcessing",
+    "relation": "both",
+    "docText": "System performs nightly pull from NASDTEC API (`/v1/clearinghouse/people`) and:\n1. Retrieves all educators with TransactionDate in current month\n2. Stores records locally (LastName, FirstName, MiddleName, SuffixName, BirthDate, CertificationID, Jurisdiction, TransactionDate, ClearinghouseId, ClearinghouseUrl)\n3. Matches to Michigan educators using Mi-Key (CertificationID/SSN + BirthDate + Name -> Unique ID)\n4. If match found, creates ExternalBackgroundCheck record and associates with educator\n5. Routes to PPR worklist for manual review",
+    "graphText": "The system performs a nightly pull from the NASDTEC API (GET /v1/clearinghouse/people) and: (1) retrieves all educators with TransactionDate in the current month; (2) stores records locally (LastName, FirstName, MiddleName, SuffixName, BirthDate, CertificationID, Jurisdiction, TransactionDate, ClearinghouseId, ClearinghouseUrl); (3) matches to Michigan educators using Mi-Key (CertificationID/SSN + BirthDate + Name -> Unique ID); (4) if matched, creates an ExternalBackgroundCheck record and associates it with the educator; (5) routes it to the PPR worklist for manual review.",
+    "onlyInGraph": [
+      "the",
+      "a",
+      "the",
+      "get",
+      "the",
+      "matched",
+      "an",
+      "it",
+      "the",
+      "it",
+      "the"
+    ],
+    "onlyInDoc": [
+      "match found"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "NASDTEC Nightly Batch Processing Rule",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_NASDTECNightlyBatchProcessing",
+    "relation": "graph-has-more",
+    "docText": "NASDTEC reports that an educator had their Ohio certificate revoked. Nightly batch matches the SSN to a Michigan educator, creates background check record with clearinghouse URL, routes to worklist. PPR reviewer clicks URL to see full details on NASDTEC site and makes processing determination.",
+    "graphText": "NASDTEC reports that an educator had their Ohio certificate revoked. The nightly batch matches the SSN to a Michigan educator, creates a background check record with the clearinghouse URL, and routes it to worklist. A PPR reviewer clicks the URL to see full details on the NASDTEC site and makes a processing determination.",
+    "onlyInGraph": [
+      "the",
+      "a",
+      "the",
+      "and",
+      "it",
+      "a",
+      "the",
+      "the",
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rap Sheet Display-Only Rule",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_RapSheetDisplayOnly",
+    "relation": "graph-has-more",
+    "docText": "Full rap sheets retrieved via CHRISS `GET_RAPBACK` SOAP call (Integration B from spec) are displayed to authorized PPR reviewers but NEVER stored in the system. Only metadata (requestID, tcn, judicialMarker) is persisted in ExternalBackgroundCheck aggregate.",
+    "graphText": "Full rap sheets retrieved via the CHRISS GET_RAPBACK SOAP call (Integration B from spec) are displayed to authorized PPR reviewers but NEVER stored in the system. Only metadata (requestID, tcn, judicialMarker) is persisted in the ExternalBackgroundCheck aggregate.",
+    "onlyInGraph": [
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rap Sheet Display-Only Rule",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_RapSheetDisplayOnly",
+    "relation": "both",
+    "docText": "PPR reviewer sees Rap Back notification for educator. Clicks \"View Rap Sheet\" button. System makes SOAP call to CHRISS, displays rap sheet text in modal. Reviewer reviews details and updates disclosure status. Rap sheet content is never written to database - only the fact that retrieval occurred (audit log).",
+    "graphText": "A PPR reviewer sees a Rap Back notification for an educator, clicks 'View Rap Sheet'. The system makes a SOAP call to CHRISS and displays the rap sheet text in a modal. The reviewer reviews details and updates disclosure status. The rap sheet content is never written to the database — only the fact that retrieval occurred (audit log).",
+    "onlyInGraph": [
+      "a",
+      "a",
+      "an",
+      "the",
+      "a",
+      "and",
+      "the",
+      "a",
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": [
+      "button"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Disclosure Editing Restrictions",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_DisclosureEditingRestrictions",
+    "relation": "graph-has-more",
+    "docText": "Prevents accidental corruption of finalized reviews while allowing corrections during active review process.",
+    "graphText": "Prevents accidental corruption of finalized reviews while allowing corrections during the active review process.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Enhanced Monitoring Status Behavior",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_EnhancedMonitoringStatusBehavior",
+    "relation": "both",
+    "docText": "When Enhanced Monitoring Status is active for an educator (BRD 9.1.20):\n- PPR clearance returns `ConditionalClearance` with review trigger indicating monitoring is active\n- Communications domain sends alerts to PPR Review role when new credential applications are submitted (triggered by domain events)\n- Application processing continues normally (no automatic hold)\n- Rap Back and NASDTEC checks proceed as usual\n- PPR staff receive notifications of external check results for review",
+    "graphText": "When Enhanced Monitoring Status is active for an educator (BRD 9.1.20): PPR clearance returns ConditionalClearance with a review trigger indicating monitoring is active; Communications sends alerts to the PPR Review role when new credential applications are submitted (triggered by domain events); application processing continues normally (no automatic hold); Rap Back and NASDTEC checks proceed as usual; PPR staff receive notifications of external check results for review.",
+    "onlyInGraph": [
+      "a",
+      "the"
+    ],
+    "onlyInDoc": [
+      "domain"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Enhanced Monitoring Status Behavior",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_EnhancedMonitoringStatusBehavior",
+    "relation": "both",
+    "docText": "An educator had a minor incident years ago. PPR activates Enhanced Monitoring Status to monitor future applications but doesn't want to block employment. When they apply for a new endorsement, PPR returns `ConditionalClearance`, Communications sends alert to PPR staff, but Credentialing approval proceeds if all other requirements are met.",
+    "graphText": "An educator had a minor incident years ago. PPR activates Enhanced Monitoring Status to monitor future applications without blocking employment. When they apply for a new endorsement, PPR returns ConditionalClearance, Communications sends an alert to PPR staff, but Credentialing approval proceeds if all other requirements are met.",
+    "onlyInGraph": [
+      "without blocking",
+      "an"
+    ],
+    "onlyInDoc": [
+      "but doesn t want to block"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Re-Review Requirement Behavior",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReReviewRequirementBehavior",
+    "relation": "graph-has-more",
+    "docText": "When Re-Review Requirement is active for an educator (BRD 9.1.8):\n- Disclosures in statuses that normally wouldn't populate worklist (\"Reviewed - No Action Required\", \"Reviewed - Non-Enumerated\", \"Reviewed - Misdemeanor\", \"Reviewed - Arraignment\") are forced back into PPR worklist\n- Applies to educators with credential status: Valid, Withdrawn, Suspended, Revoked\n- Allows re-review of previously cleared disclosures when additional scrutiny is warranted",
+    "graphText": "When Re-Review Requirement is active for an educator (BRD 9.1.8): disclosures in statuses that normally wouldn't populate worklist (Reviewed - No Action Required, Reviewed - Non-Enumerated, Reviewed - Misdemeanor, Reviewed - Arraignment) are forced back into the PPR worklist; applies to educators with credential status Valid, Withdrawn, Suspended, or Revoked; allows re-review of previously cleared disclosures when additional scrutiny is warranted.",
+    "onlyInGraph": [
+      "the",
+      "or"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Re-Review Requirement Behavior",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReReviewRequirementBehavior",
+    "relation": "graph-has-more",
+    "docText": "Provides mechanism to re-evaluate educators whose circumstances have changed or who require heightened oversight despite previously cleared disclosures.",
+    "graphText": "Provides a mechanism to re-evaluate educators whose circumstances have changed or who require heightened oversight despite previously cleared disclosures.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Re-Review Requirement Behavior",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_ReReviewRequirementBehavior",
+    "relation": "graph-has-more",
+    "docText": "An educator with a \"Reviewed - Misdemeanor\" from 5 years ago applies for a new position. Credentialing Admin activates Re-Review Requirement. Next time the educator's disclosures are evaluated for worklist population, the old misdemeanor disclosure appears in worklist for re-review.",
+    "graphText": "An educator with a 'Reviewed - Misdemeanor' from 5 years ago applies for a new position. Credentialing Admin activates Re-Review Requirement. The next time the educator's disclosures are evaluated for worklist population, the old misdemeanor disclosure appears in worklist for re-review.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Annual PPR Compliance Requirement",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AnnualPPRComplianceRequirement",
+    "relation": "both",
+    "docText": "Educators must complete a Professional Practice Review response annually. The system determines compliance by checking whether the educator has submitted a PPR response since June 30 of the current year (BRD 9.1.7).",
+    "graphText": "Educators must complete a Professional Practice Review response annually. Compliance is determined by whether the educator has submitted a PPR response since June 30 of the current year (BRD 9.1.7): if LastPPRResponseDate is null (new educator), compliance is required after first credential application; if before June 30 of the current year, compliance is required; if on/after June 30, compliance is current; submissions dated June 29-30 count as current even if processed after June 30 (grace period). The system publishes PPRReminderRequired events at configured intervals before the annual due date (typically 30/60/90 days prior); if overdue, reminders continue at regular intervals until completed.",
+    "onlyInGraph": [
+      "is determined",
+      "if lastpprresponsedate is null new educator compliance is required after first credential application if before june 30 of the current year compliance is required if on after june 30 compliance is current submissions dated june 29 30 count as current even if processed after june 30 grace period the system publishes pprreminderrequired events at configured intervals before the annual due date typically 30 60 90 days prior if overdue reminders continue at regular intervals until completed"
+    ],
+    "onlyInDoc": [
+      "the system determines",
+      "checking"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Annual PPR Compliance Requirement",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AnnualPPRComplianceRequirement",
+    "relation": "graph-has-more",
+    "docText": "Ensures ongoing compliance with disclosure requirements throughout an educator's career. Computed approach eliminates need for batch marker reset jobs.",
+    "graphText": "Ensures ongoing compliance with disclosure requirements throughout an educator's career. The computed approach eliminates the need for batch marker reset jobs.",
+    "onlyInGraph": [
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Annual PPR Compliance Requirement",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AnnualPPRComplianceRequirement",
+    "relation": "both",
+    "docText": "An educator last submitted PPR on May 15, 2025. On July 1, 2025, system calculates that their last response was before June 30, so compliance is required. System publishes `PPRReminderRequired` events starting December 1, 2025 (before June 30, 2026 deadline). Communications sends email reminders. If not completed by June 30, 2026, system displays banner alert on login and continues sending reminders.",
+    "graphText": "An educator last submitted PPR on May 15, 2025. On July 1, 2025 the system calculates that the last response was before June 30, so compliance is required. The system publishes PPRReminderRequired events starting December 1, 2025 (before the June 30, 2026 deadline). Communications sends email reminders; if not completed by June 30, 2026, the system displays a banner alert on login and continues sending reminders.",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the",
+      "the",
+      "the",
+      "a"
+    ],
+    "onlyInDoc": [
+      "their"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Attachment Management",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AttachmentManagement",
+    "relation": "graph-has-more",
+    "docText": "An educator accidentally uploads the same court order three times. PPR reviewer requests soft-delete of two copies via Documents API, removing them from the disclosure view but retaining them in system storage for audit purposes.",
+    "graphText": "An educator accidentally uploads the same court order three times. A PPR reviewer requests soft-delete of two copies via the Documents API, removing them from the disclosure view but retaining them in system storage for audit purposes.",
+    "onlyInGraph": [
+      "a",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Seven-Year Audit Retention",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_SevenYearAuditRetention",
+    "relation": "both",
+    "docText": "All disclosure records, review actions, status changes, audit log entries, AND soft-deleted attachments must be retained for minimum seven years in accordance with state records retention policy. Hard-deleted documents (via DTMB intervention) are purged immediately and do not count toward retention requirements.\n\nAfter seven years, soft-deleted attachments may be purged via automated retention policy. Active disclosures and non-deleted attachments are retained indefinitely or per state policy.",
+    "graphText": "All disclosure records, review actions, status changes, audit log entries, and soft-deleted attachments must be retained for a minimum of seven years per state records retention policy. Hard-deleted documents (via DTMB intervention) are purged immediately and do not count toward retention requirements. After seven years, soft-deleted attachments may be purged via automated retention policy; active disclosures and non-deleted attachments are retained indefinitely or per state policy.",
+    "onlyInGraph": [
+      "a",
+      "of",
+      "per"
+    ],
+    "onlyInDoc": [
+      "in accordance with"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Automatic Stop-Check on Application Creation",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AutomaticStopCheckOnApplicationCreation",
+    "relation": "both",
+    "docText": "When an educator attempts to create a new credential application, Credentialing immediately evaluates PPR clearance (BRD 9.4.1):\n- If PPR returns `Blocked` clearance status (Mandatory Hold Requirement active OR \"Reviewed - Listed\" disclosure exists), application creation is prevented\n- System displays clear error message indicating PPR hold or disqualification\n- Block applies regardless of Annual PPR Compliance status",
+    "graphText": "When an educator attempts to create a new credential application, Credentialing immediately evaluates PPR clearance (BRD 9.4.1): if PPR returns Blocked clearance status (Mandatory Hold Requirement active OR a \"Reviewed - Listed\" disclosure exists), application creation is prevented and a clear error message is displayed; this block applies regardless of Annual PPR Compliance status.",
+    "onlyInGraph": [
+      "a",
+      "and a",
+      "is displayed this"
+    ],
+    "onlyInDoc": [
+      "system displays",
+      "indicating ppr hold or disqualification"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Automatic Stop-Check on Application Creation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:profpractices:Rule_AutomaticStopCheckOnApplicationCreation",
+    "relation": "graph-has-more",
+    "docText": "Educator clicks \"Apply for Certificate\". Before rendering application form, Credentialing calls PPR clearance API. Educator has \"Reviewed - Listed\" disclosure. PPR returns `Blocked` status. Credentialing displays: \"You cannot apply for a credential due to a disqualifying conviction. Contact MDE-Professional-Practice@Michigan.gov for assistance.\"",
+    "graphText": "Educator clicks 'Apply for Certificate'. Before rendering the application form, Credentialing calls the PPR clearance API. The educator has a 'Reviewed - Listed' disclosure. PPR returns Blocked status. Credentialing displays: 'You cannot apply for a credential due to a disqualifying conviction. Contact MDE-Professional-Practice@Michigan.gov for assistance.'",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the",
+      "a"
+    ],
+    "onlyInDoc": []
+  }
+]

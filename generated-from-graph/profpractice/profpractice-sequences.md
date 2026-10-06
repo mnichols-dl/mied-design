@@ -321,7 +321,9 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Justification Required: All marker changes require reason text for audit trail. Permission Segregation: Different permissions for setting vs. clearing markers per this sequence's own narrative, though profpractice-permissions.md models a single profpractice.markers.manage permission covering all marker set/clear operations — see notes on the IAM verify-permission references below. Immediate Effect: Marker changes immediately affect clearance assessments and worklist routing.
+- **Justification Required:** All marker changes require reason text for audit trail
+- **Permission Segregation:** Different permissions for setting vs. clearing markers
+- **Immediate Effect:** Marker changes immediately affect clearance assessments and worklist routing
 
 **State Changes:**
 - EducatorPPRStatus: Marker flags toggled (MandatoryHoldRequirement, EnhancedMonitoringStatus, ReReviewRequirement)
@@ -415,9 +417,9 @@ sequenceDiagram
 
 ## Retrieve Full Rap Sheet for Review
 
-**What:** PPR reviewer initiates on-demand retrieval of complete rap sheet from CHRISS.  
-**When:** Reviewer needs detailed criminal history beyond notification metadata.  
-**Who:** User with profpractice.rapsheet.retrieve permission (source header names 'profpractice.rapback.retrieve-rapsheet', which does not exist in profpractice-permissions.md — see that permission's own notes).
+**What:** PPR reviewer initiates on-demand retrieval of complete rap sheet from CHRISS  
+**When:** Reviewer needs detailed criminal history beyond notification metadata  
+**Who:** User with `profpractice.rapback.retrieve-rapsheet` permission
 
 ```mermaid
 ---
@@ -453,7 +455,9 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Display-Only: Rap sheet is NEVER persisted; only displayed transiently. Audit Logging: System logs the fact that retrieval occurred (who, when) but not content. On-Demand: Retrieval only happens when reviewer explicitly requests it.
+- **Display-Only:** Rap sheet is NEVER persisted; only displayed transiently
+- **Audit Logging:** System logs fact that retrieval occurred (who, when) but not content
+- **On-Demand:** Retrieval only happens when reviewer explicitly requests it
 
 **State Changes:**
 - ExternalBackgroundCheck: RapSheetRetrievalLog updated (audit only)
@@ -672,9 +676,9 @@ sequenceDiagram
 
 ## Log Non-System Action
 
-**What:** PPR reviewer documents external activities (phone calls, emails, manual document reviews).  
-**When:** Reviewer takes action outside the system that should be audited.  
-**Who:** User with profpractice.actions.log permission (source header names 'profpractice.disclosure.log-non-system-action', which does not exist in profpractice-permissions.md — see that permission's own notes).
+**What:** PPR reviewer documents external activities (phone calls, emails, manual document reviews)  
+**When:** Reviewer takes action outside the system that should be audited  
+**Who:** User with `profpractice.disclosure.log-non-system-action` permission
 
 ```mermaid
 ---
@@ -985,9 +989,9 @@ sequenceDiagram
 
 ## Generate PPR Compliance Report
 
-**What:** Admin accesses reporting interface to view disclosure processing metrics and compliance data.  
-**When:** Ad-hoc reporting needs, compliance audits, or management review.  
-**Who:** User with profpractice.report.view permission (source header names 'profpractice.reports.disclosure-metrics.view' or 'profpractice.reports.compliance.view', neither of which exists in profpractice-permissions.md — see that permission's own notes).
+**What:** Admin accesses reporting interface to view disclosure processing metrics and compliance data  
+**When:** Ad-hoc reporting needs, compliance audits, or management review  
+**Who:** User with `profpractice.reports.disclosure-metrics.view` or `profpractice.reports.compliance.view` permission
 
 ```mermaid
 ---

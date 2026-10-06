@@ -67,9 +67,9 @@ None — this diagram represents the handoff into Documents; see the per-flow se
 
 ## Document Upload with Malware Scanning
 
-**What:** User uploads file, system scans for malware, stores if clean.  
-**When:** User needs to attach a supporting document to a credential application, PPR disclosure, or other context.  
-**Who:** Educator, District Staff, Administrator.
+**What:** User uploads file, system scans for malware, stores if clean  
+**When:** User needs to attach supporting document to credential application, PPR disclosure, or other context  
+**Who:** Educator, District Staff, Administrator
 
 ```mermaid
 ---
@@ -175,9 +175,9 @@ sequenceDiagram
 
 ## Document Download with SAS Token
 
-**What:** User requests document, system generates time-limited access URL.  
-**When:** User views document from a credential application, a filtered pending-items list view, or document library.  
-**Who:** Educator, District Staff, Administrator.
+**What:** User requests document, system generates time-limited access URL  
+**When:** User views document from credential application, a filtered pending-items list view, or document library  
+**Who:** Educator, District Staff, Administrator
 
 ```mermaid
 ---
@@ -239,9 +239,9 @@ sequenceDiagram
 
 ## Document Replacement and Versioning
 
-**What:** User replaces existing document, old version archived.  
-**When:** User uploads wrong file or needs to update a supporting document.  
-**Who:** Educator (own documents), Administrator (any document in scope).
+**What:** User replaces existing document, old version archived  
+**When:** User uploads wrong file or needs to update supporting document  
+**Who:** Educator (own documents), Administrator (any document in scope)
 
 ```mermaid
 ---
@@ -317,7 +317,11 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-New document ID for new version: each version is a separate Document record. Archive old version: old blob moved to archive container, not deleted. Version numbering: incremental (1.0, 2.0, 3.0) for simplicity. Malware scan new version: replacement goes through the full scan-in-place workflow. Rollback on failure: if the new version fails scan, the old version remains current.
+- **New document ID for new version:** Each version is a separate Document record
+- **Archive old version:** Old blob moved to archive container, not deleted
+- **Version numbering:** Incremental (1.0, 2.0, 3.0) for simplicity
+- **Malware scan new version:** Replacement goes through full scan-in-place workflow
+- **Rollback on failure:** If new version fails scan, old version remains current
 
 **State Changes:**
 - Original Document: `Available` -> `Soft Deleted` (current_version = false)
@@ -335,9 +339,9 @@ New document ID for new version: each version is a separate Document record. Arc
 
 ## Soft Delete and Hard Delete Lifecycle
 
-**What:** User deletes document, system soft-deletes immediately, hard-deletes after retention period.  
-**When:** User removes incorrect upload or document no longer needed.  
-**Who:** Educator (own documents), Administrator (any document in scope) for soft delete; the system (nightly job) for hard delete.
+**What:** User deletes document, system soft-deletes immediately, hard-deletes after retention period  
+**When:** User removes incorrect upload or document no longer needed  
+**Who:** Educator (own documents), Administrator (any document in scope)
 
 ```mermaid
 ---
@@ -409,9 +413,9 @@ sequenceDiagram
 
 ## Legal Hold Application and Release
 
-**What:** Administrator applies legal hold preventing deletion, later releases after the legal matter concludes.  
-**When:** Litigation, investigation, or audit requires document preservation.  
-**Who:** Legal Counsel, Compliance Officer.
+**What:** Administrator applies legal hold preventing deletion, later releases after legal matter concludes  
+**When:** Litigation, investigation, or audit requires document preservation  
+**Who:** Legal Counsel, Compliance Officer
 
 ```mermaid
 ---
@@ -564,7 +568,11 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Browser-based bulk upload: each file gets its own SAS token, uploaded directly from browser. Scan in-place: files scanned in target containers (no quarantine). Parallel uploads: max 10 concurrent to avoid overwhelming scan service (2,000 files/min limit). Individual item tracking: each file has success/failure status. Partial success allowed: some files can fail without failing the entire operation.
+- **Browser-based bulk upload:** Each file gets its own SAS token, uploaded directly from browser
+- **Scan in-place:** Files scanned in target containers (no quarantine)
+- **Parallel uploads:** Max 10 concurrent to avoid overwhelming scan service (2,000 files/min limit)
+- **Individual item tracking:** Each file has success/failure status
+- **Partial success allowed:** Some files can fail without failing entire operation
 
 **State Changes:**
 - BulkOperation status: `Queued` -> `In Progress` -> `Completed` OR `Partially Failed`
@@ -757,7 +765,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Dual approval for high-value: documents with legal hold history or >5 year retention require 2 approvals. 7-day execution window: approved overrides expire if not executed within 7 days. Justification mandatory: all overrides require a business reason for audit trail. Cannot be reversed: once executed, deletion is permanent (standard retention applies to hard delete).
+- **Dual approval for high-value:** Documents with legal hold history or >5 year retention require 2 approvals
+- **7-day execution window:** Approved overrides expire if not executed within 7 days
+- **Justification mandatory:** All overrides require business reason for audit trail
+- **Cannot be reversed:** Once executed, deletion is permanent (standard retention applies to hard delete)
 
 **State Changes:**
 - OverrideRequest: `Pending` -> `Approved` -> `Executed`

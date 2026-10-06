@@ -1,0 +1,49 @@
+[
+  {
+    "area": "reporting",
+    "docKind": "permissions",
+    "section": "reporting.catalog.view",
+    "item": "reporting.catalog.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:reporting:Perm_CatalogView",
+    "relation": "graph-has-more",
+    "docText": "All authenticated users; individual reports are further gated by their declared domain permission",
+    "graphText": "All authenticated users; individual reports are further gated by their declared domain permission (each report's PermissionKey).",
+    "onlyInGraph": [
+      "each report s permissionkey"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "reporting",
+    "docKind": "permissions",
+    "section": "reporting.catalog.manage",
+    "item": "reporting.catalog.manage",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:reporting:Perm_CatalogManage",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; does not affect the underlying Power BI report definition",
+    "graphText": "System Admin only; does not affect the underlying Power BI report definition. This remains the ONLY permission gating reporting-api.ttl's admin catalog operations (Op_AdminCreateReport et al.) — there is not yet a per-domain equivalent of Communications' create/edit/activate/delete verbs, so a Staffing Administrator cannot today manage Staffing's own report catalog entries independently of a System Admin. See DESIGN-SPIKES.md item 3, which already covers bringing the ReportDefinitionAggregate lifecycle up to Communications' template-lifecycle richness (draft/published status, availability window) — delegating catalog management to per-domain manage permissions belongs in that same design pass, not as a quick rename, since it requires new authorization checks on the admin API operations themselves.",
+    "onlyInGraph": [
+      "this remains the only permission gating reporting api ttl s admin catalog operations op admincreatereport et al there is not yet a per domain equivalent of communications create edit activate delete verbs so a staffing administrator cannot today manage staffing s own report catalog entries independently of a system admin see design spikes md item 3 which already covers bringing the reportdefinitionaggregate lifecycle up to communications template lifecycle richness draft published status availability window delegating catalog management to per domain manage permissions belongs in that same design pass not as a quick rename since it requires new authorization checks on the admin api operations themselves"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "reporting",
+    "docKind": "permissions",
+    "section": "reporting.embed-token.generate",
+    "item": "reporting.embed-token.generate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:reporting:Perm_EmbedTokenGenerate",
+    "relation": "graph-has-more",
+    "docText": "Not directly role-assignable; granted implicitly when the user holds the report's declared domain permission at an appropriate scope. The Reporting API enforces this — it is not a standalone assignable permission.",
+    "graphText": "Not directly role-assignable; granted implicitly when the user holds the report's declared domain permission (PermissionKey, e.g. reporting.credentialing-reports.view) at an appropriate scope. The Reporting API enforces this — it is a technical/documentation gate on the embed-token endpoint's behavior, not a standalone assignable permission. The real authorization decision ('does this user hold the PermissionKey declared on this specific report?') is delegated to IAM and evaluated per-report; scope.SystemWide here describes this permission's own nominal scope, not the effective scope of the underlying domain permission it delegates to.",
+    "onlyInGraph": [
+      "permissionkey e g reporting credentialing reports view",
+      "a technical documentation gate on the embed token endpoint s behavior",
+      "the real authorization decision does this user hold the permissionkey declared on this specific report is delegated to iam and evaluated per report scope systemwide here describes this permission s own nominal scope not the effective scope of the underlying domain permission it delegates to"
+    ],
+    "onlyInDoc": []
+  }
+]

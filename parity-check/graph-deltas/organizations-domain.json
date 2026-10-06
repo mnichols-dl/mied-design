@@ -1,0 +1,22 @@
+[
+  {
+    "area": "organizations",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "Organization",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:organizations:OrganizationAggregate",
+    "relation": "both",
+    "docText": "- Every organization has exactly one organization code, which is immutable\n- Every organization has exactly one Lead Administrator at any point in time; this is sourced from EEM and cannot be overridden in MiEdWorkforce\n- An organization's type is immutable once created; type changes in EEM result in deactivation of the old record and creation of a new one\n- Hierarchy relationships are sourced exclusively from EEM; MiEdWorkforce does not allow manual hierarchy edits\n- A Building may have either a District or an ISD as its direct parent; both are valid",
+    "graphText": "Every organization has exactly one organization code, which is immutable. Every organization has exactly one Lead Administrator at any point in time; this is sourced from EEM and cannot be overridden in MiEdWorkforce (enforced by: the sync pipeline sets lead_admin_email from CEPI data only, no write endpoint exists for this field). An organization's type is immutable once created; type changes in EEM result in deactivation of the old record and creation of a new one with a new internal ID, same organization code (enforced by: sync pipeline routes type-mismatched records to a deactivate-and-recreate path rather than an update path). A Building may have either a District or an ISD as its direct parent; both are valid. Hierarchy relationships are sourced exclusively from EEM; MiEdWorkforce does not allow manual hierarchy edits. Organizations deactivated in EEM are marked Inactive but never hard-deleted — historical records in consuming domains (authorizations, assignments, enrollments) may still reference them (enforced by: the sync pipeline's deactivation path only ever sets status=Inactive and deactivated_at). See Rule_LeadAdministratorSourcedFromEEM, Rule_OrganizationTypeImmutable, and Rule_InactiveOrganizationsRetained below for these same rules promoted to queryable sd:BusinessRule nodes.",
+    "onlyInGraph": [
+      "enforced by the sync pipeline sets lead admin email from cepi data only no write endpoint exists for this field",
+      "with",
+      "new internal id same organization code enforced by sync pipeline routes type mismatched records to a deactivate and recreate path rather than an update path a",
+      "hierarchy relationships are sourced exclusively from eem miedworkforce does not allow manual hierarchy edits organizations deactivated in eem are marked inactive but never hard deleted historical records in consuming domains authorizations assignments enrollments may still reference them enforced by the sync pipeline s deactivation path only ever sets status inactive and deactivated at see rule leadadministratorsourcedfromeem rule organizationtypeimmutable and rule inactiveorganizationsretained below for these same rules promoted to queryable sd businessrule nodes"
+    ],
+    "onlyInDoc": [
+      "hierarchy relationships are sourced exclusively from eem miedworkforce does not allow manual hierarchy edits"
+    ]
+  }
+]

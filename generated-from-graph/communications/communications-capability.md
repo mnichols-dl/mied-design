@@ -60,7 +60,7 @@ The Communications platform capability provides centralized notification and ale
 | **Event Type**              | The classification of a domain event (e.g., `CredentialApplicationApproved`, `StaffingRecordSubmitted`) which determines the context-specific variables available for template resolution.                                           |
 | **Variable Resolver**       | Component that transforms event payloads and entity IDs into user-facing, formatted values for template placeholders. Resolvers are event-type specific and handle data fetching and formatting.                                     |
 | **Recipient Resolution**    | The process of identifying notification recipients by evaluating roles, organizational relationships, and external contact sources based on minimal event payload data.                                                              |
-| **Resend**                  | Capability to retransmit a previously sent email, optionally to different recipient(s), available only during the content retention period.                                                                                          |
+| **Resend**                  | Capability to retransmit a previously sent email, optionally to different recipient(s), available only during content retention period                                                                                               |
 | **Recipient Override**      | Modification of the recipient email address when resending, useful for corrected addresses or forwarding to help desk                                                                                                                |
 | **Consolidation**           | Batching multiple related events into a single notification to reduce communication volume (e.g., 10 data quality issues -> 1 email listing all)                                                                                     |
 | **Comment**                 | A text annotation on a process item (credential application, staffing record) with visibility control (internal-only or external-visible) and optional inclusion in outbound emails                                                  |
@@ -416,20 +416,20 @@ erDiagram
 
 Events published by this domain that other domains may subscribe to:
 
-| Event                    | Aggregate     | Trigger                                                                                                                                                 | Payload Highlights                                                      | Consumers           |
-| ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------- |
-| `EmailTemplateCreated`   | EmailTemplate | New template saved                                                                                                                                      | `{ template_id, functional_area, created_by }`                          | audit, reporting    |
-| `EmailTemplateActivated` | EmailTemplate | Template version set to active                                                                                                                          | `{ template_id, version_id, effective_date }`                           | audit               |
-| `EmailSent`              | EmailInstance | Email successfully queued to SendGrid                                                                                                                   | `{ instance_id, template_id, recipients[], sent_at }`                   | audit, analytics    |
-| `EmailDelivered`         | EmailInstance | SendGrid confirms delivery                                                                                                                              | `{ instance_id, recipient_email, delivered_at }`                        | analytics           |
-| `EmailBounced`           | EmailInstance | SendGrid reports bounce                                                                                                                                 | `{ instance_id, recipient_email, bounce_reason, substatus }`            | monitoring, support |
-| `EmailDeferred`          | EmailInstance | SendGrid defers delivery (temporary failure, will retry)                                                                                                | `{ instance_id, recipient_email, defer_reason }`                        | monitoring          |
-| `EmailDropped`           | EmailInstance | SendGrid drops email before sending                                                                                                                     | `{ instance_id, recipient_email, drop_reason }`                         | monitoring, support |
-| `EmailResent`            | EmailInstance | Email resent to new/same recipient                                                                                                                      | `{ instance_id, original_instance_id, new_recipient_email, resent_by }` | audit               |
-| `EmailContentArchived`   | EmailInstance | Email content purged from hot storage (per communications-capability.md's Domain Events table and its own 'Email Content Archival' Integration Pattern) | `{ instance_id, archived_at }`                                          | audit               |
-| `DashboardAlertCreated`  | Alert         | Alert pushed to user dashboard                                                                                                                          | `{ alert_id, user_id, severity, action_link }`                          | dashboard-ui, audit |
-| `DashboardAlertResolved` | Alert         | User completed alert action                                                                                                                             | `{ alert_id, user_id, resolved_at }`                                    | audit, analytics    |
-| `CommentCreated`         | Comment       | Comment added to process item                                                                                                                           | `{ comment_id, process_item_id, visibility }`                           | audit               |
+| Event                    | Aggregate     | Trigger                               | Payload Highlights                                                      | Consumers           |
+| ------------------------ | ------------- | ------------------------------------- | ----------------------------------------------------------------------- | ------------------- |
+| `EmailTemplateCreated`   | EmailTemplate | New template saved                    | `{ template_id, functional_area, created_by }`                          | audit, reporting    |
+| `EmailTemplateActivated` | EmailTemplate | Template version set to active        | `{ template_id, version_id, effective_date }`                           | audit               |
+| `EmailSent`              | EmailInstance | Email successfully queued to SendGrid | `{ instance_id, template_id, recipients[], sent_at }`                   | audit, analytics    |
+| `EmailDelivered`         | EmailInstance | SendGrid confirms delivery            | `{ instance_id, recipient_email, delivered_at }`                        | analytics           |
+| `EmailBounced`           | EmailInstance | SendGrid reports bounce               | `{ instance_id, recipient_email, bounce_reason, substatus }`            | monitoring, support |
+| `EmailDeferred`          | EmailInstance | SendGrid defers delivery              | `{ instance_id, recipient_email, defer_reason }`                        | monitoring          |
+| `EmailDropped`           | EmailInstance | SendGrid drops email                  | `{ instance_id, recipient_email, drop_reason }`                         | monitoring, support |
+| `EmailResent`            | EmailInstance | Email resent to new/same recipient    | `{ instance_id, original_instance_id, new_recipient_email, resent_by }` | audit               |
+| `EmailContentArchived`   | EmailInstance | Email content purged from hot storage | `{ instance_id, archived_at }`                                          | audit               |
+| `DashboardAlertCreated`  | Alert         | Alert pushed to user dashboard        | `{ alert_id, user_id, severity, action_link }`                          | dashboard-ui, audit |
+| `DashboardAlertResolved` | Alert         | User completed alert action           | `{ alert_id, user_id, resolved_at }`                                    | audit, analytics    |
+| `CommentCreated`         | Comment       | Comment added to process item         | `{ comment_id, process_item_id, visibility }`                           | audit               |
 
 **Event Naming Convention:** PastTense + Noun + Action (e.g., `EmailSent`, `EmailTemplateActivated`)
 
@@ -467,7 +467,7 @@ Events published by this domain that other domains may subscribe to:
 
 ### Template Variable Mandatory Resolution
 
-**Rule:** If a template variable is marked as mandatory and cannot be resolved from available data sources, the notification send must be blocked and the event must be moved to a processing queue for manual intervention. Failed-resolution handling: (1) send blocked, error logged with full context (template_id, version_id, event_id, missing variable names); (2) event moved to Dead Letter Queue with retry metadata; (3) dashboard alert created for the template owner; (4) manual recovery options — fix the template, trigger a manual retry, export events to CSV, or after 7 days in DLQ the event is archived and marked permanently failed. Prevention: template validation on save (variables must exist in the event type's available-variables list), an activation gate that test-resolves against sample event data, and UI warnings showing which variables are mandatory.
+**Rule:** If a template variable is marked as mandatory and cannot be resolved from available data sources, the notification send must be blocked and the event must be moved to a processing queue for manual intervention.
 
 **Rationale:** Prevents sending incomplete or misleading communications (e.g., "Your application for <<CertificateType>>" where CertificateType is null) while providing administrators with tools to diagnose and resolve the issue.
 
@@ -488,7 +488,11 @@ Events published by this domain that other domains may subscribe to:
 - Template activation gate: Before activating, system runs test resolution against sample event data
 - UI warnings: Template editor shows which variables are mandatory and provides example values
 
-**Example:** Template contains <<ApplicantName>> (mandatory). Event CredentialApplicationApproved includes application_id: 12345. The variable resolver for this event type queries the Applications table but the applicant record is missing. Send is blocked; the event moves to DLQ; the admin is alerted; the template remains active but flagged.
+**Example:**
+- Template contains `<<ApplicantName>>` (mandatory)
+- Event `CredentialApplicationApproved` includes `application_id: 12345`
+- Variable resolver for this event type queries `Applications` table but applicant record is missing
+- Send is blocked; event moves to DLQ; admin alerted; template remains active but flagged
 
 **Open Questions:**
 - Should the system allow a "send anyway" option that replaces unresolved mandatory variables with "[DATA UNAVAILABLE]" placeholder text? This would prevent notification delays but might confuse recipients.
@@ -507,13 +511,17 @@ Events published by this domain that other domains may subscribe to:
 
 **Enforced By:** EmailTemplate aggregate
 
-**Example:** Template "Credential Approved" has v1.0 (active) and v1.1 (draft). Admin activates v1.1. The system automatically sets v1.0 to inactive, v1.1 to active. Future sends use v1.1; historical sends still reference v1.0.
+**Example:**
+- Template "Credential Approved" has v1.0 (active) and v1.1 (draft)
+- Admin activates v1.1
+- System automatically sets v1.0 to inactive, v1.1 to active
+- Future sends use v1.1; historical sends reference v1.0
 
 ---
 
 ### External Comment Inclusion Requires Explicit Selection
 
-**Rule:** External comments are eligible for inclusion in outbound emails but are NOT automatically included. The user must explicitly select which external comments to include.
+**Rule:** External comments are eligible for inclusion in outbound emails but are NOT automatically included. User must explicitly select which external comments to include.
 
 **Rationale:** Prevents accidental disclosure of sensitive information or draft comments not intended for external recipients.
 
@@ -547,7 +555,7 @@ Events published by this domain that other domains may subscribe to:
 
 ### Event Payload Structure and Variable Resolution
 
-**Rule:** Domain events that trigger emails must carry minimal, intrinsic payload data (primarily IDs and essential context). Variable resolution is handled by event-type-specific resolvers that fetch and format additional data as needed. All resolved values are user-facing formatted strings — dates as "January 15, 2026", names as "First Last", credential/certificate types as human-readable display names, never raw codes/ISO timestamps.
+**Rule:** Domain events that trigger emails must carry minimal, intrinsic payload data (primarily IDs and essential context). Variable resolution is handled by event-type-specific resolvers that fetch and format additional data as needed.
 
 **Rationale:**
 - Keeps events lightweight and focused on core information
@@ -594,7 +602,12 @@ Events published by this domain that other domains may subscribe to:
 
 **Enforced By:** EmailInstance aggregate + Email Send Orchestrator
 
-**Example:** Template content: "Dear <<ApplicantName>>, your application for <<CertificateType>> has been approved." Event provides application_id: 12345. Resolver produces ApplicantName = "Jane Doe", CertificateType = "Elementary Education". Stored in EmailInstance: "Dear Jane Doe, your application for Elementary Education has been approved." NOT stored: the original template text, the event payload, or the variable mappings. Implication: resending replays the exact rendered content from the original send; it cannot "re-render" with updated data — a new email must be sent for that.
+**Example:**
+- Template content: "Dear <<ApplicantName>>, your application for <<CertificateType>> has been approved."
+- Event provides: `application_id: 12345`
+- Resolver produces: `ApplicantName = "Jane Doe"`, `CertificateType = "Elementary Education"`
+- **Stored in EmailInstance:** "Dear Jane Doe, your application for Elementary Education has been approved."
+- **NOT stored:** Original template text, event payload, variable mappings
 
 **Implications:**
 - Resending uses the exact rendered content from the original send

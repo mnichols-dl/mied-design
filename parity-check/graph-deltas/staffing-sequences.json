@@ -1,0 +1,25 @@
+[
+  {
+    "area": "staffing",
+    "docKind": "sequences",
+    "section": "Update Employee Demographics",
+    "item": "Update Employee Demographics",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:staffing:Seq_UpdateEmployeeDemographics",
+    "relation": "both",
+    "docText": "- All demographic updates flow through IAM's identity resolution API (which in turn talks to Mi-Key) to maintain a single source of truth for identity matching — Staffing holds no Near Match state of its own beyond a \"Requires Resolution\" flag on its own record\n- Update history stored locally for audit trail (modified by, modified date)\n- Cross-notification pattern: citizen notified of district updates, district notified of citizen updates\n- Near Match on the Update path is intentionally narrower than on Add New Employee: only the candidate sharing the submitted Unique ID is ever displayed, and the user cannot escalate to \"Request New ID\" — they may only confirm (optionally replacing the master record) or cancel (FDD 15.3, \"If the request is generated from an Update Record the user will be able to review and confirm the update or cancel the request... not able to Create a New ID when updating\")\n- An unresolved Near Match auto-cancels after an admin-configurable timeframe (FDD 15.3 Gap Analysis names this \"X days,\" not yet numerically defined — see `iam-domain.md` Open Question #11)",
+    "graphText": "All demographic updates flow through IAM's identity resolution API (which in turn talks to Mi-Key) to maintain a single source of truth for identity matching — Staffing holds no Near Match state of its own beyond a 'Requires Resolution' flag. Update history stored locally for audit trail. Cross-notification pattern: citizen notified of district updates, district notified of citizen updates. Near Match on the Update path is intentionally narrower than on Add New Employee: only the candidate sharing the submitted Unique ID is ever displayed, and the user cannot escalate to 'Request New ID' — they may only confirm (optionally replacing the master record) or cancel. An unresolved Near Match auto-cancels after an admin-configurable timeframe (not yet numerically defined — see iam:Question_NearMatchAutoCancelTimeframe in abox/mied-v3/iam/iam-domain.ttl).",
+    "onlyInGraph": [
+      "nearmatchautocanceltimeframe in abox mied v3 iam iam domain ttl"
+    ],
+    "onlyInDoc": [
+      "on its own record",
+      "modified by modified date",
+      "fdd 15 3 if the request is generated from",
+      "update record the user will be able to review and confirm the update or cancel the request not able to create a new id when updating an",
+      "fdd 15 3 gap analysis names this x days",
+      "domain md open",
+      "11"
+    ]
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "area": "payments",
+    "docKind": "sequences",
+    "section": "Refund Request Processing (Single Approval ≤$500)",
+    "item": "Refund Request Processing (Single Approval ≤$500)",
+    "property": "errorScenarios",
+    "iri": "urn:solutiondesign:instance:payments:Seq_RefundRequestSingleApproval",
+    "relation": "graph-has-more",
+    "docText": "- CEPAS API failure -> RefundRequest marked Failed, admin alerted for retry\n- Amount exceeds original -> Validation error before CEPAS call",
+    "graphText": "CEPAS API failure -> RefundRequest marked Failed, admin alerted for retry. Amount exceeds original -> Validation error before CEPAS API call.",
+    "onlyInGraph": [
+      "api"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "sequences",
+    "section": "Bulk Refund Processing",
+    "item": "Bulk Refund Processing",
+    "property": "errorScenarios",
+    "iri": "urn:solutiondesign:instance:payments:Seq_BulkRefundProcessing",
+    "relation": "both",
+    "docText": "- If any CEPAS API call fails, that refund marked Failed, others continue\n- Summary shows: 4 successful, 1 failed",
+    "graphText": "If any CEPAS API call fails, that refund marked Failed, others continue; summary shows successful vs. failed counts.",
+    "onlyInGraph": [
+      "vs",
+      "counts"
+    ],
+    "onlyInDoc": [
+      "4",
+      "1"
+    ]
+  }
+]

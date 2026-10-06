@@ -1,0 +1,101 @@
+[
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Review Disclosure and Update Status",
+    "item": "Review Disclosure and Update Status",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_ReviewDisclosureAndUpdateStatus",
+    "relation": "both",
+    "docText": "**What:** PPR staff reviews disclosure details and updates status through workflow\n**When:** Disclosure appears in reviewer's worklist\n**Who:** User with `profpractice.disclosure.update-status` permission assigned to worklist",
+    "graphText": "What: PPR staff reviews disclosure details and updates status through workflow. When: Disclosure appears in reviewer's worklist. Who: User with profpractice.status.update permission assigned to worklist (source header names 'profpractice.disclosure.update-status', which does not exist in profpractice-permissions.md — see that permission's own notes).",
+    "onlyInGraph": [
+      "update",
+      "source header names profpractice disclosure update status which does not exist in profpractice permissions md see that permission s own notes"
+    ],
+    "onlyInDoc": [
+      "disclosure update"
+    ]
+  },
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Manage Account Markers",
+    "item": "Manage Account Markers",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_ManageAccountMarkers",
+    "relation": "graph-has-more",
+    "docText": "- **Justification Required:** All marker changes require reason text for audit trail\n- **Permission Segregation:** Different permissions for setting vs. clearing markers\n- **Immediate Effect:** Marker changes immediately affect clearance assessments and worklist routing",
+    "graphText": "Justification Required: All marker changes require reason text for audit trail. Permission Segregation: Different permissions for setting vs. clearing markers per this sequence's own narrative, though profpractice-permissions.md models a single profpractice.markers.manage permission covering all marker set/clear operations — see notes on the IAM verify-permission references below. Immediate Effect: Marker changes immediately affect clearance assessments and worklist routing.",
+    "onlyInGraph": [
+      "per this sequence s own narrative though profpractice permissions md models a single profpractice markers manage permission covering all marker set clear operations see notes on the iam verify permission references below"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Retrieve Full Rap Sheet for Review",
+    "item": "Retrieve Full Rap Sheet for Review",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_RetrieveFullRapSheet",
+    "relation": "graph-has-more",
+    "docText": "**What:** PPR reviewer initiates on-demand retrieval of complete rap sheet from CHRISS\n**When:** Reviewer needs detailed criminal history beyond notification metadata\n**Who:** User with `profpractice.rapback.retrieve-rapsheet` permission",
+    "graphText": "What: PPR reviewer initiates on-demand retrieval of complete rap sheet from CHRISS. When: Reviewer needs detailed criminal history beyond notification metadata. Who: User with profpractice.rapsheet.retrieve permission (source header names 'profpractice.rapback.retrieve-rapsheet', which does not exist in profpractice-permissions.md — see that permission's own notes).",
+    "onlyInGraph": [
+      "rapsheet retrieve permission source header names profpractice",
+      "which does not exist in profpractice permissions md see that",
+      "s own notes"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Retrieve Full Rap Sheet for Review",
+    "item": "Retrieve Full Rap Sheet for Review",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_RetrieveFullRapSheet",
+    "relation": "graph-has-more",
+    "docText": "- **Display-Only:** Rap sheet is NEVER persisted; only displayed transiently\n- **Audit Logging:** System logs fact that retrieval occurred (who, when) but not content\n- **On-Demand:** Retrieval only happens when reviewer explicitly requests it",
+    "graphText": "Display-Only: Rap sheet is NEVER persisted; only displayed transiently. Audit Logging: System logs the fact that retrieval occurred (who, when) but not content. On-Demand: Retrieval only happens when reviewer explicitly requests it.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Log Non-System Action",
+    "item": "Log Non-System Action",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_LogNonSystemAction",
+    "relation": "graph-has-more",
+    "docText": "**What:** PPR reviewer documents external activities (phone calls, emails, manual document reviews)\n**When:** Reviewer takes action outside the system that should be audited\n**Who:** User with `profpractice.disclosure.log-non-system-action` permission",
+    "graphText": "What: PPR reviewer documents external activities (phone calls, emails, manual document reviews). When: Reviewer takes action outside the system that should be audited. Who: User with profpractice.actions.log permission (source header names 'profpractice.disclosure.log-non-system-action', which does not exist in profpractice-permissions.md — see that permission's own notes).",
+    "onlyInGraph": [
+      "actions log permission source header names profpractice",
+      "which does not exist in profpractice permissions md see that",
+      "s own notes"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "profpractices",
+    "docKind": "sequences",
+    "section": "Generate PPR Compliance Report",
+    "item": "Generate PPR Compliance Report",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:profpractices:Seq_GeneratePPRComplianceReport",
+    "relation": "graph-has-more",
+    "docText": "**What:** Admin accesses reporting interface to view disclosure processing metrics and compliance data\n**When:** Ad-hoc reporting needs, compliance audits, or management review\n**Who:** User with `profpractice.reports.disclosure-metrics.view` or `profpractice.reports.compliance.view` permission",
+    "graphText": "What: Admin accesses reporting interface to view disclosure processing metrics and compliance data. When: Ad-hoc reporting needs, compliance audits, or management review. Who: User with profpractice.report.view permission (source header names 'profpractice.reports.disclosure-metrics.view' or 'profpractice.reports.compliance.view', neither of which exists in profpractice-permissions.md — see that permission's own notes).",
+    "onlyInGraph": [
+      "report view permission source header names profpractice",
+      "neither of which exists in profpractice permissions md see that",
+      "s own notes"
+    ],
+    "onlyInDoc": []
+  }
+]

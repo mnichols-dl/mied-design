@@ -1,0 +1,359 @@
+[
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "context",
+    "item": "purpose",
+    "property": "purpose",
+    "iri": "urn:solutiondesign:instance:proflearning:ProfessionalLearningContext",
+    "relation": "both",
+    "docText": "The Professional Learning domain manages the State Continuing Education Clock Hours (SCECH) system for Michigan educators. It owns the lifecycle of professional learning programs from sponsor application through program delivery and credit awarding. This domain enables educators to discover learning opportunities, sponsors to offer approved programs, and administrators to maintain quality standards for professional development that counts toward credential renewal requirements.",
+    "graphText": "Manages the State Continuing Education Clock Hours (SCECH) system for Michigan educators: sponsor management, professional learning program applications/approval/catalog, session scheduling, attendee enrollment and attendance tracking, SCECH credit awarding and correction workflows, program evaluations, public catalog search, and college-course-credit application from STARR data.",
+    "onlyInGraph": [
+      "sponsor management",
+      "applications approval catalog session scheduling attendee enrollment",
+      "attendance tracking scech",
+      "correction workflows program evaluations public catalog search and college course credit application from starr data"
+    ],
+    "onlyInDoc": [
+      "the professional learning domain",
+      "it owns the lifecycle of",
+      "programs from sponsor application through",
+      "delivery",
+      "this domain enables educators to discover learning opportunities sponsors to offer approved programs",
+      "administrators to maintain quality standards for professional development that counts toward credential renewal requirements"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Session",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:proflearning:UT_Session",
+    "relation": "both",
+    "docText": "A specific offering/instance of a Program with defined dates and location. Example: The October 15-17 offering of \"Classroom Management Strategies\" at County ISD is a Session. The same Program might have another Session in November at a different location.",
+    "graphText": "A specific offering/instance of a Program with defined dates and location. The same Program may have multiple Sessions at different times/locations.",
+    "onlyInGraph": [
+      "may",
+      "multiple sessions",
+      "times locations"
+    ],
+    "onlyInDoc": [
+      "example",
+      "october 15 17 offering of classroom management strategies at county isd is a session the",
+      "might",
+      "another session in november",
+      "a",
+      "location"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "ProfessionalLearningProgram",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:proflearning:ProfessionalLearningProgramAggregate",
+    "relation": "graph-has-more",
+    "docText": "- Program must have approved sponsor\n- Maximum SCECH hours must be positive\n- Program must have at least one session within approval period\n- Modified programs require re-approval\n- Program Format dictates whether location address is required\n- If evaluation is required, template must be specified",
+    "graphText": "Program must have approved sponsor. Maximum SCECH hours must be positive. Program must have at least one session within approval period. Modified programs require re-approval (sponsor-initiated edits only — Professional Learning Admin may edit an approved program directly without re-triggering approval). Program Format dictates whether location address is required. If evaluation is required, template must be specified.",
+    "onlyInGraph": [
+      "sponsor initiated edits only professional learning admin may edit an approved",
+      "directly without re triggering approval program"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "ProgramAttendance",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:proflearning:ProgramAttendanceAggregate",
+    "relation": "both",
+    "docText": "- Attendee must have valid Unique ID from IAM system\n- Awarded SCECHs cannot exceed program's maximum for each type\n- Roster cannot be certified until all required evaluations are submitted\n- Once certified, SCECH awards are immutable (corrections require admin override via CorrectionRequest)\n- Default awarded SCECHs equal program maximum unless adjusted",
+    "graphText": "Attendee must have valid Unique ID from IAM system. Awarded SCECHs cannot exceed program's maximum for each type. Roster cannot be certified until all required evaluations are submitted. Once certified, SCECH awards are immutable (corrections require admin override via SCECHCorrectionRequest). Default awarded SCECHs equal program maximum unless adjusted. School Counselor SCECH types (College/Career/Military) can only be awarded to educators holding a School Counselor credential.",
+    "onlyInGraph": [
+      "scechcorrectionrequest",
+      "school counselor scech types college career military can only be awarded to educators holding a school counselor credential"
+    ],
+    "onlyInDoc": [
+      "correctionrequest"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "EvaluationTemplate",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:proflearning:EvaluationTemplateAggregate",
+    "relation": "graph-has-more",
+    "docText": "Defines the standardized questions used to collect feedback on program quality and effectiveness. Leverages cross-cutting Question Set capability.",
+    "graphText": "Defines the standardized questions used to collect feedback on program quality and effectiveness. Leverages the cross-cutting Question Set capability for actual question content.",
+    "onlyInGraph": [
+      "the",
+      "for actual question content"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Attendee Must Have Valid Unique ID",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_AttendeeValidUniqueId",
+    "relation": "both",
+    "docText": "Sponsor tries to add \"John Smith\" by name only. System requires Unique ID. Sponsor searches by name via global search, finds matching educator with ID 12345678, selects from list.",
+    "graphText": "Sponsor tries to add 'John Smith' by name only; system requires selecting a matched Unique ID from search results.",
+    "onlyInGraph": [
+      "selecting a matched",
+      "search results"
+    ],
+    "onlyInDoc": [
+      "sponsor searches by name via global search finds matching educator with id 12345678 selects",
+      "list"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Default SCECH Award Equals Program Maximum",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_DefaultScechEqualsMax",
+    "relation": "both",
+    "docText": "When an attendee is added to a program roster, the system defaults their awarded SCECH hours to the program's maximum approved hours. Sponsors can decrease (or increase, if approved) before certification.",
+    "graphText": "When an attendee is added to a program roster, awarded SCECH hours default to the program's maximum approved hours.",
+    "onlyInGraph": [
+      "default"
+    ],
+    "onlyInDoc": [
+      "the system defaults their",
+      "sponsors can decrease or increase if approved before certification"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Default SCECH Award Equals Program Maximum",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_DefaultScechEqualsMax",
+    "relation": "both",
+    "docText": "Most attendees complete full program, reducing data entry burden. Adjustments handle partial attendance.",
+    "graphText": "Most attendees complete the full program; adjustments handle partial attendance.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": [
+      "reducing data entry burden"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Default SCECH Award Equals Program Maximum",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_DefaultScechEqualsMax",
+    "relation": "both",
+    "docText": "Program approved for 10 SCECH hours. When John Doe added to roster, his awarded SCECHs default to 10. Sponsor adjusts to 5 for partial attendance before certifying.",
+    "graphText": "Program approved for 10 SCECH hours; John Doe's awarded SCECHs default to 10, then adjusted to 5 for partial attendance before certifying.",
+    "onlyInGraph": [
+      "s",
+      "then adjusted"
+    ],
+    "onlyInDoc": [
+      "when",
+      "added to roster his",
+      "sponsor adjusts"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: College Course SCECH Conversion Rate",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_CollegeCourseConversionRate",
+    "relation": "both",
+    "docText": "Educator completes a 3-credit graduate course in Educational Psychology. System calculates: 3 semester credits x 15 = 45 SCECH hours. Educator is awarded 45 SCECHs upon approval.",
+    "graphText": "3-credit graduate course converts to 45 SCECH hours (3 x 15).",
+    "onlyInGraph": [
+      "converts to",
+      "3 x 15"
+    ],
+    "onlyInDoc": [
+      "educator completes a",
+      "in educational psychology system calculates 3 semester credits x 15",
+      "educator is awarded 45 scechs upon approval"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: College Courses Must Post-Date Last Credential Issuance",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_CollegeCoursePostDatesIssuance",
+    "relation": "graph-has-more",
+    "docText": "Prevents reusing coursework already counted toward previous credential.",
+    "graphText": "Prevents reusing coursework already counted toward a previous credential.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: College Courses Must Post-Date Last Credential Issuance",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_CollegeCoursePostDatesIssuance",
+    "relation": "both",
+    "docText": "Educator's certificate issued June 2023. College course completed May 2023 is ineligible. Course completed September 2023 is eligible.",
+    "graphText": "Certificate issued June 2023; a May 2023 course is ineligible, a September 2023 course is eligible.",
+    "onlyInGraph": [
+      "a",
+      "course",
+      "a",
+      "course"
+    ],
+    "onlyInDoc": [
+      "educator s",
+      "college course completed",
+      "course completed"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Modified Programs Require Re-Approval",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_ModifiedProgramsRequireReapproval",
+    "relation": "both",
+    "docText": "If a sponsor (Coordinator/Assistant Coordinator) edits details of an already-approved program, the updated application must route through the full approval workflow. This rule scopes to sponsor-initiated edits only — the Professional Learning Admin, as the approval authority itself, may edit an approved Program's details directly without re-triggering approval (audit details are still recorded). See FDD 28 §Feature 28.4.1/28.4.3.",
+    "graphText": "If a sponsor (Coordinator/Assistant Coordinator) edits details of an already-approved program, the updated application must route through the full approval workflow. Professional Learning Admin edits apply directly without re-triggering approval (audit still recorded).",
+    "onlyInGraph": [
+      "edits apply"
+    ],
+    "onlyInDoc": [
+      "this rule scopes to sponsor initiated edits only the",
+      "as the approval authority itself may edit an approved program s details",
+      "details are",
+      "see fdd 28 feature 28 4 1 28 4 3"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Modified Programs Require Re-Approval",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_ModifiedProgramsRequireReapproval",
+    "relation": "both",
+    "docText": "Ensures quality control and prevents unauthorized changes to approved content by the party the workflow is meant to check; an Admin edit needs no additional approval since the Admin already holds approval authority.",
+    "graphText": "Ensures quality control over sponsor-initiated changes; an Admin, as the approval authority itself, needs no additional approval.",
+    "onlyInGraph": [
+      "over sponsor initiated",
+      "as the approval authority itself"
+    ],
+    "onlyInDoc": [
+      "and prevents unauthorized",
+      "to approved content by the party the workflow is meant to check",
+      "edit",
+      "since the admin already holds approval authority"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Modified Programs Require Re-Approval",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_ModifiedProgramsRequireReapproval",
+    "relation": "both",
+    "docText": "Sponsor changes max SCECH hours from 10 to 15. Program status changes to PendingApproval, `ProgramModified` event published, and the application reappears in the admin's pending-review list. By contrast, a Professional Learning Admin correcting a typo in an approved program's description edits it directly — no status change, no re-approval.",
+    "graphText": "Sponsor changes max SCECH hours 10->15: status becomes PendingApproval, ProgramModified published, reappears in admin's pending-review list. An Admin correcting a typo edits directly with no status change.",
+    "onlyInGraph": [
+      "becomes",
+      "an",
+      "with"
+    ],
+    "onlyInDoc": [
+      "from",
+      "to",
+      "program",
+      "changes to",
+      "event",
+      "and the application",
+      "the",
+      "by contrast a professional learning",
+      "in an approved program s description",
+      "it",
+      "no re approval"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Once Certified, SCECH Awards Are Immutable Without Correction Request",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_CertifiedAwardsImmutable",
+    "relation": "both",
+    "docText": "Sponsor certifies roster on June 1. On June 5, realizes educator only attended 2 of 3 days. Sponsor cannot directly edit. Must submit correction request explaining the error, which routes to admin for approval. If approved, system publishes `SCECHAwardAdjusted` event to update Credentialing domain.",
+    "graphText": "Sponsor certifies roster June 1; discovers an error June 5; must submit a correction request rather than editing directly.",
+    "onlyInGraph": [
+      "discovers an error",
+      "a",
+      "rather than editing directly"
+    ],
+    "onlyInDoc": [
+      "on",
+      "on",
+      "realizes educator only attended 2 of 3 days sponsor cannot directly edit",
+      "explaining the error which routes to admin for approval if approved system publishes scechawardadjusted event to update credentialing domain"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Evaluation Requirement Is Program-Specific",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_EvaluationRequirementProgramSpecific",
+    "relation": "both",
+    "docText": "Programs have a configurable toggle (\"Evaluation Required\"). If ON, attendees must submit evaluation before SCECH credits are awarded. If OFF, credits awarded immediately upon sponsor certification.",
+    "graphText": "Programs have a configurable 'Evaluation Required' toggle. If ON, attendees must submit an evaluation before SCECH credits are awarded; if OFF, credits award immediately upon sponsor certification.",
+    "onlyInGraph": [
+      "toggle",
+      "an",
+      "award"
+    ],
+    "onlyInDoc": [
+      "toggle",
+      "awarded"
+    ]
+  },
+  {
+    "area": "proflearning",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Only Active Programs Appear in Public Catalog",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:proflearning:Rule_OnlyActiveProgramsInCatalog",
+    "relation": "graph-has-more",
+    "docText": "Prevents confusion from inactive or expired programs; ensures public sees only current offerings.",
+    "graphText": "Prevents confusion from inactive or expired programs; ensures the public sees only current offerings.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  }
+]

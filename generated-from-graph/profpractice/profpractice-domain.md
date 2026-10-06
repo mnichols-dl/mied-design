@@ -172,7 +172,7 @@ While they *create* Disclosure records when incidents are reported, the PPR Resp
 
 **Root Entity:** EducatorPPRStatus
 
-**Purpose:** Tracks account-level markers and provides a query interface for PPR clearance and roster-eligibility assessments. Does NOT store a single "clearance status" — assessments are calculated on-demand from current disclosure statuses and markers.
+**Purpose:** Tracks account-level markers and provides query interface for PPR clearance assessments. Does NOT store a single "clearance status" - assessments are calculated on-demand from current disclosure statuses and markers.
 
 **Entities & Value Objects:**
 - **EducatorPPRStatus** - The root entity
@@ -793,20 +793,20 @@ erDiagram
 
 Events published by this domain that other domains may subscribe to:
 
-| Event                           | Aggregate                    | Trigger                                                                                  | Payload Highlights                                                                                                                           | Consumers                                      |
-| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `DisclosureSubmitted`           | Disclosure                   | Educator submits self-disclosure or PPR response with new incidents                      | `{ disclosureId, educatorId, disclosureType, convictionDate, submittedAt, sourceType }`                                                      | credentialing, communications, audit           |
-| `DisclosureStatusChanged`       | Disclosure                   | PPR reviewer changes disclosure status                                                   | `{ disclosureId, educatorId, previousStatus, newStatus, changedAt, changedBy }`                                                              | credentialing, staffing, communications, audit |
-| `PPRAccountMarkerChanged`       | EducatorPPRStatus            | Account marker set or cleared on educator                                                | educatorId, markerType (MandatoryHoldRequirement\|EnhancedMonitoringStatus\|ReReviewRequirement), markerActive, reason, changedBy, changedAt | "EnhancedMonitoringStatus"                     |
-| `PPRClearanceAssessmentChanged` | EducatorPPRStatus            | Disclosure status change, marker change, or any condition affecting clearance assessment | educatorId, previousAssessment, newAssessment, triggeredBy (DisclosureStatusChange\|MarkerChange\|ComplianceRecalculation), changedAt        | "MarkerChange"                                 |
-| `PPRResponseSubmitted`          | ProfessionalPracticeResponse | Educator completes periodic PPR review                                                   | `{ responseId, educatorId, responseDate, newDisclosuresReported, createdDisclosureIds, responseStatus }`                                     | communications, audit                          |
-| `RapBackNotificationReceived`   | ExternalBackgroundCheck      | Rap Back system sends new criminal activity notification                                 | `{ checkId, educatorId, notificationDate, tcn, judicialMarker, requiresEducatorResponse }`                                                   | credentialing, communications, audit           |
-| `NASDTECRecordMatched`          | ExternalBackgroundCheck      | NASDTEC nightly batch identified educator with out-of-state disciplinary action          | `{ checkId, educatorId, jurisdiction, transactionDate, clearinghouseId, clearinghouseUrl, requiresReview }`                                  | credentialing, communications, audit           |
-| `DisclosureRoutedToWorklist`    | Disclosure                   | Disclosure assigned to PPR worklist                                                      | `{ disclosureId, worklistId, routedAt, routingReason }`                                                                                      | communications, audit                          |
-| `DisclosureReviewStarted`       | Disclosure                   | PPR reviewer begins reviewing disclosure                                                 | `{ disclosureId, reviewerId, reviewStartedAt }`                                                                                              | audit                                          |
-| `DisclosureReviewCompleted`     | Disclosure                   | PPR reviewer finalizes disclosure to "Reviewed" status                                   | `{ disclosureId, reviewerId, finalStatus, reviewCompletedAt }`                                                                               | credentialing, staffing, communications, audit |
-| `PPRReminderRequired`           | EducatorPPRStatus            | System determines educator needs PPR reminder based on compliance calculation            | `{ educatorId, reminderType, dueDate, currentComplianceStatus }`                                                                             | communications, audit                          |
-| `NonSystemActionLogged`         | Disclosure                   | Reviewer documents external action (phone call, email, etc.)                             | disclosureId, actionType (NotifiedSchoolDistrict\|ReferredToPPR\|NotifiedMSPRemoval), actionDescription, loggedBy, loggedAt                  | "ReferredToPPR"                                |
+| Event                           | Aggregate                    | Trigger                                                                                  | Payload Highlights                                                                                          | Consumers                                      |
+| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `DisclosureSubmitted`           | Disclosure                   | Educator submits self-disclosure or PPR response with new incidents                      | `{ disclosureId, educatorId, disclosureType, convictionDate, submittedAt, sourceType }`                     | credentialing, communications, audit           |
+| `DisclosureStatusChanged`       | Disclosure                   | PPR reviewer changes disclosure status                                                   | `{ disclosureId, educatorId, previousStatus, newStatus, changedAt, changedBy }`                             | credentialing, staffing, communications, audit |
+| `PPRAccountMarkerChanged`       | EducatorPPRStatus            | Account marker set or cleared on educator                                                | `{ educatorId, markerType: "MandatoryHoldRequirement"                                                       | "EnhancedMonitoringStatus"                     |
+| `PPRClearanceAssessmentChanged` | EducatorPPRStatus            | Disclosure status change, marker change, or any condition affecting clearance assessment | `{ educatorId, previousAssessment: {...}, newAssessment: {...}, triggeredBy: "DisclosureStatusChange"       | "MarkerChange"                                 |
+| `PPRResponseSubmitted`          | ProfessionalPracticeResponse | Educator completes periodic PPR review                                                   | `{ responseId, educatorId, responseDate, newDisclosuresReported, createdDisclosureIds, responseStatus }`    | communications, audit                          |
+| `RapBackNotificationReceived`   | ExternalBackgroundCheck      | Rap Back system sends new criminal activity notification                                 | `{ checkId, educatorId, notificationDate, tcn, judicialMarker, requiresEducatorResponse }`                  | credentialing, communications, audit           |
+| `NASDTECRecordMatched`          | ExternalBackgroundCheck      | NASDTEC nightly batch identified educator with out-of-state disciplinary action          | `{ checkId, educatorId, jurisdiction, transactionDate, clearinghouseId, clearinghouseUrl, requiresReview }` | credentialing, communications, audit           |
+| `DisclosureRoutedToWorklist`    | Disclosure                   | Disclosure assigned to PPR worklist                                                      | `{ disclosureId, worklistId, routedAt, routingReason }`                                                     | communications, audit                          |
+| `DisclosureReviewStarted`       | Disclosure                   | PPR reviewer begins reviewing disclosure                                                 | `{ disclosureId, reviewerId, reviewStartedAt }`                                                             | audit                                          |
+| `DisclosureReviewCompleted`     | Disclosure                   | PPR reviewer finalizes disclosure to "Reviewed" status                                   | `{ disclosureId, reviewerId, finalStatus, reviewCompletedAt }`                                              | credentialing, staffing, communications, audit |
+| `PPRReminderRequired`           | EducatorPPRStatus            | System determines educator needs PPR reminder based on compliance calculation            | `{ educatorId, reminderType, dueDate, currentComplianceStatus }`                                            | communications, audit                          |
+| `NonSystemActionLogged`         | Disclosure                   | Reviewer documents external action (phone call, email, etc.)                             | `{ disclosureId, actionType: "NotifiedSchoolDistrict"                                                       | "ReferredToPPR"                                |
 
 **Event Naming Convention:** PastTense[Noun][Action] (e.g., `DisclosureSubmitted`, `AssessmentChanged`)
 
@@ -937,7 +937,7 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Enforced By:** EducatorPPRStatus clearance evaluation checks Mandatory Hold Requirement first (priority 1).
 
-**Example:** An educator is under criminal investigation. PPR Admin activates Mandatory Hold Requirement. When the educator applies for a permit, PPR returns Hold status and Credentialing sets the application to 'PPR Hold' — cannot auto-approve regardless of other eligibility factors.
+**Example:** An educator is under criminal investigation. PPR Admin activates Mandatory Hold Requirement. When the educator applies for a permit, PPR returns `Hold` status and Credentialing sets application to "PPR Hold" - cannot auto-approve regardless of other eligibility factors.
 
 ---
 
@@ -965,11 +965,11 @@ When a district attempts to add an educator to roster, Staffing domain:
 - District must complete felony disclosure acknowledgment form before application proceeds
 - District sees message: "Please complete the felony disclosure form to confirm understanding..."
 
-**Rationale:** Felonies don't automatically disqualify, but require district acknowledgment and an informed hiring decision.
+**Rationale:** Felonies don't automatically disqualify, but require district acknowledgment and informed hiring decision.
 
 **Enforced By:** EducatorPPRStatus clearance evaluation sets `RequiresFelonyAcknowledgment = true` in PPRClearanceAssessment (priority 3).
 
-**Example:** An educator with a past felony DUI conviction applies for a teaching certificate. PPR returns ConditionalClearance with felony acknowledgment requirement. Credentialing flags the application for manual review and notifies the district to complete the acknowledgment form before hire can proceed.
+**Example:** An educator with a past felony DUI conviction applies for a teaching certificate. PPR returns `ConditionalClearance` with felony acknowledgment requirement. Credentialing flags application for manual review and notifies district to complete acknowledgment form before hire can proceed.
 
 ---
 
@@ -985,7 +985,7 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Enforced By:** ExternalBackgroundCheck aggregate; integration logic with Rap Back system; events published to Credentialing and Communications domains.
 
-**Example:** An educator with a valid teaching certificate is arrested for DUI. Rap Back sends notification. The system creates a disclosure requiring educator response, routes it to worklist, and publishes the event. Communications sends an email to the educator. The next time Credentialing evaluates clearance, the active-review disclosure triggers Hold status.
+**Example:** An educator with a valid teaching certificate is arrested for DUI. Rap Back sends notification. System creates a disclosure requiring educator response, routes to worklist, publishes event. Communications sends email to educator. Next time Credentialing evaluates clearance, active review disclosure triggers `Hold` status.
 
 ---
 
@@ -1002,13 +1002,13 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Enforced By:** Scheduled nightly job; ExternalBackgroundCheck aggregate; integration with NASDTEC API and Mi-Key.
 
-**Example:** NASDTEC reports that an educator had their Ohio certificate revoked. The nightly batch matches the SSN to a Michigan educator, creates a background check record with the clearinghouse URL, and routes it to worklist. A PPR reviewer clicks the URL to see full details on the NASDTEC site and makes a processing determination.
+**Example:** NASDTEC reports that an educator had their Ohio certificate revoked. Nightly batch matches the SSN to a Michigan educator, creates background check record with clearinghouse URL, routes to worklist. PPR reviewer clicks URL to see full details on NASDTEC site and makes processing determination.
 
 ---
 
 ### Rap Sheet Display-Only Rule
 
-**Rule:** Full rap sheets retrieved via the CHRISS GET_RAPBACK SOAP call (Integration B from spec) are displayed to authorized PPR reviewers but NEVER stored in the system. Only metadata (requestID, tcn, judicialMarker) is persisted in the ExternalBackgroundCheck aggregate.
+**Rule:** Full rap sheets retrieved via CHRISS `GET_RAPBACK` SOAP call (Integration B from spec) are displayed to authorized PPR reviewers but NEVER stored in the system. Only metadata (requestID, tcn, judicialMarker) is persisted in ExternalBackgroundCheck aggregate.
 
 **Rationale:** Privacy and data retention compliance; full rap sheets contain sensitive information beyond MDE's purview.
 
@@ -1022,7 +1022,7 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Rule:** Disclosures in "Under PPR Review" status can be edited by PPR staff (date, type, description, attachments). Once a disclosure reaches any "Reviewed" status, it becomes locked and cannot be edited without explicit reversion by PPR Admin.
 
-**Rationale:** Prevents accidental corruption of finalized reviews while allowing corrections during the active review process.
+**Rationale:** Prevents accidental corruption of finalized reviews while allowing corrections during active review process.
 
 **Enforced By:** Disclosure aggregate state transitions and authorization rules.
 
@@ -1049,13 +1049,16 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 ### Re-Review Requirement Behavior
 
-**Rule:** When Re-Review Requirement is active for an educator (BRD 9.1.8): disclosures in statuses that normally wouldn't populate worklist (Reviewed - No Action Required, Reviewed - Non-Enumerated, Reviewed - Misdemeanor, Reviewed - Arraignment) are forced back into the PPR worklist; applies to educators with credential status Valid, Withdrawn, Suspended, or Revoked; allows re-review of previously cleared disclosures when additional scrutiny is warranted.
+**Rule:** When Re-Review Requirement is active for an educator (BRD 9.1.8):
+- Disclosures in statuses that normally wouldn't populate worklist ("Reviewed - No Action Required", "Reviewed - Non-Enumerated", "Reviewed - Misdemeanor", "Reviewed - Arraignment") are forced back into PPR worklist
+- Applies to educators with credential status: Valid, Withdrawn, Suspended, Revoked
+- Allows re-review of previously cleared disclosures when additional scrutiny is warranted
 
-**Rationale:** Provides a mechanism to re-evaluate educators whose circumstances have changed or who require heightened oversight despite previously cleared disclosures.
+**Rationale:** Provides mechanism to re-evaluate educators whose circumstances have changed or who require heightened oversight despite previously cleared disclosures.
 
 **Enforced By:** PPRWorklist routing rules; Re-Review Requirement evaluation in worklist population logic.
 
-**Example:** An educator with a 'Reviewed - Misdemeanor' from 5 years ago applies for a new position. Credentialing Admin activates Re-Review Requirement. The next time the educator's disclosures are evaluated for worklist population, the old misdemeanor disclosure appears in worklist for re-review.
+**Example:** An educator with a "Reviewed - Misdemeanor" from 5 years ago applies for a new position. Credentialing Admin activates Re-Review Requirement. Next time the educator's disclosures are evaluated for worklist population, the old misdemeanor disclosure appears in worklist for re-review.
 
 ---
 
@@ -1071,7 +1074,7 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Reminders:** System calculates compliance status and publishes `PPRReminderRequired` events at configured intervals before annual due date (typical: 30, 60, 90 days prior). Communications domain subscribes to events and sends templated reminders. If overdue, reminders continue at regular intervals until completed.
 
-**Rationale:** Ensures ongoing compliance with disclosure requirements throughout an educator's career. The computed approach eliminates the need for batch marker reset jobs.
+**Rationale:** Ensures ongoing compliance with disclosure requirements throughout an educator's career. Computed approach eliminates need for batch marker reset jobs.
 
 **Enforced By:** EducatorPPRStatus computed property; PPRReminderRequired events consumed by Communications capability.
 
@@ -1087,7 +1090,7 @@ When a district attempts to add an educator to roster, Staffing domain:
 
 **Enforced By:** Disclosure aggregate references document IDs; Documents capability enforces deletion rules; authorization rules prevent educator deletion.
 
-**Example:** An educator accidentally uploads the same court order three times. A PPR reviewer requests soft-delete of two copies via the Documents API, removing them from the disclosure view but retaining them in system storage for audit purposes.
+**Example:** An educator accidentally uploads the same court order three times. PPR reviewer requests soft-delete of two copies via Documents API, removing them from the disclosure view but retaining them in system storage for audit purposes.
 
 ---
 
@@ -1116,7 +1119,7 @@ After seven years, soft-deleted attachments may be purged via automated retentio
 
 **Enforced By:** Credentialing domain calls PPR API during application creation attempt; PPR returns assessment.
 
-**Example:** Educator clicks 'Apply for Certificate'. Before rendering the application form, Credentialing calls the PPR clearance API. The educator has a 'Reviewed - Listed' disclosure. PPR returns Blocked status. Credentialing displays: 'You cannot apply for a credential due to a disqualifying conviction. Contact MDE-Professional-Practice@Michigan.gov for assistance.'
+**Example:** Educator clicks "Apply for Certificate". Before rendering application form, Credentialing calls PPR clearance API. Educator has "Reviewed - Listed" disclosure. PPR returns `Blocked` status. Credentialing displays: "You cannot apply for a credential due to a disqualifying conviction. Contact MDE-Professional-Practice@Michigan.gov for assistance."
 
 ---
 

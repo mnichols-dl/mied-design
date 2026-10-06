@@ -1,0 +1,43 @@
+[
+  {
+    "area": "iam",
+    "docKind": "sequences",
+    "section": "Business User - Initial Authorization Request",
+    "item": "Business User - Initial Authorization Request",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:iam:Seq_BusinessUserInitialAuthorizationRequest",
+    "relation": "both",
+    "docText": "- **Organization search:** Predictive search with debouncing; calls Organizations API typeahead endpoint\n- **Approval routing:** Lead Admin email retrieved from Organizations API and cached by IAM keyed by org code; see IAM Technical Considerations for unmasked email caching strategy\n- **Link expiration:** 7-day default (configurable by System Admin via InactivityPolicy-like config)\n- **MiLogin context:** Authorization request tied to Business or Worker identity type",
+    "graphText": "Organization search: predictive search with debouncing against the Organizations API typeahead endpoint. Approval routing: Lead Admin email retrieved from the Organizations API and cached by IAM keyed by org code. Link expiration: 7-day default. MiLogin context: authorization request tied to Business or Worker identity type.",
+    "onlyInGraph": [
+      "against the",
+      "the"
+    ],
+    "onlyInDoc": [
+      "calls",
+      "see iam technical considerations for unmasked email caching strategy",
+      "configurable by system admin via inactivitypolicy like config"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "sequences",
+    "section": "Citizen User - Update Account Demographics",
+    "item": "Citizen User - Update Account Demographics",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:iam:Seq_CitizenUpdateAccountDemographics",
+    "relation": "both",
+    "docText": "- **Active employment gates Primary fields:** If the Unique ID is tied to active employment, Primary Demographic fields (Legal Name, SSN, DOB) are locked; only the employing district can change them (see `staffing-domain.md`)\n- **Near Match does not block dashboard access on Update** (unlike Account Creation) — only the pending update itself is held, and Primary/Secondary fields lock until resolved; Contact fields stay editable\n- **Self-cancellable:** Per FDD 15.10.4, the citizen retains the ability to cancel a pending Near Match update request (unlike Account Creation, which can only be resolved by an Identity Administrator)",
+    "graphText": "Active employment gates Primary fields: locked if the Unique ID is tied to active employment; only the employing district can change them. Near Match does not block dashboard access on Update (unlike Account Creation). Self-cancellable: the citizen retains the ability to cancel a pending Near Match update request.",
+    "onlyInGraph": [
+      "locked"
+    ],
+    "onlyInDoc": [
+      "primary demographic fields legal name ssn dob are locked",
+      "see staffing domain md",
+      "only the pending update itself is held and primary secondary fields lock until resolved contact fields stay editable",
+      "per fdd 15 10 4",
+      "unlike account creation which can only be resolved by an identity administrator"
+    ]
+  }
+]

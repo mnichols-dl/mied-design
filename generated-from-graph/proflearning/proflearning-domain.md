@@ -123,7 +123,13 @@ The Professional Learning domain manages the State Continuing Education Clock Ho
 - **EndorsementAlignment** - Value Object (reference to endorsement code(s) this program is aligned to for renewal credit or professional development targeting; does NOT grant endorsement)
 - **EvaluationRequirement** - Value Object (toggle: required vs. optional, template reference)
 
-**Key Invariants:** Program must have approved sponsor. Maximum SCECH hours must be positive. Program must have at least one session within approval period. Modified programs require re-approval (sponsor-initiated edits only — Professional Learning Admin may edit an approved program directly without re-triggering approval). Program Format dictates whether location address is required. If evaluation is required, template must be specified.
+**Key Invariants:**
+- Program must have approved sponsor
+- Maximum SCECH hours must be positive
+- Program must have at least one session within approval period
+- Modified programs require re-approval
+- Program Format dictates whether location address is required
+- If evaluation is required, template must be specified
 
 **Key States:** Draft, PendingApproval, Approved, Active, Inactive, Withdrawn
 
@@ -221,7 +227,7 @@ The Professional Learning domain manages the State Continuing Education Clock Ho
 
 **Root Entity:** EvaluationTemplate
 
-**Purpose:** Defines the standardized questions used to collect feedback on program quality and effectiveness. Leverages the cross-cutting Question Set capability for actual question content.
+**Purpose:** Defines the standardized questions used to collect feedback on program quality and effectiveness. Leverages cross-cutting Question Set capability.
 
 **Entities & Value Objects:**
 - **EvaluationTemplate** - Collection of evaluation questions for a program or category
@@ -607,7 +613,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** An educator can only apply college course credits toward SCECH if the course was completed after their most recent credential was issued.
 
-**Rationale:** Prevents reusing coursework already counted toward a previous credential.
+**Rationale:** Prevents reusing coursework already counted toward previous credential.
 
 **Enforced By:** CollegeCourseCredit aggregate eligibility check
 
@@ -667,7 +673,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** The public catalog search only returns programs with status "Active" and sessions within their approval period.
 
-**Rationale:** Prevents confusion from inactive or expired programs; ensures the public sees only current offerings.
+**Rationale:** Prevents confusion from inactive or expired programs; ensures public sees only current offerings.
 
 **Enforced By:** Public catalog search query filters by status and date range
 

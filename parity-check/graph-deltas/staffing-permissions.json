@@ -1,0 +1,366 @@
+[
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.employee-roster.add-employee",
+    "item": "staffing.employee-roster.add-employee",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EmployeeRosterAddEmployee",
+    "relation": "graph-has-more",
+    "docText": "Triggers Unique ID matching workflow with Mi-Key",
+    "graphText": "Triggers Unique ID matching workflow with Mi-Key (via IAM).",
+    "onlyInGraph": [
+      "via iam"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.employee-roster.update-demographics",
+    "item": "staffing.employee-roster.update-demographics",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EmployeeRosterUpdateDemographics",
+    "relation": "both",
+    "docText": "Request demographic update via Mi-Key",
+    "graphText": "Update demographic data on an existing employee roster record.",
+    "onlyInGraph": [
+      "demographic data on an existing employee roster record"
+    ],
+    "onlyInDoc": [
+      "request demographic",
+      "via mi key"
+    ]
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.employee-roster.update-demographics",
+    "item": "staffing.employee-roster.update-demographics",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EmployeeRosterUpdateDemographics",
+    "relation": "graph-has-more",
+    "docText": "Triggers Mi-Key update workflow",
+    "graphText": "Triggers Mi-Key update workflow via IAM.",
+    "onlyInGraph": [
+      "via iam"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.employee-roster.bulk-upload",
+    "item": "staffing.employee-roster.bulk-upload",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EmployeeRosterBulkUpload",
+    "relation": "graph-has-more",
+    "docText": "Must include valid Unique IDs; cannot create new employees via bulk",
+    "graphText": "Must include valid Unique IDs; cannot create new employees via bulk (confirmed by staffing-domain.md's resolved Open Question #3, citing FDD 15.5). No matching bulk-upload endpoint exists anywhere in staffing-api.yml — left with no PermissionRequirement, an intentional, documented gap; the bulk/file-upload pipeline implied by staffing.admin.view-file-queues / staffing.admin.reset-file-processing is likewise entirely absent from the API surface.",
+    "onlyInGraph": [
+      "confirmed by staffing domain md s resolved open question 3 citing fdd 15 5 no matching bulk upload endpoint exists anywhere in staffing api yml left with no permissionrequirement an intentional documented gap the bulk file upload pipeline implied by staffing admin view file queues staffing admin reset file processing is likewise entirely absent from the api surface"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.position-roster.delete",
+    "item": "staffing.position-roster.delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_PositionRosterDelete",
+    "relation": "graph-has-more",
+    "docText": "Only allowed before position is established/certified",
+    "graphText": "Only allowed before position is established/certified. (The underlying operation, cancelPosition, sets status to Cancelled rather than physically deleting — see staffing-api.ttl.)",
+    "onlyInGraph": [
+      "the underlying operation cancelposition sets status to cancelled rather than physically deleting see staffing api ttl"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.education-history.view",
+    "item": "staffing.education-history.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EducationHistoryView",
+    "relation": "graph-has-more",
+    "docText": "District users see for their employees; citizens see own",
+    "graphText": "District users see for their employees; citizens see own. No sd:ApiOperation exists for Education History anywhere in staffing-api.yml, despite staffing-domain.md's EducationHistory entity and its own dedicated invariants — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no sd apioperation exists for education history anywhere in staffing api yml despite staffing domain md s educationhistory entity and its own dedicated invariants a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.education-history.update",
+    "item": "staffing.education-history.update",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EducationHistoryUpdate",
+    "relation": "graph-has-more",
+    "docText": "Citizens can add/remove; districts can add, cannot remove citizen-added",
+    "graphText": "Citizens can add/remove; districts can add, cannot remove citizen-added. Same API-surface gap as staffing.education-history.view.",
+    "onlyInGraph": [
+      "same api surface gap as staffing education history view"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.evaluation-outcome.view",
+    "item": "staffing.evaluation-outcome.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EvaluationOutcomeView",
+    "relation": "graph-has-more",
+    "docText": "District users see for their employees; citizens see own",
+    "graphText": "District users see for their employees; citizens see own. No sd:ApiOperation exists for Evaluation Outcome anywhere in staffing-api.yml, despite the EvaluationOutcome entity and its own 'Evaluation Outcome Appeal Window' business rule — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no sd apioperation exists for evaluation outcome anywhere in staffing api yml despite the evaluationoutcome entity and its own evaluation outcome appeal window business rule a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.evaluation-outcome.submit",
+    "item": "staffing.evaluation-outcome.submit",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EvaluationOutcomeSubmit",
+    "relation": "graph-has-more",
+    "docText": "District submits for instructional staff/administrators",
+    "graphText": "District submits for instructional staff/administrators. Same API-surface gap as staffing.evaluation-outcome.view.",
+    "onlyInGraph": [
+      "same api surface gap as staffing evaluation outcome view"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.evaluation-outcome.appeal",
+    "item": "staffing.evaluation-outcome.appeal",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EvaluationOutcomeAppeal",
+    "relation": "graph-has-more",
+    "docText": "District can appeal within 5-year window; citizen can appeal any",
+    "graphText": "District can appeal within 5-year window; citizen can appeal any (per staff:Rule_EvaluationOutcomeAppealWindow). Same API-surface gap as staffing.evaluation-outcome.view.",
+    "onlyInGraph": [
+      "per staff rule evaluationoutcomeappealwindow same api surface gap as staffing evaluation outcome view"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.evaluation-outcome.approve-appeal",
+    "item": "staffing.evaluation-outcome.approve-appeal",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_EvaluationOutcomeApproveAppeal",
+    "relation": "graph-has-more",
+    "docText": "District reviews and approves/denies citizen appeals",
+    "graphText": "District reviews and approves/denies citizen appeals. Same API-surface gap as staffing.evaluation-outcome.view.",
+    "onlyInGraph": [
+      "same api surface gap as staffing evaluation outcome view"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.new-teacher-monitoring.view",
+    "item": "staffing.new-teacher-monitoring.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_NewTeacherMonitoringView",
+    "relation": "graph-has-more",
+    "docText": "Required to see mentor assignments and SCECH tracking",
+    "graphText": "Required to see mentor assignments and SCECH tracking. No sd:ApiOperation exists for New Teacher Monitoring anywhere in staffing-api.yml, despite staffing-domain.md's dedicated NewTeacherMonitoring entity, ERD table, and staff:Rule_NewTeacherMonitoringRequirement business rule — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no sd apioperation exists for new teacher monitoring anywhere in staffing api yml despite staffing domain md s dedicated newteachermonitoring entity erd table and staff rule newteachermonitoringrequirement business rule a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.new-teacher-monitoring.update",
+    "item": "staffing.new-teacher-monitoring.update",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_NewTeacherMonitoringUpdate",
+    "relation": "graph-has-more",
+    "docText": "Assign mentor, link SCECH sessions for DPPD requirement",
+    "graphText": "Assign mentor, link SCECH sessions for DPPD requirement. Same API-surface gap as staffing.new-teacher-monitoring.view — even the NewTeacherMentorAssigned domain event has no corresponding API operation shown creating it.",
+    "onlyInGraph": [
+      "same api surface gap as staffing new teacher monitoring view even the newteachermentorassigned domain event has no corresponding api operation shown creating it"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.view",
+    "item": "staffing.audit.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditView",
+    "relation": "graph-has-more",
+    "docText": "ISD Auditor sees constituent districts; SOM Auditor sees all ISDs",
+    "graphText": "ISD Auditor sees constituent districts (scope:ISD, representing the source's 'ISD/RESA Entity' tier); SOM Auditor sees all ISDs (scope:SystemWide).",
+    "onlyInGraph": [
+      "scope isd representing the source s isd resa entity tier",
+      "scope systemwide"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.review-submission",
+    "item": "staffing.audit.review-submission",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditReviewSubmission",
+    "relation": "graph-has-more",
+    "docText": "ISD Auditor reviews constituent district submissions",
+    "graphText": "ISD Auditor reviews constituent district submissions ('ISD/RESA Entity' scope).",
+    "onlyInGraph": [
+      "isd resa entity scope"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.submit-finding",
+    "item": "staffing.audit.submit-finding",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditSubmitFinding",
+    "relation": "graph-has-more",
+    "docText": "Document placement issues, request additional documentation",
+    "graphText": "Document placement issues, request additional documentation ('ISD/RESA Entity' scope).",
+    "onlyInGraph": [
+      "isd resa entity scope"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.request-documentation",
+    "item": "staffing.audit.request-documentation",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditRequestDocumentation",
+    "relation": "graph-has-more",
+    "docText": "Request master schedules, attendance records, etc.",
+    "graphText": "Request master schedules, attendance records, etc. ('ISD/RESA Entity' scope).",
+    "onlyInGraph": [
+      "isd resa entity scope"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.finalize",
+    "item": "staffing.audit.finalize",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditFinalize",
+    "relation": "graph-has-more",
+    "docText": "Requires attestation and e-signature",
+    "graphText": "Requires attestation and e-signature ('ISD/RESA Entity' scope).",
+    "onlyInGraph": [
+      "isd resa entity scope"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.audit.decertify",
+    "item": "staffing.audit.decertify",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AuditDecertify",
+    "relation": "graph-has-more",
+    "docText": "Allows correction during defined de-certification period",
+    "graphText": "Allows correction during defined de-certification period ('ISD/RESA Entity' scope). No decertify endpoint exists anywhere in staffing-api.yml, though the aggregate's own De-certified StateDefinition and 'Finalized audit becomes read-only except during defined de-certification window' invariant both assume this capability exists — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "isd resa entity scope no decertify endpoint exists anywhere in staffing api yml though the aggregate s own de certified statedefinition and finalized audit becomes read only except during defined de certification window invariant both assume this capability exists a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.admin.manage-collections",
+    "item": "staffing.admin.manage-collections",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AdminManageCollections",
+    "relation": "graph-has-more",
+    "docText": "Staffing Data Admin role; create collections, set date ranges, entity types",
+    "graphText": "Staffing Data Admin role; create collections, set date ranges, entity types. No matching sd:ApiOperation anywhere in staffing-api.yml — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no matching sd apioperation anywhere in staffing api yml a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.admin.manage-validations",
+    "item": "staffing.admin.manage-validations",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AdminManageValidations",
+    "relation": "graph-has-more",
+    "docText": "Staffing Data Admin role; assign validations to collections/categories/elements",
+    "graphText": "Staffing Data Admin role; assign validations to collections/categories/elements — see staff:TP_ValidationRuleEngine (staffing-technical-design.ttl). No matching sd:ApiOperation anywhere in staffing-api.yml — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "see staff tp validationruleengine staffing technical design ttl no matching sd apioperation anywhere in staffing api yml a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.admin.manage-data-elements",
+    "item": "staffing.admin.manage-data-elements",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AdminManageDataElements",
+    "relation": "graph-has-more",
+    "docText": "Staffing Data Admin role; create/update data elements, categories, components",
+    "graphText": "Staffing Data Admin role; create/update data elements, categories, components. No matching sd:ApiOperation anywhere in staffing-api.yml — a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no matching sd apioperation anywhere in staffing api yml a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.admin.view-file-queues",
+    "item": "staffing.admin.view-file-queues",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AdminViewFileQueues",
+    "relation": "graph-has-more",
+    "docText": "Staffing Data Admin role; monitor bulk upload processing",
+    "graphText": "Staffing Data Admin role; monitor bulk upload processing. No matching sd:ApiOperation anywhere in staffing-api.yml — bulk-upload has no endpoint at all (see staffing.employee-roster.bulk-upload); a documented gap, not modeled here.",
+    "onlyInGraph": [
+      "no matching sd apioperation anywhere in staffing api yml bulk upload has no endpoint at all see staffing employee roster bulk upload a documented gap not modeled here"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "permissions",
+    "section": "staffing.admin.reset-file-processing",
+    "item": "staffing.admin.reset-file-processing",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:staffing:Perm_AdminResetFileProcessing",
+    "relation": "graph-has-more",
+    "docText": "Staffing Data Admin role; troubleshoot stuck file uploads",
+    "graphText": "Staffing Data Admin role; troubleshoot stuck file uploads. No matching sd:ApiOperation anywhere in staffing-api.yml — same file-upload API-surface gap as staffing.admin.view-file-queues.",
+    "onlyInGraph": [
+      "no matching sd apioperation anywhere in staffing api yml same file upload api surface gap as staffing admin view file queues"
+    ],
+    "onlyInDoc": []
+  }
+]

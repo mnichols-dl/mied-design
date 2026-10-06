@@ -79,7 +79,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Event payload: lightweight (IDs only), resolver fetches display data. Variable resolution: event-type-specific resolver handles formatting. Silent failure: no active template for the event type means no email is sent (prevents spam on misconfigured events) rather than an error. Rendered content only: EmailInstance stores the final output, not intermediate data.
+- **Event payload:** Lightweight (IDs only), resolver fetches display data
+- **Variable resolution:** Event-type-specific resolver handles formatting
+- **Silent failure:** No template = no email (prevents spam on misconfigured events)
+- **Rendered content only:** EmailInstance stores final output, not intermediate data
 
 **State Changes:**
 - EmailInstance status: `None` > `Queued`
@@ -97,9 +100,9 @@ Event payload: lightweight (IDs only), resolver fetches display data. Variable r
 
 ## Manual Email Send with Template Customization
 
-**What:** User composes and sends one-time email using a template as a starting point.  
-**When:** User needs to send a custom communication (e.g., follow-up, clarification).  
-**Who:** Credentialing Administrator, Help Desk Staff.
+**What:** User composes and sends one-time email using template as starting point  
+**When:** User needs to send custom communication (e.g., follow-up, clarification)  
+**Who:** Credentialing Administrator, Help Desk Staff
 
 ```mermaid
 ---
@@ -181,9 +184,9 @@ sequenceDiagram
 
 ## Template Version Update and Activation
 
-**What:** Admin creates a new template version and activates it.  
-**When:** Template content needs updating (e.g., policy change, branding update).  
-**Who:** Credentialing Administrator, System Administrator.
+**What:** Admin creates new template version and activates it  
+**When:** Template content needs updating (e.g., policy change, branding update)  
+**Who:** Credentialing Administrator, System Administrator
 
 ```mermaid
 ---
@@ -242,7 +245,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Single active version: activating v2.0 automatically deactivates v1.0. Draft-then-activate workflow: prevents accidental activation of untested content. Variable validation: system validates placeholders match the event type's available variables. Audit trail: all versions preserved (never deleted).
+- **Single active version:** Activating v2.0 automatically deactivates v1.0
+- **Draft-then-activate workflow:** Prevents accidental activation of untested content
+- **Variable validation:** System validates placeholders match event type's available variables
+- **Audit trail:** All versions preserved (never deleted)
 
 **State Changes:**
 - TemplateVersion: `Draft` > `Active`
@@ -335,9 +341,9 @@ sequenceDiagram
 
 ## Email Resend with Recipient Override
 
-**What:** User resends a previously sent email to a new/corrected recipient.  
-**When:** Email bounced, user provided an updated email, or help desk escalation.  
-**Who:** Credentialing Administrator, Help Desk Staff.
+**What:** User resends previously sent email to new/corrected recipient  
+**When:** Email bounced, user provided updated email, help desk escalation  
+**Who:** Credentialing Administrator, Help Desk Staff
 
 ```mermaid
 ---
@@ -410,7 +416,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Content availability: resend only available during the retention period. Email update detection: system detects if the user's email changed in the identity system since original send. No re-resolution: resend uses the original rendered content (not re-rendered). New instance created: resend creates a new EmailInstance linked to the original.
+- **Content availability:** Resend only available during retention period
+- **Email update detection:** System detects if user's email changed in identity system
+- **No re-resolution:** Resend uses original rendered content (not re-rendered)
+- **New instance created:** Resend creates new EmailInstance linked to original
 
 **State Changes:**
 - New EmailInstance status: `None` > `Queued`
@@ -488,7 +497,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Signature validation: HMAC SHA256 prevents spoofed webhooks. Idempotency: duplicate events ignored (SendGrid may retry). Race condition handling: orphaned webhooks logged but accepted (200 OK, idempotent). Status mapping: SendGrid statuses mapped to domain events.
+- **Signature validation:** HMAC SHA256 prevents spoofed webhooks
+- **Idempotency:** Duplicate events ignored (SendGrid may retry)
+- **Race condition handling:** Orphaned webhooks logged but accepted
+- **Status mapping:** SendGrid statuses mapped to domain events
 
 **State Changes:**
 - EmailInstance `delivery_status`: `Queued` > `Delivered/Bounced/Deferred/Dropped`
@@ -636,7 +648,11 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Event-type-specific resolvers: each event type has a dedicated resolver class. Lightweight events: event carries only IDs, resolver fetches display data. User-facing formatting: all values formatted for human readability. Caching: frequently accessed data (user profiles) cached for 1 hour. Batch API calls: resolver batches requests when resolving multiple variables from the same source.
+- **Event-type-specific resolvers:** Each event type has dedicated resolver class
+- **Lightweight events:** Event carries only IDs, resolver fetches display data
+- **User-facing formatting:** All values formatted for human readability
+- **Caching:** Frequently accessed data (user profiles) cached for 1 hour
+- **Batch API calls:** Resolver batches requests when resolving multiple variables from same source
 
 **State Changes:**
 - None (internal process)
@@ -704,13 +720,16 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Role-based targeting: alerts sent to users with specific roles at specific scopes. Automatic expiration: alerts expire after a configured period (default 30 days). Action links: each alert includes a deep link to the relevant page. One alert per user: system creates individual alert instances (not shared).
+- **Role-based targeting:** Alerts sent to users with specific roles at specific scopes
+- **Automatic expiration:** Alerts expire after configured period (default 30 days)
+- **Action links:** Each alert includes deep link to relevant page
+- **One alert per user:** System creates individual alert instances (not shared)
 
 **State Changes:**
 - Alert status: `None` > `Active`
 
 **Events Published:**
-DashboardAlertCreated - Per user who received the alert.
+- `DashboardAlertCreated` - Per user who received alert
 
 **Error Scenarios:**
 - No users match targeting rules > Alert template misconfigured, log warning
@@ -720,8 +739,8 @@ DashboardAlertCreated - Per user who received the alert.
 
 ## User Resolves Dashboard Alert
 
-**What:** User completes action and dismisses alert.  
-**When:** User clicks the alert action link and completes the required task.  
+**What:** User completes action and dismisses alert  
+**When:** User clicks alert action link and completes required task  
 **Who:** District Data Steward, Authorization Approver, etc.
 
 ```mermaid
@@ -779,9 +798,9 @@ sequenceDiagram
 
 ## Mass Email with Consolidation
 
-**What:** System consolidates multiple related events into a single email.  
-**When:** Multiple data quality issues detected for the same user within the consolidation window.  
-**Who:** System (automated).
+**What:** System consolidates multiple related events into single email  
+**When:** Multiple data quality issues detected for same user within consolidation window  
+**Who:** System (automated)
 
 ```mermaid
 ---
@@ -846,7 +865,10 @@ sequenceDiagram
 ```
 
 **Key Decisions:**
-Consolidation window: 15 minutes default (configurable per event type). Grouping key: typically the recipient user, but can be customized. Special templates: consolidation templates support list variables. Event tracking: EmailInstance links to all consolidated event IDs.
+- **Consolidation window:** 15 minutes default (configurable per event type)
+- **Grouping key:** Typically recipient user, but can be customized
+- **Special templates:** Consolidation templates support list variables
+- **Event tracking:** EmailInstance links to all consolidated event IDs
 
 **State Changes:**
 - EmailInstance status: `None` > `Queued`

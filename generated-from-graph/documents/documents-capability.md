@@ -57,12 +57,12 @@ The Documents platform capability provides centralized file storage and lifecycl
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Document**            | A file uploaded by a user, stored in Azure Blob Storage, with associated metadata tracking its lifecycle and permissions                                                                                                                    |
 | **Document Category**   | A classification grouping for documents that determines storage location, retention policy, security requirements, and file size limits (e.g., "Credential Supporting Document", "Professional Practice Documentation", "Bulk Import File") |
-| **Document Attachment** | The business entity to which a document is attached (e.g., credential application ID, staffing roster ID, professional learning session ID); replaces the overloaded term 'context'.                                                        |
+| **Document Attachment** | The business entity to which a document is attached (e.g., credential application ID, staffing roster ID, professional learning session ID); replaces overloaded term "context"                                                             |
 | **Blob Container**      | An Azure Blob Storage container organizing documents by category, with naming convention: `documents-{category-slug}`                                                                                                                       |
 | **Blob Path**           | The hierarchical path within a container organizing documents, typically: `{year}/{month}/{attachment-type}/{attachment-id}/{document-id}_{sanitized-filename}`                                                                             |
 | **Document Metadata**   | Structured data about a document stored in system database, including: original filename, MIME type, file size, upload timestamp, uploader ID, category, attachment, retention expiry date, soft delete status                              |
 | **Soft Delete**         | Marking a document as deleted without removing the blob, preventing user access while preserving data for recovery or audit                                                                                                                 |
-| **Hard Delete**         | Permanently removing a document blob from storage after the retention period expires or a legal hold is released.                                                                                                                           |
+| **Hard Delete**         | Permanently removing document blob from storage after retention period expires or legal hold is released                                                                                                                                    |
 | **Retention Policy**    | Configurable rule specifying how long documents in a category must be preserved before eligible for hard delete (e.g., 7 years, 90 days, indefinite)                                                                                        |
 | **Legal Hold**          | Flag preventing hard delete of a document regardless of retention policy, typically applied for litigation or investigation                                                                                                                 |
 | **Document Version**    | A distinct file replacing a previous document, tracked with version number and timestamp, with previous version either soft-deleted or archived based on policy                                                                             |
@@ -399,7 +399,7 @@ Events published by this domain that other domains may subscribe to:
 | `DocumentUploaded`        | Document         | Upload completed and malware scan clean                  | `{ document_id, category, attachment_type, attachment_id, uploaded_by_user_id, file_size, mime_type }` | audit, domain-specific workflows |
 | `DocumentMalwareDetected` | Document         | Malware scan identifies threat                           | `{ document_id, threat_type, threat_name, scan_service, uploaded_by_user_id }`                         | security, monitoring             |
 | `DocumentViewed`          | Document         | User downloads/views document                            | `{ document_id, viewed_by_user_id, viewed_at }`                                                        | audit, analytics                 |
-| `DocumentReplaced`        | Document         | User uploads new version (scan clean)                    | `{ document_id, new_version_id, replaced_by_user_id, old_version_archived }`                           | audit, domain-specific workflows |
+| `DocumentReplaced`        | Document         | User uploads new version                                 | `{ document_id, new_version_id, replaced_by_user_id, old_version_archived }`                           | audit, domain-specific workflows |
 | `DocumentSoftDeleted`     | Document         | Document marked as deleted                               | `{ document_id, deleted_by_user_id, retention_expiry_date }`                                           | audit                            |
 | `DocumentHardDeleted`     | Document         | Blob permanently removed                                 | `{ document_id, deleted_at, deletion_reason }`                                                         | audit, compliance                |
 | `DocumentCategoryCreated` | DocumentCategory | New category configured                                  | `{ category_id, category_slug, retention_years }`                                                      | audit                            |
@@ -553,7 +553,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** Soft delete is a user-facing action that marks a document as inaccessible. Hard delete is a system-automated process that permanently removes blobs after retention/legal hold clearance. Users never directly trigger hard delete.
 
-**Rationale:** Protects against accidental permanent data loss, ensures compliance with retention schedules, and provides a recovery window for deleted documents.
+**Rationale:** Protects against accidental permanent data loss, ensures compliance with retention schedules, and provides recovery window for deleted documents.
 
 **Enforced By:** Document aggregate + Hard Delete Background Job
 
@@ -581,7 +581,7 @@ Events published by this domain that other domains may subscribe to:
 
 ### Bulk Operation Retention Validation
 
-**Rule:** Bulk delete operations must validate retention policies and legal holds for ALL documents in the batch before starting. If any document violates retention rules, the operation is blocked (strict mode) or marked partially failed (permissive mode, the default).
+**Rule:** Bulk delete operations must validate retention policies and legal holds for ALL documents in the batch before starting. If any document violates retention rules, the operation is blocked or marked partially failed.
 
 **Rationale:** Prevents accidental bulk deletion of documents still under retention or legal hold, which could violate compliance requirements.
 

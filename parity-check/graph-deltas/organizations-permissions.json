@@ -1,0 +1,17 @@
+[
+  {
+    "area": "organizations",
+    "docKind": "permissions",
+    "section": "organizations.lead-admin.view",
+    "item": "organizations.lead-admin.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:organizations:Perm_LeadAdminView",
+    "relation": "graph-has-more",
+    "docText": "Internal service permission; consumed by IAM for authorization approval routing. Lead Admin email not exposed to non-admin users directly.",
+    "graphText": "Internal service permission; consumed by IAM for authorization approval routing. Lead Admin email not exposed to non-admin users directly — enforced at the Istio authorization policy layer (only IAM's service account principal may call the endpoint) in addition to this IAM permission check.",
+    "onlyInGraph": [
+      "enforced at the istio authorization policy layer only iam s service account principal may call the endpoint in addition to this iam permission check"
+    ],
+    "onlyInDoc": []
+  }
+]

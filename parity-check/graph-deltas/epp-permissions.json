@@ -1,0 +1,79 @@
+[
+  {
+    "area": "epp",
+    "docKind": "permissions",
+    "section": "epp.provider.view",
+    "item": "epp.provider.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:epp:Perm_ProviderView",
+    "relation": "graph-has-more",
+    "docText": "Allows viewing EPP master data, program approvals, contacts",
+    "graphText": "Allows viewing EPP master data, program approvals, contacts. 'EPP-specific' scope mapped to scope:Entity — see file header note.",
+    "onlyInGraph": [
+      "epp specific scope mapped to scope entity see file header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "permissions",
+    "section": "epp.enrollment.bulk-upload",
+    "item": "epp.enrollment.bulk-upload",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:epp:Perm_EnrollmentBulkUpload",
+    "relation": "graph-has-more",
+    "docText": "Batch enrollment updates from institutional systems",
+    "graphText": "Batch enrollment updates from institutional systems. Separate from epp.enrollment.edit to allow finer-grained control and audit trail of bulk vs. individual updates.",
+    "onlyInGraph": [
+      "separate from epp enrollment edit to allow finer grained control and audit trail of bulk vs individual updates"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "permissions",
+    "section": "epp.applications.review",
+    "item": "epp.applications.review",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:epp:Perm_ApplicationsReview",
+    "relation": "both",
+    "docText": "Hold, Deny, Cancel, Recommend actions",
+    "graphText": "Hold, Deny, Cancel actions (and Recommend, unless an institution separates that out — see epp.applications.recommend).",
+    "onlyInGraph": [
+      "and recommend unless an institution separates that out see epp applications recommend"
+    ],
+    "onlyInDoc": [
+      "recommend"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "permissions",
+    "section": "epp.applications.recommend",
+    "item": "epp.applications.recommend",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:epp:Perm_ApplicationsRecommend",
+    "relation": "graph-has-more",
+    "docText": "May be separated from general review for dual approval",
+    "graphText": "May be separated from general review for dual approval; not required by every institution.",
+    "onlyInGraph": [
+      "not required by every institution"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "permissions",
+    "section": "epp.admin.system",
+    "item": "epp.admin.system",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:epp:Perm_AdminSystem",
+    "relation": "graph-has-more",
+    "docText": "Super admin - all EPP functions across all providers",
+    "graphText": "Super admin - all EPP functions across all providers. A blanket super-permission, not tied to any single operation; epp-api.yml's per-operation x-permissions-required lists never name it directly (e.g. createEppProvider is gated by epp.provider.create), so no sd:PermissionRequirement is modeled for it here — it is presumed to satisfy every other permission's check at the authorization-layer level, which is outside what an individual PermissionRequirement can express.",
+    "onlyInGraph": [
+      "a blanket super permission not tied to any single operation epp api yml s per operation x permissions required lists never name it directly e g createeppprovider is gated by epp provider create so no sd permissionrequirement is modeled for it here it is presumed to satisfy every other permission s check at the authorization layer level which is outside what an individual permissionrequirement can express"
+    ],
+    "onlyInDoc": []
+  }
+]

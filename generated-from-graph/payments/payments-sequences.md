@@ -392,7 +392,8 @@ sequenceDiagram
 - `RefundCompleted` - Fires after CEPAS confirms refund processed
 
 **Error Scenarios:**
-CEPAS API failure -> RefundRequest marked Failed, admin alerted for retry. Amount exceeds original -> Validation error before CEPAS API call.
+- CEPAS API failure -> RefundRequest marked Failed, admin alerted for retry
+- Amount exceeds original -> Validation error before CEPAS call
 
 ---
 

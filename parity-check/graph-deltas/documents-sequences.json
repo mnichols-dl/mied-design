@@ -1,0 +1,125 @@
+[
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Document Upload with Malware Scanning",
+    "item": "Document Upload with Malware Scanning",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:documents:Seq_DocumentUploadWithMalwareScanning",
+    "relation": "graph-has-more",
+    "docText": "**What:** User uploads file, system scans for malware, stores if clean\n**When:** User needs to attach supporting document to credential application, PPR disclosure, or other context\n**Who:** Educator, District Staff, Administrator",
+    "graphText": "What: User uploads file, system scans for malware, stores if clean. When: User needs to attach a supporting document to a credential application, PPR disclosure, or other context. Who: Educator, District Staff, Administrator.",
+    "onlyInGraph": [
+      "a",
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Document Download with SAS Token",
+    "item": "Document Download with SAS Token",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:documents:Seq_DocumentDownloadWithSasToken",
+    "relation": "graph-has-more",
+    "docText": "**What:** User requests document, system generates time-limited access URL\n**When:** User views document from credential application, a filtered pending-items list view, or document library\n**Who:** Educator, District Staff, Administrator",
+    "graphText": "What: User requests document, system generates time-limited access URL. When: User views document from a credential application, a filtered pending-items list view, or document library. Who: Educator, District Staff, Administrator.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Document Replacement and Versioning",
+    "item": "Document Replacement and Versioning",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:documents:Seq_DocumentReplacementAndVersioning",
+    "relation": "graph-has-more",
+    "docText": "**What:** User replaces existing document, old version archived\n**When:** User uploads wrong file or needs to update supporting document\n**Who:** Educator (own documents), Administrator (any document in scope)",
+    "graphText": "What: User replaces existing document, old version archived. When: User uploads wrong file or needs to update a supporting document. Who: Educator (own documents), Administrator (any document in scope).",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Document Replacement and Versioning",
+    "item": "Document Replacement and Versioning",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:documents:Seq_DocumentReplacementAndVersioning",
+    "relation": "graph-has-more",
+    "docText": "- **New document ID for new version:** Each version is a separate Document record\n- **Archive old version:** Old blob moved to archive container, not deleted\n- **Version numbering:** Incremental (1.0, 2.0, 3.0) for simplicity\n- **Malware scan new version:** Replacement goes through full scan-in-place workflow\n- **Rollback on failure:** If new version fails scan, old version remains current",
+    "graphText": "New document ID for new version: each version is a separate Document record. Archive old version: old blob moved to archive container, not deleted. Version numbering: incremental (1.0, 2.0, 3.0) for simplicity. Malware scan new version: replacement goes through the full scan-in-place workflow. Rollback on failure: if the new version fails scan, the old version remains current.",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Soft Delete and Hard Delete Lifecycle",
+    "item": "Soft Delete and Hard Delete Lifecycle",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:documents:Seq_SoftDeleteAndHardDeleteLifecycle",
+    "relation": "graph-has-more",
+    "docText": "**What:** User deletes document, system soft-deletes immediately, hard-deletes after retention period\n**When:** User removes incorrect upload or document no longer needed\n**Who:** Educator (own documents), Administrator (any document in scope)",
+    "graphText": "What: User deletes document, system soft-deletes immediately, hard-deletes after retention period. When: User removes incorrect upload or document no longer needed. Who: Educator (own documents), Administrator (any document in scope) for soft delete; the system (nightly job) for hard delete.",
+    "onlyInGraph": [
+      "for soft delete the system nightly job for hard delete"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Legal Hold Application and Release",
+    "item": "Legal Hold Application and Release",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:documents:Seq_LegalHoldApplicationAndRelease",
+    "relation": "graph-has-more",
+    "docText": "**What:** Administrator applies legal hold preventing deletion, later releases after legal matter concludes\n**When:** Litigation, investigation, or audit requires document preservation\n**Who:** Legal Counsel, Compliance Officer",
+    "graphText": "What: Administrator applies legal hold preventing deletion, later releases after the legal matter concludes. When: Litigation, investigation, or audit requires document preservation. Who: Legal Counsel, Compliance Officer.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Bulk Document Upload",
+    "item": "Bulk Document Upload",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:documents:Seq_BulkDocumentUpload",
+    "relation": "graph-has-more",
+    "docText": "- **Browser-based bulk upload:** Each file gets its own SAS token, uploaded directly from browser\n- **Scan in-place:** Files scanned in target containers (no quarantine)\n- **Parallel uploads:** Max 10 concurrent to avoid overwhelming scan service (2,000 files/min limit)\n- **Individual item tracking:** Each file has success/failure status\n- **Partial success allowed:** Some files can fail without failing entire operation",
+    "graphText": "Browser-based bulk upload: each file gets its own SAS token, uploaded directly from browser. Scan in-place: files scanned in target containers (no quarantine). Parallel uploads: max 10 concurrent to avoid overwhelming scan service (2,000 files/min limit). Individual item tracking: each file has success/failure status. Partial success allowed: some files can fail without failing the entire operation.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "sequences",
+    "section": "Administrator Requests Retention Override",
+    "item": "Administrator Requests Retention Override",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:documents:Seq_AdministratorRequestsRetentionOverride",
+    "relation": "graph-has-more",
+    "docText": "- **Dual approval for high-value:** Documents with legal hold history or >5 year retention require 2 approvals\n- **7-day execution window:** Approved overrides expire if not executed within 7 days\n- **Justification mandatory:** All overrides require business reason for audit trail\n- **Cannot be reversed:** Once executed, deletion is permanent (standard retention applies to hard delete)",
+    "graphText": "Dual approval for high-value: documents with legal hold history or >5 year retention require 2 approvals. 7-day execution window: approved overrides expire if not executed within 7 days. Justification mandatory: all overrides require a business reason for audit trail. Cannot be reversed: once executed, deletion is permanent (standard retention applies to hard delete).",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  }
+]

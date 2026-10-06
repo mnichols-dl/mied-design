@@ -1,0 +1,630 @@
+[
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Refund",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:payments:UT_Refund",
+    "relation": "graph-has-more",
+    "docText": "Return of payment to original payer, processed via CEPAS CancelPayment API, resulting in new confirmation number",
+    "graphText": "Return of payment to original payer, processed via CEPAS CancelPayment API, resulting in a new confirmation number.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Bulk Payment",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:payments:UT_BulkPayment",
+    "relation": "graph-has-more",
+    "docText": "Single payment transaction covering fees for multiple credential applications (e.g., district paying for 10 substitute credentials)",
+    "graphText": "Single payment transaction covering fees for multiple credential applications (e.g., a district paying for 10 substitute credentials).",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Payment Command Code",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:payments:UT_PaymentCommandCode",
+    "relation": "both",
+    "docText": "Indicator in posting file denoting transaction type: Payment (1), Refund (5), Void (6), Chargeback (9), Chargeback Reversal (10), Partial Refund (14), ACH Credit (15), or Processor Void (16). Only Payment and Refund are actively reconciled today (see \"Daily Posting File Reconciliation\"); all other codes land in `Discrepancy` for manual review, pending explicit handling.",
+    "graphText": "Indicator in the posting file denoting transaction type: Payment (1), Refund (5), Void (6), Chargeback (9), Chargeback Reversal (10), Partial Refund (14), ACH Credit (15), or Processor Void (16). Only Payment and Refund are actively reconciled today; all other codes land in Discrepancy for manual review, pending explicit handling.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": [
+      "see daily posting file reconciliation"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Missing Payment",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:payments:UT_MissingPayment",
+    "relation": "graph-has-more",
+    "docText": "Transaction confirmed in CEPAS posting file but not recorded in MiEdWorkforce during real-time redirect flow",
+    "graphText": "Transaction confirmed in the CEPAS posting file but not recorded in MiEdWorkforce during the real-time redirect flow.",
+    "onlyInGraph": [
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "PaymentTransaction",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:payments:PaymentTransactionAggregate",
+    "relation": "graph-has-more",
+    "docText": "- Payment amount must be greater than zero\n- Payment amount is immutable after transaction creation (derived from credential type at initiation)\n- Only transactions in `Paid` status can be refunded\n- Refund amount must be less than or equal to original payment amount\n- Hash validation must succeed before marking payment as confirmed\n- Transaction status progression: `Pending` -> `Paid` OR `Failed` -> optionally `Refunded` / `PartiallyRefunded`\n- Reference data field limited to 254 characters\n- Confirmation number required for refund processing\n- Bulk payment total must equal sum of individual application fees\n- Missing payment detection only updates status if current status is `Pending`",
+    "graphText": "Payment amount must be greater than zero. Payment amount is immutable after transaction creation (derived from credential type at initiation). Only transactions in Paid status can be refunded. Refund amount must be less than or equal to original payment amount. Hash validation must succeed before marking payment as confirmed. Transaction status progression: Pending -> Paid OR Failed -> optionally Refunded / PartiallyRefunded. Reference data field limited to 254 characters. Confirmation number required for refund processing. Bulk payment total must equal sum of individual application fees. Missing payment detection only updates status if current status is Pending. Paid/Refunded/PartiallyRefunded transactions cannot revert to Pending or Failed (enforced at the database layer via triggers, not just application logic); Refunded is a terminal state. Bulk payment confirmation updates the parent and all child transactions atomically — per payments-technical-design.md, if the child-row count after update doesn't match the expected item count, the whole update is rolled back.",
+    "onlyInGraph": [
+      "paid refunded partiallyrefunded transactions cannot revert to pending or failed enforced at the database layer via triggers not just application logic refunded is a terminal state bulk payment confirmation updates the parent and all child transactions atomically per payments technical design md if the child row count after update doesn t match the expected item count the whole update is rolled back"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "ReconciliationBatch",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:payments:ReconciliationBatchAggregate",
+    "relation": "graph-has-more",
+    "docText": "- One batch per calendar day per CEPAS application\n- Batch processing is idempotent (reprocessing same file yields same results)\n- All posting file records must be categorized: Matched, Missing, or Discrepancy\n- Discrepancies remain flagged until manually resolved\n- Batch status progression: `Received` -> `Processing` -> `Completed` OR `Failed`",
+    "graphText": "One batch per calendar day per CEPAS application. Batch processing is idempotent (reprocessing same file yields same results). All posting file records must be categorized: Matched, Missing, or Discrepancy. Discrepancies remain flagged until manually resolved. Batch status progression: Received -> Processing -> Completed OR Failed. Auto-updates only apply to Pending transactions; Failed and Refunded transactions are never overwritten by the posting file. All auto-updates and discrepancy insertions for a given batch are wrapped in a single SQL transaction so the batch is processed atomically.",
+    "onlyInGraph": [
+      "auto updates only apply to pending transactions failed and refunded transactions are never overwritten by the posting file all auto updates and discrepancy insertions for a given batch are wrapped in a single sql transaction so the batch is processed atomically"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "RefundRequest",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:payments:RefundRequestAggregate",
+    "relation": "graph-has-more",
+    "docText": "- Refund requests must reference existing Paid transaction\n- Refund amount validation occurs before CEPAS API call\n- Approved refunds cannot be cancelled (irreversible)\n- Refund request status progression: `Requested` -> `Approved` / `Rejected` -> `Processing` -> `Completed` / `Failed`",
+    "graphText": "Refund requests must reference an existing Paid transaction. Refund amount validation occurs before the CEPAS API call. Approved refunds cannot be cancelled (irreversible). Refund request status progression: Requested -> Approved / Rejected -> Processing -> Completed / Failed. Refunds <= $500 require a single Financial Admin approval (auto-approved by the system); refunds > $500 require the Credential Admin to initiate and a separate Financial Admin to authorize (dual approval); the threshold is configurable, default $500.",
+    "onlyInGraph": [
+      "an",
+      "the",
+      "refunds 500 require a single financial admin approval auto approved by the system refunds 500 require the credential admin to initiate and a separate financial admin to authorize dual approval the threshold is configurable default 500"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "PaymentCompleted",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:PaymentCompletedEvent",
+    "relation": "graph-has-more",
+    "docText": "CEPAS redirect returns success + hash validated",
+    "graphText": "CEPAS redirect returns success and hash validated (or posting file confirms a Pending payment)",
+    "onlyInGraph": [
+      "and",
+      "or posting file confirms a pending payment"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "PaymentFailed",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:PaymentFailedEvent",
+    "relation": "graph-has-more",
+    "docText": "CEPAS redirect returns error",
+    "graphText": "CEPAS redirect returns a non-zero error code",
+    "onlyInGraph": [
+      "a non zero",
+      "code"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "PaymentReconciled",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:PaymentReconciledEvent",
+    "relation": "graph-has-more",
+    "docText": "Posting file confirms payment",
+    "graphText": "Posting file confirms a payment",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "MissingPaymentDetected",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:MissingPaymentDetectedEvent",
+    "relation": "graph-has-more",
+    "docText": "Posting file shows payment not in system",
+    "graphText": "Posting file shows a payment not present in the system",
+    "onlyInGraph": [
+      "a",
+      "present",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "RefundRequested",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:RefundRequestedEvent",
+    "relation": "graph-has-more",
+    "docText": "Admin initiates refund",
+    "graphText": "Admin initiates a refund",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "RefundApproved",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:RefundApprovedEvent",
+    "relation": "both",
+    "docText": "Approver authorizes refund",
+    "graphText": "Financial Admin authorizes a refund",
+    "onlyInGraph": [
+      "financial admin",
+      "a"
+    ],
+    "onlyInDoc": [
+      "approver"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "RefundCompleted",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:RefundCompletedEvent",
+    "relation": "graph-has-more",
+    "docText": "CEPAS confirms refund processed",
+    "graphText": "CEPAS confirms the refund was processed",
+    "onlyInGraph": [
+      "the",
+      "was"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "events",
+    "item": "BulkPaymentCompleted",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:payments:BulkPaymentCompletedEvent",
+    "relation": "both",
+    "docText": "Bulk payment redirect success",
+    "graphText": "Bulk payment redirect confirmation succeeds",
+    "onlyInGraph": [
+      "confirmation succeeds"
+    ],
+    "onlyInDoc": [
+      "success"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Payment Amount Immutability",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_PaymentAmountImmutability",
+    "relation": "graph-has-more",
+    "docText": "Prevents user confusion, ensures audit trail integrity, and matches CEPAS confirmation amounts. If fee schedule changes, new applications pay new rate; existing pending payments honor original amount.",
+    "graphText": "Prevents user confusion, ensures audit trail integrity, and matches CEPAS confirmation amounts. If the fee schedule changes, new applications pay the new rate; existing pending payments honor the original amount.",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Payment Amount Immutability",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_PaymentAmountImmutability",
+    "relation": "graph-has-more",
+    "docText": "- User initiates payment for Elementary Credential on Jan 1, 2026 (fee: $100)\n- Fee schedule updated Jan 5, 2026 (new fee: $120)\n- User completes payment Jan 10, 2026\n- Amount charged: $100 (original calculated amount)\n- New applications after Jan 5 pay $120",
+    "graphText": "User initiates payment for an Elementary Credential on Jan 1, 2026 (fee: $100). Fee schedule updated Jan 5, 2026 (new fee: $120). User completes payment Jan 10, 2026. Amount charged: $100 (original calculated amount). New applications after Jan 5 pay $120.",
+    "onlyInGraph": [
+      "an"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Hash Validation Required for Payment Confirmation",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_HashValidationRequired",
+    "relation": "graph-has-more",
+    "docText": "All payment confirmations returned from CEPAS redirect must pass SHA-1 hash validation before updating transaction status to Paid.",
+    "graphText": "All payment confirmations returned from a CEPAS redirect must pass SHA-1 hash validation before updating transaction status to Paid.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Hash Validation Required for Payment Confirmation",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_HashValidationRequired",
+    "relation": "graph-has-more",
+    "docText": "Prevents spoofed payment confirmations and ensures data integrity. CEPAS provides hash calculated as `SHA-1([ConfirmationNumber][Amount][SecurityKey])` which MiEdWorkforce must independently verify.",
+    "graphText": "Prevents spoofed payment confirmations and ensures data integrity. CEPAS provides a hash calculated as SHA-1(ConfirmationNumber + Amount + SecurityKey) which MiEdWorkforce must independently verify.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Hash Validation Required for Payment Confirmation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_HashValidationRequired",
+    "relation": "both",
+    "docText": "- CEPAS returns: `c=12345, t=100.00, hash=a1b2c3d4...`\n- MiEdWorkforce calculates: `SHA-1(\"12345\" + \"100.00\" + \"<SecurityKey>\")`\n- If hashes match -> transaction marked Paid\n- If hashes don't match -> transaction marked Failed, alert raised, payment not credited",
+    "graphText": "CEPAS returns c=12345, t=100.00, hash=a1b2c3d4.... MiEdWorkforce calculates SHA-1(\"12345\" + \"100.00\" + SecurityKey). If hashes match, transaction is marked Paid; if not, transaction is marked Failed and an alert is raised.",
+    "onlyInGraph": [
+      "is",
+      "not",
+      "is",
+      "and an",
+      "is"
+    ],
+    "onlyInDoc": [
+      "hashes don t match",
+      "payment not credited"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Posting File as Source of Truth",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_PostingFileSourceOfTruth",
+    "relation": "graph-has-more",
+    "docText": "The CEPAS posting file is the authoritative source of truth for payment status. If posting file confirms a payment that MiEdWorkforce has as Pending, system automatically updates to Paid.",
+    "graphText": "The CEPAS posting file is the authoritative source of truth for payment status. If the posting file confirms a payment that MiEdWorkforce has as Pending, the system automatically updates it to Paid.",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "it"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Posting File as Source of Truth",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_PostingFileSourceOfTruth",
+    "relation": "graph-has-more",
+    "docText": "Real-time redirect confirmations can be missed due to browser closures, network issues, or user navigation away. Posting file ensures no revenue is lost and all payments are eventually reconciled.",
+    "graphText": "Real-time redirect confirmations can be missed due to browser closures, network issues, or user navigation away. The posting file ensures no revenue is lost and all payments are eventually reconciled.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Posting File as Source of Truth",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_PostingFileSourceOfTruth",
+    "relation": "both",
+    "docText": "- User completes payment on CEPAS site\n- User closes browser before redirect back to MiEdWorkforce\n- Transaction remains `Pending` in MiEdWorkforce\n- Next morning, posting file includes this payment\n- Batch job detects missing payment, updates status to `Paid`\n- Credential application workflow advances automatically",
+    "graphText": "User completes payment on the CEPAS site then closes the browser before the redirect back. The transaction remains Pending in MiEdWorkforce. The next morning, the posting file includes this payment; the batch job detects the missing payment and updates status to Paid, advancing the credential application workflow automatically.",
+    "onlyInGraph": [
+      "the",
+      "then",
+      "the",
+      "the",
+      "the",
+      "the",
+      "the",
+      "the",
+      "the",
+      "and",
+      "advancing the"
+    ],
+    "onlyInDoc": [
+      "user",
+      "to miedworkforce",
+      "advances"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Refund Amount Validation",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_RefundAmountValidation",
+    "relation": "graph-has-more",
+    "docText": "Refund amount must be less than or equal to original payment amount. Partial refunds must leave a non-zero remainder or represent full amount.",
+    "graphText": "Refund amount must be less than or equal to the original payment amount. Partial refunds must leave a non-zero remainder or represent the full amount.",
+    "onlyInGraph": [
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Refund Amount Validation",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_RefundAmountValidation",
+    "relation": "both",
+    "docText": "Prevents over-refunding and ensures financial integrity. CEPAS enforces this on their end, but MiEdWorkforce validates before API call to provide immediate user feedback.",
+    "graphText": "Prevents over-refunding and ensures financial integrity. CEPAS enforces this on their end too, but MiEdWorkforce validates before the API call to give immediate user feedback.",
+    "onlyInGraph": [
+      "too",
+      "the",
+      "give"
+    ],
+    "onlyInDoc": [
+      "provide"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Refund Amount Validation",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_RefundAmountValidation",
+    "relation": "both",
+    "docText": "- Original payment: $100\n- Valid refund requests: $100 (full), $50 (partial), $25 (partial)\n- Invalid refund request: $150 (exceeds original)\n- System blocks invalid request before CEPAS API call",
+    "graphText": "Original payment: $100. Valid refund requests: $100 (full), $50 (partial), $25 (partial). Invalid: $150 (exceeds original) — blocked before the CEPAS API call. If a $30 partial refund has already processed, the maximum new refund is $70; multiple partial refunds are allowed until the total refunded equals the original amount.",
+    "onlyInGraph": [
+      "blocked",
+      "the",
+      "if a 30 partial refund has already processed the maximum new refund is 70 multiple partial refunds are allowed until the total refunded equals the original amount"
+    ],
+    "onlyInDoc": [
+      "refund request",
+      "system blocks invalid request"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Bulk Payment Individual Fee Integrity",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_BulkPaymentFeeIntegrity",
+    "relation": "graph-has-more",
+    "docText": "When processing bulk payment, system must validate that total amount equals sum of individual application fees. Bulk payment succeeds or fails atomically.",
+    "graphText": "When processing a bulk payment, the system must validate that the total amount equals the sum of individual application fees. Bulk payment succeeds or fails atomically.",
+    "onlyInGraph": [
+      "a",
+      "the",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Bulk Payment Individual Fee Integrity",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_BulkPaymentFeeIntegrity",
+    "relation": "graph-has-more",
+    "docText": "Prevents partial payment scenarios where some applications in bulk batch are paid and others are not.",
+    "graphText": "Prevents partial-payment scenarios where some applications in a bulk batch are paid and others are not.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Bulk Payment Individual Fee Integrity",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_BulkPaymentFeeIntegrity",
+    "relation": "both",
+    "docText": "- User selects 5 applications: App1 ($50), App2 ($75), App3 ($50), App4 ($100), App5 ($50)\n- Calculated total: $325\n- CEPAS confirmation returns: $325 -> all 5 applications marked Paid\n- If CEPAS confirmation returns different amount -> all 5 remain Pending, discrepancy flagged",
+    "graphText": "User selects 5 applications ($50+$75+$50+$100+$50 = $325). If the CEPAS confirmation returns $325, all 5 applications are marked Paid. If it returns a different amount, all 5 remain Pending and a discrepancy is flagged.",
+    "onlyInGraph": [
+      "if the",
+      "are",
+      "it",
+      "a",
+      "and a",
+      "is"
+    ],
+    "onlyInDoc": [
+      "app1",
+      "app2",
+      "app3",
+      "app4",
+      "app5",
+      "calculated total",
+      "cepas confirmation"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Missing Payment Auto-Update Restrictions",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_MissingPaymentAutoUpdateRestrictions",
+    "relation": "both",
+    "docText": "Posting file reconciliation can only auto-update transactions currently in `Pending` status. Transactions in `Failed` or `Refunded` status are not auto-updated even if appearing in posting file.",
+    "graphText": "Posting file reconciliation can only auto-update transactions currently in Pending status. Transactions in Failed or Refunded status are not auto-updated even if they appear in the posting file.",
+    "onlyInGraph": [
+      "they appear",
+      "the"
+    ],
+    "onlyInDoc": [
+      "appearing"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Missing Payment Auto-Update Restrictions",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_MissingPaymentAutoUpdateRestrictions",
+    "relation": "both",
+    "docText": "Prevents corruption of audit trail and state machine violations. Failed payments may have been retried with new transaction ID. Refunded payments should not revert to Paid.",
+    "graphText": "Prevents corruption of the audit trail and state-machine violations. Failed payments may have been retried under a new transaction ID; refunded payments should not revert to Paid.",
+    "onlyInGraph": [
+      "the",
+      "under a"
+    ],
+    "onlyInDoc": [
+      "with"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Missing Payment Auto-Update Restrictions",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_MissingPaymentAutoUpdateRestrictions",
+    "relation": "both",
+    "docText": "- Transaction T1 marked `Failed` on Jan 10 (user declined card)\n- User retries with different card, creates Transaction T2 (succeeds)\n- Posting file on Jan 11 includes T2 confirmation\n- T2 auto-updated to `Paid`\n- T1 remains `Failed` (not updated)\n- If posting file somehow includes T1, flagged as discrepancy for manual review",
+    "graphText": "Transaction T1 marked Failed on Jan 10 (declined card). User retries with a different card, creating Transaction T2 (succeeds). The Jan 11 posting file includes T2's confirmation; T2 is auto-updated to Paid, T1 remains Failed. If the posting file somehow includes T1, it is flagged as a discrepancy for manual review.",
+    "onlyInGraph": [
+      "a",
+      "creating",
+      "the",
+      "posting file",
+      "s",
+      "is",
+      "the",
+      "it is",
+      "a"
+    ],
+    "onlyInDoc": [
+      "user",
+      "creates",
+      "posting file on",
+      "not updated"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "CEPAS Server Unavailability Handling",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:payments:Rule_CepasUnavailabilityHandling",
+    "relation": "both",
+    "docText": "If CEPAS server is unreachable when user clicks \"Pay Fee\", system must display error message within MiEdWorkforce (before redirect attempt) and allow user to retry later. Application submission is not blocked.",
+    "graphText": "If the CEPAS server is unreachable when a user clicks \"Pay Fee\", the system must display an error message within MiEdWorkforce (before attempting the redirect) and allow the user to retry later. Application submission is not blocked.",
+    "onlyInGraph": [
+      "the",
+      "a",
+      "the",
+      "an",
+      "attempting the",
+      "the"
+    ],
+    "onlyInDoc": [
+      "attempt"
+    ]
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "CEPAS Server Unavailability Handling",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:payments:Rule_CepasUnavailabilityHandling",
+    "relation": "graph-has-more",
+    "docText": "Separates application submission from payment timing. Users can submit applications and pay later, improving user experience during CEPAS outages.",
+    "graphText": "Separates application submission from payment timing so users can submit applications and pay later, improving user experience during CEPAS outages.",
+    "onlyInGraph": [
+      "so"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "CEPAS Server Unavailability Handling",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:payments:Rule_CepasUnavailabilityHandling",
+    "relation": "both",
+    "docText": "- User submits credential application (successful)\n- Application status set to `Pending Payment`\n- User clicks \"Pay Fee\" link\n- System health check detects CEPAS unavailable (timeout or 503 response)\n- Error message displayed: \"Payment system temporarily unavailable. Please try again later. Your application has been submitted.\"\n- User returns in 1 hour, clicks \"Pay Fee\" again, redirect succeeds",
+    "graphText": "User submits a credential application successfully; status is set to Pending Payment. User clicks \"Pay Fee\"; a health check detects CEPAS is unavailable (timeout or 503). Error message is displayed: \"Payment system temporarily unavailable. Please try again later. Your application has been submitted.\" User returns in 1 hour and the redirect succeeds.",
+    "onlyInGraph": [
+      "a",
+      "successfully",
+      "is",
+      "a",
+      "is",
+      "is",
+      "and the"
+    ],
+    "onlyInDoc": [
+      "successful application",
+      "link system",
+      "response",
+      "clicks pay fee again"
+    ]
+  }
+]

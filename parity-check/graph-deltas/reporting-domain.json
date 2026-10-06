@@ -1,0 +1,34 @@
+[
+  {
+    "area": "reporting",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Report Access Is Gated by Domain Permissions",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:reporting:Rule_ReportAccessGatedByDomainPermissions",
+    "relation": "both",
+    "docText": "Each report in the catalog declares a single `PermissionKey` (e.g., `profpractice.reports.view`). Before generating an embed token, the Reporting API checks that the requesting user holds this permission at an appropriate organizational scope. Access is denied if the check fails.",
+    "graphText": "Each report in the catalog declares a single PermissionKey (e.g. reporting.credentialing-reports.view). Before generating an embed token, the Reporting API checks that the requesting user holds this permission at an appropriate organizational scope. Access is denied if the check fails.",
+    "onlyInGraph": [
+      "reporting credentialing"
+    ],
+    "onlyInDoc": [
+      "profpractice"
+    ]
+  },
+  {
+    "area": "reporting",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Standard Parameter Set",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:reporting:Rule_StandardParameterSet",
+    "relation": "graph-has-more",
+    "docText": "The application defines a canonical set of embed parameter names. Report authors must use these exact parameter names when configuring RLS roles in their report definitions. Custom parameter names outside this set are not permitted without a catalog governance review.",
+    "graphText": "The application defines a canonical set of embed parameter names (UserUniqueId, OrgType, OrgCode, OrgAncestorCodes, UserRole). Report authors must use these exact parameter names when configuring RLS roles in their report definitions. Custom parameter names outside this set are not permitted without a catalog governance review.",
+    "onlyInGraph": [
+      "useruniqueid orgtype orgcode organcestorcodes userrole"
+    ],
+    "onlyInDoc": []
+  }
+]

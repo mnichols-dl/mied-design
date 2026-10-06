@@ -41,25 +41,25 @@ This domain owns the complete employment and assignment data collection cycle, f
 
 ## Ubiquitous Language
 
-| Term                               | Definition                                                                                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Employee Roster**                | The collection of all individuals employed by an educational organization during a school year, including active and terminated staff            |
-| **Position Roster**                | The organizational chart of approved positions within an entity, including unfilled, filled, and frozen positions                                |
-| **Assignment**                     | The linkage of an employee to a specific position, including course details, grade levels, and FTE allocation                                    |
-| **Appropriate Placement**          | The state where an employee holds valid credentials and endorsements matching their assigned position and course responsibilities                |
-| **Credential Error Justification** | Free-form text explanation provided by a district when assigning an employee to a position they are not credentialed for, used in audit reviews. |
-| **New Teacher**                    | An educator within their first three years of classroom teaching employment, subject to mentorship and professional development requirements     |
-| **Evaluation Outcome**             | The annual performance assessment result for instructional staff, appealable by both employee and district within defined windows                |
-| **Education History**              | Post-secondary degree and institutional records used to calculate highest level of education completed for federal reporting                     |
-| **Collection Certification**       | The formal attestation and finalization of employment and assignment data for a reporting period, after quality review and error resolution      |
-| **Data Quality Review**            | System-generated validation process that checks individual records, historical patterns, and cross-system alignment before certification         |
-| **Spot**                           | A single assignment allocation within a position, defined by SCED course, grade levels, FTE allocation, and start/end dates                      |
-| **Unfilled Position**              | A position established in the roster but not yet assigned to an employee, available for assignment from the active employee pool                 |
-| **Frozen Position**                | A position temporarily inactive and not available for employee assignment until status changes to Active or Approved                             |
-| **ISD Auditor**                    | A role responsible for reviewing district-level employment and placement data for constituent districts within an ISD/RESA service area          |
-| **SOM Auditor**                    | State-level auditor role responsible for reviewing ISD-submitted audit findings and finalized reports                                            |
-| **Staffing Data Administrator**    | System administrator role managing collection definitions, business rules, validation configurations, and data quality processing schedules      |
-| **Collection Exception**           | Approved request to allow data submission and certification past the legislative deadline for a specific district and collection period          |
+| Term                               | Definition                                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Employee Roster**                | The collection of all individuals employed by an educational organization during a school year, including active and terminated staff         |
+| **Position Roster**                | The organizational chart of approved positions within an entity, including unfilled, filled, and frozen positions                             |
+| **Assignment**                     | The linkage of an employee to a specific position, including course details, grade levels, and FTE allocation                                 |
+| **Appropriate Placement**          | The state where an employee holds valid credentials and endorsements matching their assigned position and course responsibilities             |
+| **Credential Error Justification** | Free-form text explanation provided by district when assigning an employee to a position they are not credentialed for, used in audit reviews |
+| **New Teacher**                    | An educator within their first three years of classroom teaching employment, subject to mentorship and professional development requirements  |
+| **Evaluation Outcome**             | The annual performance assessment result for instructional staff, appealable by both employee and district within defined windows             |
+| **Education History**              | Post-secondary degree and institutional records used to calculate highest level of education completed for federal reporting                  |
+| **Collection Certification**       | The formal attestation and finalization of employment and assignment data for a reporting period, after quality review and error resolution   |
+| **Data Quality Review**            | System-generated validation process that checks individual records, historical patterns, and cross-system alignment before certification      |
+| **Spot**                           | A single assignment allocation within a position, defined by SCED course, grade levels, FTE allocation, and start/end dates                   |
+| **Unfilled Position**              | A position established in the roster but not yet assigned to an employee, available for assignment from the active employee pool              |
+| **Frozen Position**                | A position temporarily inactive and not available for employee assignment until status changes to Active or Approved                          |
+| **ISD Auditor**                    | A role responsible for reviewing district-level employment and placement data for constituent districts within an ISD/RESA service area       |
+| **SOM Auditor**                    | State-level auditor role responsible for reviewing ISD-submitted audit findings and finalized reports                                         |
+| **Staffing Data Administrator**    | System administrator role managing collection definitions, business rules, validation configurations, and data quality processing schedules   |
+| **Collection Exception**           | Approved request to allow data submission and certification past the legislative deadline for a specific district and collection period       |
 
 ---
 
@@ -658,7 +658,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** If an employee has an Employment End Date, an Employment Separation Reason must also be provided. Conversely, if a Separation Reason is provided, an End Date is required.
 
-**Rationale:** Termination records must be complete for state reporting and historical analysis. Partial termination data indicates a data quality issue.
+**Rationale:** Termination records must be complete for state reporting and historical analysis. Partial termination data indicates data quality issue.
 
 **Enforced By:** EmployeeRoster aggregate during employment status update validation
 
@@ -682,7 +682,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** A collection cannot be certified if any employee records or position records remain in Error status. All validation errors must be corrected before certification allowed.
 
-**Rationale:** Certified data becomes finalized and immutable (except via formal reopen process). Error records would propagate incomplete/invalid data to the state warehouse.
+**Rationale:** Certified data becomes finalized and immutable (except via formal reopen process). Error records would propagate incomplete/invalid data to state warehouse.
 
 **Enforced By:** Collection aggregate during certification attempt; pre-certification task validation
 
@@ -698,7 +698,7 @@ Events published by this domain that other domains may subscribe to:
 
 **Enforced By:** EmployeeRoster aggregate when appeal action is requested
 
-**Example:** On 10/1/2025, district discovers a data entry error for the 2023-24 evaluation outcome for Teacher Bob Smith. Since 2023-24 is within the 5-year window, district can submit an appeal to change the outcome from Ineffective to Effective. Citizen Bob Smith can also appeal this outcome at any time via his citizen account.
+**Example:** On 10/1/2025, district discovers data entry error for 2023-24 evaluation outcome for Teacher Bob Smith. Since 2023-24 is within 5-year window, district can submit appeal to change outcome from Ineffective to Effective. Citizen Bob Smith can also appeal this outcome at any time via his citizen account.
 
 ---
 
@@ -745,8 +745,6 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** A position created at a specific building with assigned course grade spans must only include grades that the building is authorized to offer.
 
-**Rationale:** No rationale documented in staffing-domain.md — the source table cell is empty.
-
 **Enforced By:** PositionRoster aggregate during position creation and course detail assignment; validates against Building grade authorization from organization-reference-data domain
 
-**Example:** Lincoln Elementary (authorized K-5) creates a position for 3rd Grade Teacher with a SCED course spanning grades 3-5. System allows it. If the district tries to assign High School Biology (grades 9-12) to Lincoln Elementary, the system blocks with validation error: 'Building not authorized for grades 9-12'.
+**Example:** Lincoln Elementary (authorized K-5) creates position for 3rd Grade Teacher with SCED course spanning grades 3-5. System allows. If district tries to assign High School Biology (grades 9-12) to Lincoln Elementary, system blocks with validation error: "Building not authorized for grades 9-12"

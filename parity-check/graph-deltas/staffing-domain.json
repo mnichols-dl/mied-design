@@ -1,0 +1,154 @@
+[
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "terms",
+    "item": "Credential Error Justification",
+    "property": "skos:definition",
+    "iri": "urn:solutiondesign:instance:staffing:UT_CredentialErrorJustification",
+    "relation": "graph-has-more",
+    "docText": "Free-form text explanation provided by district when assigning an employee to a position they are not credentialed for, used in audit reviews",
+    "graphText": "Free-form text explanation provided by a district when assigning an employee to a position they are not credentialed for, used in audit reviews.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "EmployeeRoster",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:staffing:EmployeeRosterAggregate",
+    "relation": "both",
+    "docText": "- Employment Start Date must be on or before current date (no future hires)\n- Employment End Date must follow Employment Start Date\n- Employment End Date and Separation Reason must both be present or both absent\n- Employee cannot be re-added to same district without new Employment Start Date if previously terminated\n- Active employment status requires at least one active assignment in Assignment Details\n- New Teacher flag set to true requires New Teacher Monitoring component completion before certification\n- Evaluation Outcome required for instructional staff and administrators before certification\n- **Identity resolution is not owned here.** When an employee record has no Unique ID (new hire) or its demographics change, this aggregate triggers identity resolution by calling `iam`'s `IdentityResolutionRequest` API (or, for Link ID, submits a link request) and waits for a completion event (`IdentityResolutionCompleted`, `IdentityRequestDenied`, `PersonRecordUpdated`) to populate/update `unique_id`. EmployeeRoster holds no Near Match state, matching candidates, or Identity Administrator worklist of its own — see `iam-domain.md`.",
+    "graphText": "Employment Start Date must be on or before current date (no future hires). Employment End Date must follow Employment Start Date. Employment End Date and Separation Reason must both be present or both absent. Employee cannot be re-added to same district without new Employment Start Date if previously terminated. Active employment status requires at least one active assignment in Assignment Details. New Teacher flag set to true requires New Teacher Monitoring component completion before certification. Evaluation Outcome required for instructional staff and administrators before certification. Identity resolution is not owned here: when an employee record has no Unique ID or its demographics change, this aggregate triggers identity resolution by calling iam's IdentityResolutionRequest API (or, for Link ID, submits a link request) and waits for a completion event (IdentityResolutionCompleted, IdentityRequestDenied, PersonRecordUpdated) to populate/update unique_id. EmployeeRoster holds no Near Match state, matching candidates, or Identity Administrator worklist of its own — see iam-domain.ttl (real, converted in this same mied-v3 pass).",
+    "onlyInGraph": [
+      "ttl real converted in this same mied v3 pass"
+    ],
+    "onlyInDoc": [
+      "new hire",
+      "md"
+    ]
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: New Teacher Monitoring Requirement",
+    "property": "statement",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_NewTeacherMonitoringRequirement",
+    "relation": "both",
+    "docText": "An employee flagged as New Teacher (within first 3 years of classroom teaching) must have New Teacher Monitoring component completed before collection certification. Component includes mentor assignment and SCECH tracking toward 15-day professional development requirement over 3 years.",
+    "graphText": "An employee flagged as New Teacher (within first 3 years of classroom teaching) must have the New Teacher Monitoring component completed before collection certification, including mentor assignment and SCECH tracking toward the 15-day professional development requirement over 3 years.",
+    "onlyInGraph": [
+      "the",
+      "including",
+      "the"
+    ],
+    "onlyInDoc": [
+      "component includes"
+    ]
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Employment End Date and Separation Reason Co-requirement",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_EmploymentEndDateSeparationReasonCorequirement",
+    "relation": "graph-has-more",
+    "docText": "Termination records must be complete for state reporting and historical analysis. Partial termination data indicates data quality issue.",
+    "graphText": "Termination records must be complete for state reporting and historical analysis. Partial termination data indicates a data quality issue.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Collection Cannot Be Certified with Error-Status Records",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_CollectionCannotCertifyWithErrors",
+    "relation": "graph-has-more",
+    "docText": "Certified data becomes finalized and immutable (except via formal reopen process). Error records would propagate incomplete/invalid data to state warehouse.",
+    "graphText": "Certified data becomes finalized and immutable (except via formal reopen process). Error records would propagate incomplete/invalid data to the state warehouse.",
+    "onlyInGraph": [
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Evaluation Outcome Appeal Window",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_EvaluationOutcomeAppealWindow",
+    "relation": "graph-has-more",
+    "docText": "On 10/1/2025, district discovers data entry error for 2023-24 evaluation outcome for Teacher Bob Smith. Since 2023-24 is within 5-year window, district can submit appeal to change outcome from Ineffective to Effective. Citizen Bob Smith can also appeal this outcome at any time via his citizen account.",
+    "graphText": "On 10/1/2025, district discovers a data entry error for the 2023-24 evaluation outcome for Teacher Bob Smith. Since 2023-24 is within the 5-year window, district can submit an appeal to change the outcome from Ineffective to Effective. Citizen Bob Smith can also appeal this outcome at any time via his citizen account.",
+    "onlyInGraph": [
+      "a",
+      "the",
+      "the",
+      "an",
+      "the"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: ISD Audit Item Created After District Certification",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_ISDAuditItemCreatedAfterCertification",
+    "relation": "both",
+    "docText": "Oak Grove School District (constituent of Washtenaw ISD) certifies Fall 2024 Employee Roster on 11/15/2024. System automatically creates an audit work item scoped to Washtenaw ISD, which appears in Washtenaw ISD auditors' audit item list, alerting them to review Oak Grove's submission for appropriate placement and school safety compliance.",
+    "graphText": "Oak Grove School District (constituent of Washtenaw ISD) certifies its Fall 2024 Employee Roster on 11/15/2024. System automatically creates an audit work item scoped to Washtenaw ISD, which appears in Washtenaw ISD auditors' audit item list.",
+    "onlyInGraph": [
+      "its"
+    ],
+    "onlyInDoc": [
+      "alerting them to review oak grove s submission for appropriate placement and school safety compliance"
+    ]
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Position Grade Span Must Align with Building Authorization",
+    "property": "rationale",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_PositionGradeSpanAlignsWithBuildingAuthorization",
+    "relation": "graph-has-more",
+    "docText": "",
+    "graphText": "No rationale documented in staffing-domain.md — the source table cell is empty.",
+    "onlyInGraph": [
+      "no rationale documented in staffing domain md the source table cell is empty"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "staffing",
+    "docKind": "domain",
+    "section": "rules",
+    "item": "Rule: Position Grade Span Must Align with Building Authorization",
+    "property": "example",
+    "iri": "urn:solutiondesign:instance:staffing:Rule_PositionGradeSpanAlignsWithBuildingAuthorization",
+    "relation": "graph-has-more",
+    "docText": "Lincoln Elementary (authorized K-5) creates position for 3rd Grade Teacher with SCED course spanning grades 3-5. System allows. If district tries to assign High School Biology (grades 9-12) to Lincoln Elementary, system blocks with validation error: \"Building not authorized for grades 9-12\"",
+    "graphText": "Lincoln Elementary (authorized K-5) creates a position for 3rd Grade Teacher with a SCED course spanning grades 3-5. System allows it. If the district tries to assign High School Biology (grades 9-12) to Lincoln Elementary, the system blocks with validation error: 'Building not authorized for grades 9-12'.",
+    "onlyInGraph": [
+      "a",
+      "a",
+      "it",
+      "the",
+      "the"
+    ],
+    "onlyInDoc": []
+  }
+]

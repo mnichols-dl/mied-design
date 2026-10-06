@@ -1,0 +1,74 @@
+[
+  {
+    "area": "organizations",
+    "docKind": "sequences",
+    "section": "Organization Search",
+    "item": "Organization Search",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:organizations:Seq_OrganizationSearch",
+    "relation": "both",
+    "docText": "- **Minimum 2 characters:** Enforced at the API level to prevent full-table scans on single-character queries.\n- **Active-only default:** Search returns only `Active` organizations by default. Admins with `organizations.organization.view` can pass `status=Inactive` to surface deactivated orgs for historical lookup.\n- **Result limit of 20:** Typeahead use cases don't need exhaustive results. Users should refine their query rather than paginate search results.\n- **Search cache keyed on query hash:** The 15-minute TTL balances freshness with performance. Search result caching is TTL-only (not event-invalidated) because the cost of a cache miss is low and the benefit of immediate cache invalidation on every sync is minimal.",
+    "graphText": "Minimum 2 characters, enforced at the API level to prevent full-table scans on single-character queries. Active-only default: search returns only Active organizations by default; admins with organizations.organization.view can pass status=Inactive to surface deactivated orgs for historical lookup. Result limit of 20: typeahead use cases don't need exhaustive results — users should refine their query rather than paginate. Search cache keyed on query hash with a 15-minute TTL-only invalidation (not event-driven), since the cost of a cache miss is low and the benefit of immediate invalidation on every sync is minimal.",
+    "onlyInGraph": [
+      "with a",
+      "invalidation",
+      "driven since"
+    ],
+    "onlyInDoc": [
+      "results search",
+      "the",
+      "balances freshness with performance search result caching is ttl",
+      "invalidated because",
+      "cache"
+    ]
+  },
+  {
+    "area": "organizations",
+    "docKind": "sequences",
+    "section": "Hierarchy Resolution",
+    "item": "Hierarchy Resolution",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:organizations:Seq_HierarchyResolution",
+    "relation": "both",
+    "docText": "- **Single-row lookup:** The materialized `ancestor_organization_codes` JSON array on the hierarchy record means this is a single indexed lookup, not a recursive query. This is what makes sub-10ms hierarchy resolution achievable.\n- **Cache owned by IAM:** IAM maintains its own cache of hierarchy data. The Organizations API does not cache on behalf of its consumers — each consumer manages its own cache per the canonical caching strategy.\n- **Restricted endpoint:** `/organizations/{code}/hierarchy` is restricted to IAM's service account principal via Istio authorization policy. Other domains do not call this endpoint directly; they call `/organizations/{code}` for display purposes and let IAM handle permission evaluation.",
+    "graphText": "Single-row lookup: the materialized ancestor_organization_codes JSON array on the hierarchy record makes this a single indexed lookup, not a recursive query — this is what makes sub-10ms hierarchy resolution achievable. Cache owned by IAM: IAM maintains its own cache of hierarchy data; the Organizations API does not cache on behalf of consumers. Restricted endpoint: /organizations/{code}/hierarchy is restricted to IAM's service account principal via Istio authorization policy; other domains call /organizations/{code} for display and let IAM handle permission evaluation.",
+    "onlyInGraph": [
+      "makes"
+    ],
+    "onlyInDoc": [
+      "means",
+      "is",
+      "its",
+      "each consumer manages its own cache per the canonical caching strategy",
+      "do not",
+      "this endpoint directly they call",
+      "purposes"
+    ]
+  },
+  {
+    "area": "organizations",
+    "docKind": "sequences",
+    "section": "Degraded Operation (Sync Failure)",
+    "item": "Degraded Operation (Sync Failure)",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:organizations:Seq_DegradedOperation",
+    "relation": "both",
+    "docText": "- **No consumer-facing impact on single failure:** Because the replica is not modified on failure, consumers see no difference. The only observable effect is that new EEM changes (new orgs, Lead Admin changes, deactivations) are not reflected until the next successful sync.\n- **Alert on first failure:** A single sync failure triggers an alert. Platform operations reviews and determines whether manual intervention is needed (e.g., CEPI API outage, pipeline configuration issue).\n- **Manual re-trigger available:** `POST /admin/jobs/sync` allows a System Admin to trigger a manual sync once the upstream issue is resolved, without waiting for the next scheduled run.\n- **Multi-day failure escalation:** If sync fails for more than 2 consecutive cycles, the alert severity escalates. At that point, any EEM changes during the outage window (new Lead Admin designations, new organizations) will not be reflected in MiEdWorkforce until recovery. This is an operational concern, not a data integrity concern — the replica simply lags EEM by the outage duration.",
+    "graphText": "No consumer-facing impact on single failure: because the replica is not modified on failure, consumers see no difference beyond new EEM changes not yet being reflected. Alert on first failure: a single sync failure triggers an alert; platform operations reviews and determines whether manual intervention is needed. Manual re-trigger available: POST /admin/jobs/sync allows a System Admin to trigger a manual sync once the upstream issue is resolved. Multi-day failure escalation: if sync fails for more than 2 consecutive cycles, alert severity escalates; this is treated as an operational concern, not a data integrity concern.",
+    "onlyInGraph": [
+      "beyond",
+      "yet being",
+      "treated as"
+    ],
+    "onlyInDoc": [
+      "the only observable effect is that",
+      "new orgs lead admin changes deactivations are",
+      "until the next successful sync",
+      "e g cepi api outage pipeline configuration issue",
+      "without waiting for the next scheduled run",
+      "the",
+      "at that point any eem changes during the outage window new lead admin designations new organizations will not be reflected in miedworkforce until recovery",
+      "the replica simply lags eem by the outage duration"
+    ]
+  }
+]

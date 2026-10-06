@@ -1,0 +1,184 @@
+[
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.transaction.initiate",
+    "item": "payments.transaction.initiate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_TransactionInitiate",
+    "relation": "graph-has-more",
+    "docText": "Implicit baseline — any authenticated user can pay fees for their own applications",
+    "graphText": "Implicit baseline — any authenticated user can pay fees for their own applications. Payments does not independently verify application ownership; the calling domain or UI is responsible for that check before invoking payment flows.",
+    "onlyInGraph": [
+      "payments does not independently verify application ownership the calling domain or ui is responsible for that check before invoking payment flows"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.transaction.initiate-bulk",
+    "item": "payments.transaction.initiate-bulk",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_TransactionInitiateBulk",
+    "relation": "graph-has-more",
+    "docText": "District staff paying fees for multiple applications in their organization",
+    "graphText": "District staff paying fees for multiple applications in their organization. ISD grant is transitive to constituent districts/buildings; District grant is transitive to constituent buildings. System validates all selected applications are in scope before initiation; if any is out of scope the entire bulk request is rejected.",
+    "onlyInGraph": [
+      "isd grant is transitive to constituent districts buildings district grant is transitive to constituent buildings system validates all selected applications are in scope before initiation if any is out of scope the entire bulk request is rejected"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.transaction.retry",
+    "item": "payments.transaction.retry",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_TransactionRetry",
+    "relation": "graph-has-more",
+    "docText": "Implicit baseline — user can re-initiate after failure; each retry creates a new transaction",
+    "graphText": "Implicit baseline — user can re-initiate after failure; each retry creates a new transaction. No dedicated retry endpoint exists: retry simply calls POST /payments/initiate again (pay:Op_InitiatePayment), which is gated by payments.transaction.initiate, not this permission — so this permission is never actually enforced by any modeled PermissionRequirement. A documented gap, not fabricated.",
+    "onlyInGraph": [
+      "no dedicated retry endpoint exists retry simply calls post payments initiate again pay op initiatepayment which is gated by payments transaction initiate not this permission so this permission is never actually enforced by any modeled permissionrequirement a documented gap not fabricated"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.refund.request-bulk",
+    "item": "payments.refund.request-bulk",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_RefundRequestBulk",
+    "relation": "graph-has-more",
+    "docText": "Credential Admin; audit logged",
+    "graphText": "Credential Admin; audit logged. Each refund is processed independently — partial success is possible; threshold calculation uses the total amount across all refunds in the batch.",
+    "onlyInGraph": [
+      "each refund is processed independently partial success is possible threshold calculation uses the total amount across all refunds in the batch"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.refund.approve",
+    "item": "payments.refund.approve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_RefundApprove",
+    "relation": "graph-has-more",
+    "docText": "Financial Admin; dual approval required for amounts >$500; audit logged",
+    "graphText": "Financial Admin; dual approval required for amounts >$500 (Credential Admin initiates via payments.refund.request, Financial Admin authorizes via this permission); audit logged. Threshold is configurable, default $500.",
+    "onlyInGraph": [
+      "credential admin initiates via payments refund request financial admin authorizes via this permission",
+      "threshold is configurable default 500"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.refund.view",
+    "item": "payments.refund.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_RefundView",
+    "relation": "graph-has-more",
+    "docText": "Credential Admin, Financial Admin",
+    "graphText": "Credential Admin, Financial Admin. No API operation currently models this permission — payments-api.yml has no general refund list/history endpoint (GET /refunds/pending-approval exists but is gated by payments.refund.approve, not this permission). A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission payments api yml has no general refund list history endpoint get refunds pending approval exists but is gated by payments refund approve not this permission a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.reconciliation.view",
+    "item": "payments.reconciliation.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_ReconciliationView",
+    "relation": "graph-has-more",
+    "docText": "Payment Admin",
+    "graphText": "Payment Admin. No API operation currently models this permission — payments-api.yml defines a ReconciliationBatchSummary schema but no endpoint that returns it. A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission payments api yml defines a reconciliationbatchsummary schema but no endpoint that returns it a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.reconciliation.run",
+    "item": "payments.reconciliation.run",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_ReconciliationRun",
+    "relation": "graph-has-more",
+    "docText": "Payment Admin; audit logged",
+    "graphText": "Payment Admin; audit logged. No API operation currently models this permission — the reconciliation job (pay:BatchJob_PostingFileReconciliation) runs on a schedule only; payments-api.yml exposes no manual-trigger endpoint. A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission the reconciliation job pay batchjob postingfilereconciliation runs on a schedule only payments api yml exposes no manual trigger endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.reconciliation.export",
+    "item": "payments.reconciliation.export",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_ReconciliationExport",
+    "relation": "graph-has-more",
+    "docText": "Payment Admin, Financial Admin",
+    "graphText": "Payment Admin, Financial Admin. No API operation currently models this permission — payments-api.yml has no export endpoint. A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission payments api yml has no export endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.audit.view",
+    "item": "payments.audit.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_AuditView",
+    "relation": "graph-has-more",
+    "docText": "System Admin, Compliance Officer; includes search and export",
+    "graphText": "System Admin, Compliance Officer; includes search and export. No API operation currently models this permission — payments-api.yml has no audit-log endpoint (audit trail is populated via the PAYMENT_TRANSACTION_EVENTS ledger and consumed by the separate Audit capability via events, not queried back through this API). A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission payments api yml has no audit log endpoint audit trail is populated via the payment transaction events ledger and consumed by the separate audit capability via events not queried back through this api a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.admin.force-status",
+    "item": "payments.admin.force-status",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_AdminForceStatus",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; emergency use; requires justification; audit logged",
+    "graphText": "System Admin only; emergency use (e.g. CEPAS confirmed payment but a system error prevented the status update); requires justification; audit logged; should trigger notification to Financial Admin and System Admin. No API operation currently models this permission — payments-api.yml has no force-status endpoint. A documented gap.",
+    "onlyInGraph": [
+      "e g cepas confirmed payment but a system error prevented the status update",
+      "should trigger notification to financial admin and system admin no api operation currently models this permission payments api yml has no force status endpoint a documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "payments",
+    "docKind": "permissions",
+    "section": "payments.admin.circuit-breaker-reset",
+    "item": "payments.admin.circuit-breaker-reset",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:payments:Perm_AdminCircuitBreakerReset",
+    "relation": "graph-has-more",
+    "docText": "Payment Admin; audit logged",
+    "graphText": "Payment Admin; audit logged. No API operation currently models this permission — payments-api.yml has no circuit-breaker-reset endpoint (circuit breaker recovery is otherwise automatic via the half-open/closed state transition after cooldown). A documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission payments api yml has no circuit breaker reset endpoint circuit breaker recovery is otherwise automatic via the half open closed state transition after cooldown a documented gap"
+    ],
+    "onlyInDoc": []
+  }
+]

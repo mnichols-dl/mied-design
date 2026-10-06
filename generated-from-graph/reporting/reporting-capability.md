@@ -233,7 +233,7 @@ erDiagram
 
 ### Standard Parameter Set
 
-**Rule:** The application defines a canonical set of embed parameter names (UserUniqueId, OrgType, OrgCode, OrgAncestorCodes, UserRole). Report authors must use these exact parameter names when configuring RLS roles in their report definitions. Custom parameter names outside this set are not permitted without a catalog governance review.
+**Rule:** The application defines a canonical set of embed parameter names. Report authors must use these exact parameter names when configuring RLS roles in their report definitions. Custom parameter names outside this set are not permitted without a catalog governance review.
 
 **Rationale:** Consistency enables the application to reliably resolve and pass parameters without per-report custom logic.
 

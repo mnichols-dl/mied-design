@@ -1,0 +1,78 @@
+[
+  {
+    "area": "documents",
+    "docKind": "permissions",
+    "section": "documents.legal-hold.view",
+    "item": "documents.legal-hold.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:documents:Perm_LegalHoldView",
+    "relation": "graph-has-more",
+    "docText": "Legal Counsel, Compliance Officer, Document Admin",
+    "graphText": "Legal Counsel, Compliance Officer, Document Admin. No matching endpoint in documents-api.yml — GET /documents/search is the closest fit but is generic and ungated, not scoped to legal-hold-only results. Documented gap, not a fabricated resolution.",
+    "onlyInGraph": [
+      "no matching endpoint in documents api yml get documents search is the closest fit but is generic and ungated not scoped to legal hold only results documented gap not a fabricated resolution"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "permissions",
+    "section": "documents.admin.view-quarantine",
+    "item": "documents.admin.view-quarantine",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:documents:Perm_AdminViewQuarantine",
+    "relation": "graph-has-more",
+    "docText": "Security Admin, Document Admin; regular users receive only a generic upload failure message",
+    "graphText": "Security Admin, Document Admin; regular users receive only a generic upload failure message. No matching endpoint in documents-api.yml — documented gap.",
+    "onlyInGraph": [
+      "no matching endpoint in documents api yml documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "permissions",
+    "section": "documents.admin.override-scan",
+    "item": "documents.admin.override-scan",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:documents:Perm_AdminOverrideScan",
+    "relation": "graph-has-more",
+    "docText": "Security Admin only; requires justification; audit logged",
+    "graphText": "Security Admin only; requires justification; audit logged. No matching endpoint in documents-api.yml — documented gap.",
+    "onlyInGraph": [
+      "no matching endpoint in documents api yml documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "permissions",
+    "section": "documents.admin.force-hard-delete",
+    "item": "documents.admin.force-hard-delete",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:documents:Perm_AdminForceHardDelete",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; requires approved override request; irreversible; audit logged",
+    "graphText": "System Admin only; requires an approved override request; irreversible; audit logged. No matching endpoint in documents-api.yml — the closest existing endpoint, POST /documents/override-requests/{requestId}/execute, performs a soft delete per its own spec ('Performs soft delete for all documents ... bypassing retention policy checks'), not a hard delete. Documented gap between the permission catalog's description and the API's actual behavior.",
+    "onlyInGraph": [
+      "an",
+      "no matching endpoint in documents api yml the closest existing endpoint post documents override requests requestid execute performs a soft delete per its own spec performs soft delete for all documents bypassing retention policy checks not a hard delete documented gap between the permission catalog s description and the api s actual behavior"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "documents",
+    "docKind": "permissions",
+    "section": "documents.admin.view-all",
+    "item": "documents.admin.view-all",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:documents:Perm_AdminViewAll",
+    "relation": "graph-has-more",
+    "docText": "Document Admin, Compliance Officer; for audit and compliance investigations",
+    "graphText": "Document Admin, Compliance Officer; for audit and compliance investigations. No matching endpoint in documents-api.yml — GET /documents/search and GET /documents/{documentId}/download are both internal-service (called by domain APIs, not gated by this or any Documents-owned permission directly). Documented gap.",
+    "onlyInGraph": [
+      "no matching endpoint in documents api yml get documents search and get documents documentid download are both internal service called by domain apis not gated by this or any documents owned permission directly documented gap"
+    ],
+    "onlyInDoc": []
+  }
+]

@@ -1,0 +1,223 @@
+[
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "context",
+    "item": "purpose",
+    "property": "purpose",
+    "iri": "urn:solutiondesign:instance:epp:EppContext",
+    "relation": "both",
+    "docText": "The EPP domain manages the relationship between Educator Preparation Providers (universities, colleges, and alternative route programs) and the candidates they prepare for educator certification. It owns:\n\n- EPP provider registration and program approval\n- Candidate enrollment verification and tracking through preparation programs\n- EPP recommendation/approval of candidates for state credentialing\n- Oversight of EPP program offerings (certificate types, pathways, endorsements)\n\nThis domain bridges the gap between educator preparation (happening at institutions) and state credentialing (owned by the `credentialing` domain), ensuring only qualified candidates from approved programs receive EPP recommendations that enable credential issuance.",
+    "graphText": "Manages the relationship between Educator Preparation Providers (universities, colleges, and alternative route programs) and the candidates they prepare for educator certification: EPP provider registration and program approval, candidate enrollment verification and tracking, and EPP recommendation/approval of candidates for state credentialing. Bridges educator preparation (at institutions) and state credentialing (owned by credentialing), ensuring only qualified candidates from approved programs receive EPP recommendations that enable credential issuance.",
+    "onlyInGraph": [
+      "and"
+    ],
+    "onlyInDoc": [
+      "the epp domain",
+      "it owns",
+      "through preparation programs",
+      "oversight of epp program offerings certificate types pathways endorsements this domain",
+      "the gap between",
+      "happening",
+      "the",
+      "domain"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "EducatorPreparationProvider",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:epp:EducatorPreparationProviderAggregate",
+    "relation": "both",
+    "docText": "Represents an EEM organization that has been designated as an educator preparation provider. Links to read-only EEM organization data and manages EPP-specific program approvals and metadata.",
+    "graphText": "Represents an EEM organization designated as an educator preparation provider. Links to read-only EEM organization data (via organizations/org-reference-data) and manages EPP-specific program approvals and metadata.",
+    "onlyInGraph": [
+      "via organizations org reference data"
+    ],
+    "onlyInDoc": [
+      "that has been"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "EducatorPreparationProvider",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:epp:EducatorPreparationProviderAggregate",
+    "relation": "graph-has-more",
+    "docText": "- EPP must reference a valid EEM organization that exists in org-reference-data\n- An EPP must have at least one approved certificate category to be active\n- Endorsements can only be approved for certificate types the EPP is authorized to offer\n- MDE Approval Date must precede Enrollment Close Date and Recommend Close Date\n- An EPP in Closed status cannot have active candidate enrollments\n- Core organization data (name, address, federal code) is read-only, sourced from EEM",
+    "graphText": "EPP must reference a valid EEM organization that exists in org-reference-data (Business Rule: 'EPP Must Reference Valid EEM Organization' — core organization attributes such as name/address cannot be modified in MiEdWorkforce; they sync from EEM). An EPP must have at least one approved certificate category to be active. Endorsements can only be approved for certificate types the EPP is authorized to offer (must add certificate category before an endorsement under it). MDE Approval Date must precede Enrollment Close Date and Recommend Close Date, for both certificate categories and endorsements. An EPP in Closed status cannot have active candidate enrollments. Core organization data (name, address, federal code) is read-only, sourced from EEM. Pro Prep visibility (Business Rule: 'Pro Prep Visibility Based on Close Dates'): a certificate category/endorsement is visible on the public Pro Prep catalog only if today is before both its Enrollment Close Date and Recommend Close Date, and the EPP's own status is Active; an EPP Admin can also manually override visibility (hide early / extend) independent of the date rule.",
+    "onlyInGraph": [
+      "business rule epp must reference valid eem organization core organization attributes such as name address cannot be modified in miedworkforce they sync from eem",
+      "must add certificate category before an endorsement under it",
+      "for both certificate categories and endorsements",
+      "pro prep visibility business rule pro prep visibility based on close dates a certificate category endorsement is visible on the public pro prep catalog only if today is before both its enrollment close date and recommend close date and the epp s own status is active an epp admin can also manually override visibility hide early extend independent of the date rule"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "CandidateEnrollment",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:epp:CandidateEnrollmentAggregate",
+    "relation": "graph-has-more",
+    "docText": "Tracks a candidate's journey through an EPP program from initial enrollment submission through program completion or exit.",
+    "graphText": "Tracks a candidate's journey through an EPP program from initial enrollment submission through program completion or exit. A candidate can have enrollments at multiple EPPs simultaneously (Open Question #2: whether cross-EPP conflicts should be detected/prevented is unresolved).",
+    "onlyInGraph": [
+      "a candidate can have enrollments at multiple epps simultaneously open question 2 whether cross epp conflicts should be detected prevented is unresolved"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "CandidateEnrollment",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:epp:CandidateEnrollmentAggregate",
+    "relation": "both",
+    "docText": "- A candidate must have at least one Program associated when status is Student Teaching (Trad) or Placed (Alt)\n- Cannot add duplicate programs (same Program + Grade Band combination)\n- Enrollment Start Date required for status transition from Rejected to Enrolled\n- Candidate can have enrollments at multiple EPPs simultaneously\n- Status transitions must follow valid state machine (defined separately per EPP type: Traditional vs Alternative)",
+    "graphText": "A candidate must have at least one Program associated when status is Student Teaching (Trad) or Placed (Alt) (Business Rule: 'Candidate Program Assignment Required for Placement Status'). Cannot add duplicate programs (same Program + Grade Band combination) (Business Rule: 'Duplicate Program Prevention'). Enrollment Start Date required for status transition from Rejected to Enrolled. Candidate can have enrollments at multiple EPPs simultaneously. Status transitions must follow a valid state machine, and the valid status SET is itself route-restricted per FDD 25.2.4/25.2.5 (Business Rule: 'Enrollment Status State Machine'): Traditional route allows Enrolled, Student Teaching (Trad), Post Student Teaching (Trad), Inactive, Rejected, Exited (no Placed (Alt)); Alternative route allows Enrolled, Placed (Alt), Inactive, Rejected, Exited (no Student Teaching (Trad)/Post Student Teaching (Trad)). Open Question #1 (partially resolved): the exact transition ordering/graph within each route beyond the valid status sets above is still unspecified by either FDD.",
+    "onlyInGraph": [
+      "business rule candidate program assignment required for placement status",
+      "business rule duplicate program prevention",
+      "a",
+      "and the valid status set is itself route restricted",
+      "fdd 25 2 4 25 2 5 business rule enrollment status state machine",
+      "route allows enrolled student teaching trad post student teaching trad inactive rejected exited no placed alt",
+      "route allows enrolled placed alt inactive rejected exited no student teaching trad post student teaching trad open question 1 partially resolved the exact transition ordering graph within each route beyond the valid status sets above is still unspecified by either fdd"
+    ],
+    "onlyInDoc": [
+      "defined separately",
+      "epp type",
+      "vs"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "CredentialApplicationReview",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:epp:CredentialApplicationReviewAggregate",
+    "relation": "both",
+    "docText": "Represents an EPP's review and recommendation process for a candidate's credential application. Links EPP domain to Credentialing domain.",
+    "graphText": "EPP's review and recommendation process for a candidate's credential application. Links the EPP domain to the Credentialing domain (application itself, structure, and payment are owned and modeled by credentialing; this aggregate is EPP's own review/recommendation record referencing that application by ID).",
+    "onlyInGraph": [
+      "the",
+      "the",
+      "application itself structure and payment are owned and modeled by credentialing this aggregate is epp s own review recommendation record referencing that application by id"
+    ],
+    "onlyInDoc": [
+      "represents an"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "CredentialApplicationReview",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:epp:CredentialApplicationReviewAggregate",
+    "relation": "graph-has-more",
+    "docText": "- At least one endorsement must be recommended when action is Recommend\n- Recommended endorsements must match EPP's approved endorsement list\n- Cannot recommend an application that has a Conviction flag without manual review\n- Application cannot be recommended without validating MTTC pass status for applicable endorsements\n- Application Remarks required when action is Deny or Hold\n- Once Recommended, application moves to Pending Payment (in-state) or is routed to OEE/State Credential Admin for review (out-of-state)",
+    "graphText": "At least one endorsement must be recommended when action is Recommend. Recommended endorsements must match EPP's approved endorsement list (Business Rule: 'EPP Program Approval Scope'). Cannot recommend an application that has a Conviction flag without manual review (Business Rule: 'Conviction Flag Manual Review' — per FDD 25.1/25.3, confirmed as a red-font UI indicator on the search-results table and review-guidance workflow, NOT a hard system block on Hold/Deny/Cancel/Recommend actions). Application cannot be recommended without validating MTTC pass status for applicable endorsements (Business Rule: 'EPP Recommendation Requires MTTC Pass'; Open Question #5 on exact 'Alternative Pass' business rules remains unresolved). Application Remarks (external, visible to applicant) required when action is Deny or Hold. Once Recommended, application moves to Pending Payment (in-state) or is routed to OEE/State Credential Admin for review (out-of-state) — Business Rule: 'EPP Recommendation Triggers Payment (In-State) or OEE Review (Out-of-State)'.",
+    "onlyInGraph": [
+      "business rule epp program approval scope",
+      "business rule conviction flag manual review per fdd 25 1 25 3 confirmed as a red font ui indicator on the search results table and review guidance workflow not a hard system block on hold deny cancel recommend actions",
+      "business rule epp recommendation requires mttc pass open question 5 on exact alternative pass business rules remains unresolved",
+      "external visible to applicant",
+      "business rule epp recommendation triggers payment in state or oee review out of state"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "ApprovalApplicationReview",
+    "property": "description",
+    "iri": "urn:solutiondesign:instance:epp:ApprovalApplicationReviewAggregate",
+    "relation": "both",
+    "docText": "Represents EPP review of alternative route approval applications (temporary permits, alternative certifications). Distinct workflow from standard credential applications.",
+    "graphText": "EPP's review of alternative route approval applications (temporary permits, alternative certifications), originating from an ISD/school district. Distinct workflow from standard credential applications: recommendation and denial both return the application to the originating ISD/School District rather than proceeding directly to state approval.",
+    "onlyInGraph": [
+      "s",
+      "originating from an isd school district",
+      "recommendation and denial both return the application to the originating isd school district rather than proceeding directly to state approval"
+    ],
+    "onlyInDoc": [
+      "represents"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "aggregates",
+    "item": "ApprovalApplicationReview",
+    "property": "invariants",
+    "iri": "urn:solutiondesign:instance:epp:ApprovalApplicationReviewAggregate",
+    "relation": "graph-has-more",
+    "docText": "- Denial requires Remarks to be provided\n- Conviction flag requires manual EPP review before recommendation\n- Recommended approvals return to the ISD/School District for further action, not directly to state approval\n- Approval Type must be valid for the selected Approval Category",
+    "graphText": "Denial requires Remarks to be provided (Business Rule: 'Approval Application Denial Returns to ISD'). Conviction flag requires manual EPP review before recommendation, surfaced as the same red-font UI indicator pattern as credential applications (not a hard system block). Recommended approvals return to the ISD/School District for further action, not directly to state approval. Approval Type must be valid for the selected Approval Category.",
+    "onlyInGraph": [
+      "business rule approval application denial returns to isd",
+      "surfaced as the same red font ui indicator pattern as credential applications not a hard system block"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "events",
+    "item": "CredentialApplicationOnHold",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:epp:CredentialApplicationOnHoldEvent",
+    "relation": "graph-has-more",
+    "docText": "EPP places on hold",
+    "graphText": "EPP places application on hold",
+    "onlyInGraph": [
+      "application"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "events",
+    "item": "ApprovalApplicationRecommended",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:epp:ApprovalApplicationRecommendedEvent",
+    "relation": "both",
+    "docText": "EPP recommends approval app",
+    "graphText": "EPP recommends approval application",
+    "onlyInGraph": [
+      "application"
+    ],
+    "onlyInDoc": [
+      "app"
+    ]
+  },
+  {
+    "area": "epp",
+    "docKind": "domain",
+    "section": "events",
+    "item": "ApprovalApplicationDenied",
+    "property": "trigger",
+    "iri": "urn:solutiondesign:instance:epp:ApprovalApplicationDeniedEvent",
+    "relation": "both",
+    "docText": "EPP denies approval app",
+    "graphText": "EPP denies approval application",
+    "onlyInGraph": [
+      "application"
+    ],
+    "onlyInDoc": [
+      "app"
+    ]
+  }
+]

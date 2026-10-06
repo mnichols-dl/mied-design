@@ -1,0 +1,70 @@
+[
+  {
+    "area": "reporting",
+    "docKind": "sequences",
+    "section": "Browse Report Catalog",
+    "item": "Browse Report Catalog",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:reporting:Seq_BrowseReportCatalog",
+    "relation": "both",
+    "docText": "- **Catalog filtering at API layer:** The Reporting API filters the catalog server-side based on permission checks rather than returning the full catalog and relying on the client to hide unauthorized entries. This prevents information leakage about the existence of reports the user cannot access.\n- **Batch permission check:** To avoid N+1 IAM calls (one per report), the Reporting API batches all permission key checks in a single IAM request.",
+    "graphText": "Catalog filtering at API layer: the Reporting API filters the catalog server-side based on permission checks rather than returning the full catalog and relying on the client to hide unauthorized entries, preventing information leakage about the existence of reports the user cannot access. Batch permission check: to avoid N+1 IAM calls (one per report), the Reporting API batches all permission key checks in a single IAM request.",
+    "onlyInGraph": [
+      "preventing"
+    ],
+    "onlyInDoc": [
+      "this prevents"
+    ]
+  },
+  {
+    "area": "reporting",
+    "docKind": "sequences",
+    "section": "Generate Embed Token and View Report",
+    "item": "Generate Embed Token and View Report",
+    "property": "whatWhenWho",
+    "iri": "urn:solutiondesign:instance:reporting:Seq_GenerateEmbedTokenHappyPath",
+    "relation": "both",
+    "docText": "**What:** A user selects a report and the system validates their authorization, resolves organizational context parameters, generates a Power BI embed token, and returns it to the portal for rendering.\n**When:** User selects a specific report from the catalog.\n**Who:** Any authenticated portal user who holds the report's declared permission.\n### Happy Path\n**Scenario:** User holds required permission at an appropriate scope; all required parameters can be resolved.",
+    "graphText": "What: A user selects a report and the system validates their authorization, resolves organizational context parameters, generates a Power BI embed token, and returns it to the portal for rendering. Scenario: user holds required permission at an appropriate scope; all required parameters can be resolved. When: User selects a specific report from the catalog. Who: Any authenticated portal user who holds the report's declared permission.",
+    "onlyInGraph": [
+      "scenario user holds required permission at an appropriate scope all required parameters can be resolved"
+    ],
+    "onlyInDoc": [
+      "happy path scenario user holds required permission at an appropriate scope all required parameters can be resolved"
+    ]
+  },
+  {
+    "area": "reporting",
+    "docKind": "sequences",
+    "section": "Register Report in Catalog",
+    "item": "Register Report in Catalog",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:reporting:Seq_RegisterReportInCatalog",
+    "relation": "both",
+    "docText": "- **Register then activate pattern:** New reports default to `Inactive` so admins can verify catalog metadata before making the report visible to users. This decouples registration from publication.\n- **Power BI validation at registration:** Confirming the report exists in the workspace at registration time (not at token generation time) surfaces configuration errors early.",
+    "graphText": "Register then activate pattern: new reports default to Inactive so admins can verify catalog metadata before making the report visible to users, decoupling registration from publication. Power BI validation at registration: confirming the report exists in the workspace at registration time (not at token generation time) surfaces configuration errors early.",
+    "onlyInGraph": [
+      "decoupling"
+    ],
+    "onlyInDoc": [
+      "this decouples"
+    ]
+  },
+  {
+    "area": "reporting",
+    "docKind": "sequences",
+    "section": "Deactivate Report",
+    "item": "Deactivate Report",
+    "property": "keyDecisions",
+    "iri": "urn:solutiondesign:instance:reporting:Seq_DeactivateReport",
+    "relation": "both",
+    "docText": "- **Deactivation does not invalidate outstanding tokens:** Tokens already in flight (issued but not yet expired) remain valid since the Power BI Service is not notified. This is acceptable given the short token expiry window. Revoking active tokens would require a Power BI API call per active session — disproportionate cost for a non-emergency deactivation.",
+    "graphText": "Deactivation does not invalidate outstanding tokens: tokens already in flight (issued but not yet expired) remain valid since the Power BI Service is not notified. Acceptable given the short token expiry window — revoking active tokens would require a Power BI API call per active session, a disproportionate cost for a non-emergency deactivation.",
+    "onlyInGraph": [
+      "a"
+    ],
+    "onlyInDoc": [
+      "this is"
+    ]
+  }
+]

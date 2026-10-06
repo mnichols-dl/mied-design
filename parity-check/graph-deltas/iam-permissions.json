@@ -1,0 +1,188 @@
+[
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.user.impersonate",
+    "item": "iam.user.impersonate",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_UserImpersonate",
+    "relation": "both",
+    "docText": "All actions audit-logged; no transactions allowed",
+    "graphText": "Documented discrepancy: this permission is cataloged here (iam-permissions.md), but iam-technical-design.md's 'Omission of User Impersonation' section states impersonation was designed, evaluated, and deliberately EXCLUDED from the initial implementation — diagnostic value is instead achieved via admin views of records/history/audit logs and screenshare tooling. Not resolved here; left as a documented catalog/implementation mismatch for the cross-domain reconciliation pass. No API operation implements it (iam-api.yml has no impersonation endpoint).",
+    "onlyInGraph": [
+      "documented discrepancy this permission is cataloged here iam permissions md but iam technical design md s omission of user impersonation section states impersonation was designed evaluated and deliberately excluded from the initial implementation diagnostic value is instead achieved via admin views of records history",
+      "logs and screenshare tooling not resolved here left as a documented catalog implementation mismatch for the cross domain reconciliation pass",
+      "api operation implements it iam api yml has no impersonation endpoint"
+    ],
+    "onlyInDoc": [
+      "all actions",
+      "logged",
+      "transactions allowed"
+    ]
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.authorization.view",
+    "item": "iam.authorization.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuthorizationView",
+    "relation": "graph-has-more",
+    "docText": "Scope-aware: Organization admins see their Organization only",
+    "graphText": "Scope-aware: Organization admins see their Organization only. 'Building' scope in source mapped to scope:Entity — see this file's header note.",
+    "onlyInGraph": [
+      "building scope in source mapped to scope entity see this file s header note"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.authorization.approve",
+    "item": "iam.authorization.approve",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuthorizationApprove",
+    "relation": "graph-has-more",
+    "docText": "Must be Lead Admin for Organization",
+    "graphText": "Must be Lead Admin for Organization; transitive (ISD grants access to constituent districts and buildings).",
+    "onlyInGraph": [
+      "transitive isd grants access to constituent districts and buildings"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.authorization.deny",
+    "item": "iam.authorization.deny",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuthorizationDeny",
+    "relation": "graph-has-more",
+    "docText": "Must be Lead Admin for Organization; can add denial reason",
+    "graphText": "Must be Lead Admin for Organization; can add denial reason; transitive.",
+    "onlyInGraph": [
+      "transitive"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.authorization.grant",
+    "item": "iam.authorization.grant",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuthorizationGrant",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; bypasses approval workflow",
+    "graphText": "System Admin only; bypasses approval workflow. Critical permission — always evaluated real-time, bypasses the authorization cache (iam-technical-design.md).",
+    "onlyInGraph": [
+      "critical permission always evaluated real time bypasses the authorization cache iam technical design md"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.authorization.revoke",
+    "item": "iam.authorization.revoke",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuthorizationRevoke",
+    "relation": "graph-has-more",
+    "docText": "Organization admin for scope or System Admin",
+    "graphText": "Organization admin for scope or System Admin. Critical permission — always evaluated real-time, bypasses the authorization cache (iam-technical-design.md).",
+    "onlyInGraph": [
+      "critical permission always evaluated real time bypasses the authorization cache iam technical design md"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.permission.view",
+    "item": "iam.permission.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_PermissionView",
+    "relation": "graph-has-more",
+    "docText": "See all defined permissions",
+    "graphText": "See all defined permissions. Also used to gate internal-service permission-evaluation endpoints (POST /permissions/check, GET /permissions/effective, GET /organizations/{code}/hierarchy) per iam-api.yml.",
+    "onlyInGraph": [
+      "also used to gate internal service permission evaluation endpoints post permissions check get permissions effective get organizations code hierarchy per iam api yml"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.inactivity.run",
+    "item": "iam.inactivity.run",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_InactivityRun",
+    "relation": "graph-has-more",
+    "docText": "System Admin only; for testing/emergency runs",
+    "graphText": "System Admin only; for testing/emergency runs. Also gates the nightly/monthly Synapse-triggered admin job endpoints (POST /admin/jobs/expire-requests, POST /admin/jobs/deactivate-inactive-users).",
+    "onlyInGraph": [
+      "also gates the nightly monthly synapse triggered admin job endpoints post admin jobs expire requests post admin jobs deactivate inactive users"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.approval-link.configure",
+    "item": "iam.approval-link.configure",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_ApprovalLinkConfigure",
+    "relation": "graph-has-more",
+    "docText": "Set default expiration timeframe (days)",
+    "graphText": "Set default expiration timeframe (days). No API operation currently models this configuration permission — iam-api.yml has no approval-link-configuration endpoint; left with no PermissionRequirement, an intentional, documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this configuration permission iam api yml has no approval link configuration endpoint left with no permissionrequirement an intentional documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.reports.view",
+    "item": "iam.reports.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_ReportsView",
+    "relation": "graph-has-more",
+    "docText": "System Admin only",
+    "graphText": "System Admin only. Also gates GET /reports/new-users, GET /reports/denied-requests, GET /reports/inactivity, and POST /admin/jobs/generate-reports.",
+    "onlyInGraph": [
+      "also gates get reports new users get reports denied requests get reports inactivity and post admin jobs generate reports"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.audit.view",
+    "item": "iam.audit.view",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_AuditView",
+    "relation": "graph-has-more",
+    "docText": "Scope-aware: Organization admins see their Organization only",
+    "graphText": "Scope-aware: Organization admins see their Organization only ('System-wide or Organization' in source, expanded to the org-hierarchy scope set). No API operation currently models this permission — iam-api.yml has no audit-log endpoint; left with no PermissionRequirement, an intentional, documented gap.",
+    "onlyInGraph": [
+      "system wide or organization in source expanded to the org hierarchy scope set no api operation currently models this permission iam api yml has no audit log endpoint left with no permissionrequirement an intentional documented gap"
+    ],
+    "onlyInDoc": []
+  },
+  {
+    "area": "iam",
+    "docKind": "permissions",
+    "section": "iam.identity-admin.manage-configuration",
+    "item": "iam.identity-admin.manage-configuration",
+    "property": "notes",
+    "iri": "urn:solutiondesign:instance:iam:Perm_IdentityAdminManageConfiguration",
+    "relation": "graph-has-more",
+    "docText": "Identity Administrator role; narrower than the general `iam.*` system-configuration permissions, which do not cover identity processing specifically",
+    "graphText": "Identity Administrator role; narrower than the general iam.* system-configuration permissions, which do not cover identity processing specifically. No API operation currently models this permission — iam-api.yml has no identity-configuration endpoint; left with no PermissionRequirement, an intentional, documented gap.",
+    "onlyInGraph": [
+      "no api operation currently models this permission iam api yml has no identity configuration endpoint left with no permissionrequirement an intentional documented gap"
+    ],
+    "onlyInDoc": []
+  }
+]

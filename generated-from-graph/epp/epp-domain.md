@@ -87,7 +87,13 @@ This domain bridges the gap between educator preparation (happening at instituti
 - **ReadingDiagnosticsFlag (value object)** - Whether EPP offers Reading Diagnostics
 - **SpecialEdDirectorFlag (value object)** - Whether EPP offers Special Ed Director/Supervisor
 
-**Key Invariants:** EPP must reference a valid EEM organization that exists in org-reference-data (Business Rule: 'EPP Must Reference Valid EEM Organization' — core organization attributes such as name/address cannot be modified in MiEdWorkforce; they sync from EEM). An EPP must have at least one approved certificate category to be active. Endorsements can only be approved for certificate types the EPP is authorized to offer (must add certificate category before an endorsement under it). MDE Approval Date must precede Enrollment Close Date and Recommend Close Date, for both certificate categories and endorsements. An EPP in Closed status cannot have active candidate enrollments. Core organization data (name, address, federal code) is read-only, sourced from EEM. Pro Prep visibility (Business Rule: 'Pro Prep Visibility Based on Close Dates'): a certificate category/endorsement is visible on the public Pro Prep catalog only if today is before both its Enrollment Close Date and Recommend Close Date, and the EPP's own status is Active; an EPP Admin can also manually override visibility (hide early / extend) independent of the date rule.
+**Key Invariants:**
+- EPP must reference a valid EEM organization that exists in org-reference-data
+- An EPP must have at least one approved certificate category to be active
+- Endorsements can only be approved for certificate types the EPP is authorized to offer
+- MDE Approval Date must precede Enrollment Close Date and Recommend Close Date
+- An EPP in Closed status cannot have active candidate enrollments
+- Core organization data (name, address, federal code) is read-only, sourced from EEM
 
 **Data Sourced from EEM (Read-Only):**
 - Organization name
@@ -114,7 +120,7 @@ This domain bridges the gap between educator preparation (happening at instituti
 
 **Root Entity:** CandidateEnrollment
 
-**Purpose:** Tracks a candidate's journey through an EPP program from initial enrollment submission through program completion or exit. A candidate can have enrollments at multiple EPPs simultaneously (Open Question #2: whether cross-EPP conflicts should be detected/prevented is unresolved).
+**Purpose:** Tracks a candidate's journey through an EPP program from initial enrollment submission through program completion or exit.
 
 **Entities & Value Objects:**
 - **CandidateEnrollment** (root) - Enrollment lifecycle record
@@ -153,7 +159,13 @@ This domain bridges the gap between educator preparation (happening at instituti
 - **ReviewAction** (value object) - Action taken: Hold, Deny, Cancel, Recommend
 - **MTTCValidation** (value object) - Test results used in recommendation decision
 
-**Key Invariants:** At least one endorsement must be recommended when action is Recommend. Recommended endorsements must match EPP's approved endorsement list (Business Rule: 'EPP Program Approval Scope'). Cannot recommend an application that has a Conviction flag without manual review (Business Rule: 'Conviction Flag Manual Review' — per FDD 25.1/25.3, confirmed as a red-font UI indicator on the search-results table and review-guidance workflow, NOT a hard system block on Hold/Deny/Cancel/Recommend actions). Application cannot be recommended without validating MTTC pass status for applicable endorsements (Business Rule: 'EPP Recommendation Requires MTTC Pass'; Open Question #5 on exact 'Alternative Pass' business rules remains unresolved). Application Remarks (external, visible to applicant) required when action is Deny or Hold. Once Recommended, application moves to Pending Payment (in-state) or is routed to OEE/State Credential Admin for review (out-of-state) — Business Rule: 'EPP Recommendation Triggers Payment (In-State) or OEE Review (Out-of-State)'.
+**Key Invariants:**
+- At least one endorsement must be recommended when action is Recommend
+- Recommended endorsements must match EPP's approved endorsement list
+- Cannot recommend an application that has a Conviction flag without manual review
+- Application cannot be recommended without validating MTTC pass status for applicable endorsements
+- Application Remarks required when action is Deny or Hold
+- Once Recommended, application moves to Pending Payment (in-state) or is routed to OEE/State Credential Admin for review (out-of-state)
 
 **Key States:** Submitted, Hold, Denied, Cancelled, Pending Payment, Recommended, Approved (final state set by Credentialing domain)
 
@@ -177,7 +189,11 @@ This domain bridges the gap between educator preparation (happening at instituti
 - **ProfessionalPracticeAnswers** (value object) - Disclosure responses from applicant
 - **ReviewRemark** (value object) - Required remarks when denying, optional when recommending
 
-**Key Invariants:** Denial requires Remarks to be provided (Business Rule: 'Approval Application Denial Returns to ISD'). Conviction flag requires manual EPP review before recommendation, surfaced as the same red-font UI indicator pattern as credential applications (not a hard system block). Recommended approvals return to the ISD/School District for further action, not directly to state approval. Approval Type must be valid for the selected Approval Category.
+**Key Invariants:**
+- Denial requires Remarks to be provided
+- Conviction flag requires manual EPP review before recommendation
+- Recommended approvals return to the ISD/School District for further action, not directly to state approval
+- Approval Type must be valid for the selected Approval Category
 
 **Key States:** Submitted, Recommended by EPP, Denied, Approved (final state set by Credentialing domain)
 
@@ -206,7 +222,7 @@ Events published by this domain that other domains may subscribe to:
 | `CandidateExited`                  | CandidateEnrollment         | Status changed to Exited                  | `{ candidateId, eppCode, exitDate, exitReason }`                          | credentialing (may affect application eligibility)                                                           |
 | `CredentialApplicationRecommended` | CredentialApplicationReview | EPP recommends application                | `{ applicationId, eppCode, recommendedEndorsements, recommendationDate }` | credentialing (triggers payment or OEE review), communications (notification)                                |
 | `CredentialApplicationDenied`      | CredentialApplicationReview | EPP denies application                    | `{ applicationId, eppCode, denialDate, remarks }`                         | credentialing (status update), communications (notification)                                                 |
-| `CredentialApplicationOnHold`      | CredentialApplicationReview | EPP places application on hold            | `{ applicationId, eppCode, holdDate, remarks }`                           | communications (notification)                                                                                |
+| `CredentialApplicationOnHold`      | CredentialApplicationReview | EPP places on hold                        | `{ applicationId, eppCode, holdDate, remarks }`                           | communications (notification)                                                                                |
 | `ApprovalApplicationRecommended`   | ApprovalApplicationReview   | EPP recommends approval app               | `{ approvalApplicationId, eppCode, recommendationDate, remarks }`         | credentialing (returns application to ISD/School District for further action), communications (notification) |
 | `ApprovalApplicationDenied`        | ApprovalApplicationReview   | EPP denies approval app                   | `{ approvalApplicationId, eppCode, denialDate, remarks }`                 | credentialing (returns application to ISD/School District for further action), communications (notification) |
 | `EPPProviderCreated`               | EducatorPreparationProvider | New EPP added                             | `{ eppCode, name, eppType, approvedPrograms }`                            | org-reference-data (potential sync)                                                                          |

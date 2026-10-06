@@ -1,0 +1,148 @@
+area,title,section_line,diagram,participants,declared_participants,implicit_participants,actors,arrows,requests,responses,async_arrows,self_arrows,max_nesting,notes,lines,auth_iam,auth_self,auth_total,events_to_bus,events_direct_non_bus,external,cross_domain,db_storage,http_labeled,kind_marked,external_systems,cross_domains,events_listed_in_text
+credentialing,Submit New Certificate Application,14,1/1,8,8,0,1,34,18,16,2,2,2,2,51,0,0,0,2,0,0,3,0,7,0,,profpractice;epp;documents,1
+credentialing,Submit Permit Application,104,1/1,8,8,0,1,34,19,15,2,2,3,3,54,1,0,1,2,0,0,2,0,5,0,,profpractice;staffing,1
+credentialing,Issue Temporary Permit - Exceptional Cases (Admin),210,1/1,7,7,0,1,29,16,13,2,2,2,2,45,1,0,1,2,0,0,2,0,4,0,,iam;profpractice,2
+credentialing,Add Endorsement to Certificate,317,1/1,6,6,0,1,30,20,10,4,5,1,3,42,0,0,0,4,0,0,2,0,4,0,,organizations,4
+credentialing,Renew Credential,404,1/1,7,7,0,1,32,17,15,2,2,3,2,51,0,0,0,2,0,0,2,0,5,0,,proflearning;profpractice,1
+credentialing,Application Auto-Approval,496,1/1,6,6,0,0,21,18,3,5,9,4,8,48,0,0,0,5,0,0,2,0,2,0,,profpractice;documents,3
+credentialing,Application Manual Review and Approval,585,1/1,4,4,0,0,17,12,5,3,4,1,5,30,0,0,0,3,0,0,1,0,5,0,,documents,3
+credentialing,Suspend or Revoke Credential,661,1/1,5,5,0,1,22,14,8,2,2,1,3,33,2,0,2,2,0,0,0,0,4,0,,,2
+credentialing,Nullify Endorsement,736,1/1,5,5,0,1,14,9,5,1,1,0,2,21,1,0,1,1,0,0,0,0,3,0,,,1
+credentialing,Bulk Renewal Initiation,792,1/1,5,5,0,1,13,9,4,1,2,2,3,26,0,0,0,1,0,0,0,0,2,0,,,1
+credentialing,Print Certificate,854,1/1,4,4,0,1,9,5,4,0,0,0,1,14,0,0,0,0,0,0,1,0,2,0,,documents,0
+credentialing,Delete Pending Application,901,1/1,3,3,0,1,13,7,6,0,1,1,1,20,0,0,0,0,0,0,0,0,3,0,,,0
+credentialing,Configure Credential Definition,955,1/1,6,6,0,1,27,19,8,2,2,2,5,44,1,0,1,2,0,0,1,0,5,0,,organizations,2
+credentialing,Configure Endorsement Definition,1045,1/1,6,6,0,1,28,20,8,2,2,1,4,41,1,0,1,2,0,0,1,0,5,0,,organizations,2
+credentialing,Configure Assessment Definition,1133,1/1,5,5,0,1,24,17,7,2,2,1,3,35,1,0,1,2,0,0,0,0,4,0,,,2
+credentialing,Import Assessment Results,1210,1/1,6,6,0,1,20,15,5,1,6,2,1,32,1,0,1,1,0,0,2,0,3,0,,documents,1
+credentialing,Validate Assessment Results,1282,1/1,4,4,0,0,11,9,2,2,5,3,7,33,0,0,0,2,0,0,0,0,1,0,,,1
+credentialing,View Definition History,1354,1/1,4,4,0,1,12,7,5,0,0,0,2,18,1,0,1,0,0,0,0,0,3,0,,,0
+communications,Event-Triggered Email Send,14,1/1,8,8,0,0,23,16,7,3,5,2,7,44,0,0,0,3,0,1,2,2,3,0,SendGrid,iam,2
+communications,Manual Email Send with Template Customization,101,1/1,9,9,0,1,28,18,10,1,3,0,4,41,0,1,1,1,0,1,1,2,5,0,SendGrid,iam,1
+communications,Template Version Update and Activation,185,1/1,5,5,0,1,28,20,8,2,6,0,4,37,0,2,2,2,0,0,0,3,4,0,,,2
+communications,Email History Search and Details View,268,1/1,5,5,0,1,20,11,9,0,2,1,5,33,0,2,2,0,0,0,0,3,3,0,,,0
+communications,Email Resend with Recipient Override,342,1/1,7,7,0,1,30,16,14,1,2,3,5,51,0,2,2,1,0,1,1,4,5,0,SendGrid,iam,1
+communications,SendGrid Webhook - Delivery Status Update,437,1/1,6,6,0,0,19,11,8,1,3,3,6,40,0,0,0,1,0,1,0,4,1,0,SendGrid,,4
+communications,Email Content Purge Job,521,1/1,6,6,0,0,18,13,5,1,6,2,6,40,0,0,0,1,0,0,0,3,0,0,,,1
+communications,Template Variable Resolution (Internal),609,1/1,5,5,0,0,12,8,4,0,3,0,7,24,0,0,0,0,0,0,3,2,2,0,,credentialing;iam,0
+communications,Dashboard Alert Creation and Display,675,1/1,6,6,0,0,17,13,4,2,4,0,6,29,0,1,1,2,0,0,0,2,1,0,,,1
+communications,User Resolves Dashboard Alert,745,1/1,5,5,0,1,12,7,5,1,2,1,2,22,0,0,0,1,0,0,0,2,1,0,,,1
+communications,Mass Email with Consolidation,804,1/1,8,8,0,0,20,15,5,4,4,1,9,41,0,0,0,4,0,1,0,2,2,0,SendGrid,,1
+communications,Integration Flows,890,none
+communications,Template Variable Formatting Standards,1080,none
+communications,Event Payload Design Standards,1093,none
+communications,Resend vs. New Send Decision Matrix,1101,none
+documents,Integration Pattern: Domain API Calling Documents,16,1/1,5,5,0,1,8,6,2,0,2,0,3,16,0,1,1,0,0,0,0,1,1,0,,,0
+documents,Document Upload with Malware Scanning,65,1/1,8,8,0,1,34,26,8,4,5,1,10,56,0,0,0,4,0,0,0,10,1,0,,,2
+documents,Document Download with SAS Token,173,1/1,6,6,0,1,16,7,9,1,0,1,2,28,0,0,0,1,0,0,0,4,1,0,,,1
+documents,Document Replacement and Versioning,237,1/1,9,9,0,1,32,25,7,2,5,1,9,53,0,0,0,2,0,0,0,12,1,0,,,1
+documents,Soft Delete and Hard Delete Lifecycle,337,1/1,7,7,0,1,15,10,5,2,1,2,7,33,0,0,0,2,0,0,0,5,1,0,,,2
+documents,Legal Hold Application and Release,411,1/1,5,5,0,1,20,14,6,2,2,2,8,39,0,2,2,2,0,0,0,3,3,0,,,2
+documents,Bulk Document Upload,491,1/1,9,9,0,1,30,24,6,3,3,2,6,52,0,0,0,3,0,0,0,12,1,0,,,2
+documents,Bulk Document Soft Delete with Validation,589,1/1,5,5,0,1,18,12,6,2,2,2,9,39,0,1,1,2,0,0,0,6,1,0,,,2
+documents,Administrator Requests Retention Override,668,1/1,7,7,0,2,40,28,12,4,4,1,13,65,0,2,2,4,0,0,3,8,4,0,,communications,4
+documents,Staged File Upload for Synapse Processing,788,1/1,10,10,0,1,45,35,10,4,6,2,15,80,0,0,0,4,0,0,0,14,1,0,,,2
+epp,Designate EEM Organization as EPP,14,1/1,6,6,0,1,24,16,8,1,3,1,2,35,1,0,1,1,0,0,3,0,4,0,,organizations,1
+epp,Update EPP Configuration,87,1/1,6,6,0,1,16,11,5,1,2,0,2,24,1,0,1,1,0,0,1,0,3,0,,organizations,1
+epp,Manage EPP Certificate Category Approvals,147,1/1,5,5,0,1,34,23,11,3,7,2,0,49,0,0,0,3,0,0,0,0,4,0,,,1
+epp,Manage EPP Approved Endorsements,237,1/1,6,6,0,1,38,26,12,3,7,2,0,54,0,0,0,3,0,0,1,0,5,0,,credentialing,1
+epp,Configure Pro Prep Catalog Visibility,335,1/1,4,4,0,1,15,11,4,0,3,0,2,21,1,0,1,0,0,0,0,0,2,0,,,0
+epp,Search Pending Enrollment Verifications,393,1/1,4,4,0,1,14,8,6,0,2,1,2,23,1,0,1,0,0,0,0,0,2,0,,,0
+epp,Accept Candidate Enrollment,451,1/1,6,6,0,1,18,13,5,2,4,1,3,30,1,0,1,1,0,0,1,0,1,0,,communications,1
+epp,Reject Candidate Enrollment,521,1/1,6,6,0,1,13,10,3,2,2,0,2,21,1,0,1,1,0,0,1,0,1,0,,communications,1
+epp,Search Enrolled Candidates,578,1/1,4,4,0,1,14,8,6,0,2,1,2,23,1,0,1,0,0,0,0,0,2,0,,,0
+epp,View Candidate Enrollment Detail,637,1/1,5,5,0,1,12,7,5,0,0,0,2,19,1,0,1,0,0,0,2,0,4,0,,iam;credentialing,0
+epp,Manage Candidate Programs,694,1/1,4,4,0,1,38,23,15,0,9,3,0,55,1,0,1,0,0,0,0,0,5,0,,,0
+epp,Update Candidate Enrollment Status,791,1/1,6,6,0,1,33,21,12,2,6,3,1,52,1,0,1,2,0,0,0,0,2,0,,,1
+epp,Exit Candidate from Program,884,1/1,5,5,0,1,19,14,5,1,4,1,3,30,1,0,1,1,0,0,0,0,1,0,,,1
+epp,View Cross-EPP Enrollment History,952,1/1,4,4,0,1,8,6,2,0,1,0,2,14,1,0,1,0,0,0,0,0,1,0,,,0
+epp,Bulk Upload Candidate Tracking Data,1001,1/1,7,7,0,1,28,21,7,5,3,1,4,42,1,0,1,2,0,0,4,0,7,0,,documents;iam,1
+epp,Search Credential Applications for Review,1089,1/1,5,5,0,1,17,10,7,0,3,1,2,27,1,0,1,0,0,0,1,0,3,0,,credentialing,0
+epp,View Credential Application Detail for EPP Review,1154,1/1,6,6,0,1,16,9,7,0,0,1,2,26,1,0,1,0,0,0,4,0,6,0,,credentialing;iam;profpractice,0
+epp,Place Credential Application on Hold,1219,1/1,6,6,0,1,17,14,3,2,4,0,2,25,1,0,1,1,0,0,1,0,1,0,,communications,1
+epp,Deny Credential Application,1282,1/1,7,7,0,1,18,15,3,3,4,0,2,27,1,0,1,1,0,0,2,0,1,0,,credentialing;communications,1
+epp,Cancel Credential Application Review,1347,1/1,5,5,0,1,15,12,3,0,4,0,2,22,1,0,1,0,0,0,0,0,1,0,,,0
+epp,Recommend Candidate for Credential,1406,1/1,8,8,0,1,40,25,15,3,5,3,3,62,1,0,1,1,0,0,5,0,5,0,,credentialing;communications,1
+epp,Add Internal Remarks to Application Review,1517,1/1,4,4,0,1,16,11,5,0,3,0,1,21,1,0,1,0,0,0,0,0,3,0,,,0
+epp,Search Approval Applications for Review,1575,1/1,5,5,0,1,17,10,7,0,3,1,2,27,1,0,1,0,0,0,1,0,3,0,,credentialing,0
+epp,View Approval Application Detail for EPP Review,1639,1/1,7,7,0,1,16,9,7,0,0,1,1,26,1,0,1,0,0,0,4,0,6,0,,credentialing;iam;organizations;profpractice,0
+epp,Recommend Approval Application,1704,1/1,7,7,0,1,16,13,3,3,3,0,2,25,1,0,1,1,0,0,2,0,1,0,,credentialing;communications,1
+epp,Deny Approval Application,1766,1/1,7,7,0,1,19,14,5,3,4,1,2,31,1,0,1,1,0,0,2,0,1,0,,credentialing;communications,1
+iam,Citizen User - Initial Sign-In & Identity Resolution,14,1/1,6,5,1,1,26,19,7,4,10,3,2,44,0,0,0,4,0,4,1,0,0,0,MiLogin;Mi-Key,communications,2
+iam,Business User - Initial Authorization Request,98,1/1,6,6,0,1,21,15,6,1,5,1,2,31,0,0,0,1,0,1,4,0,1,0,MiLogin,organizations;communications,1
+iam,Lead Administrator Bootstrap (First Login),171,1/1,6,6,0,1,13,8,5,1,3,3,2,29,0,0,0,1,0,1,2,0,1,0,MiLogin,organizations;communications,1
+iam,Scope Approver - Approves Authorization Request,239,1/1,4,4,0,1,18,13,5,1,6,2,1,30,0,0,0,1,0,0,2,0,0,0,,communications,1
+iam,Scope Approver - Rejects Authorization Request,309,1/1,4,4,0,1,12,10,2,1,4,0,1,17,0,0,0,1,0,0,2,0,0,0,,communications,1
+iam,Business User - Withdraws Pending Authorization Request,361,1/1,4,4,0,1,11,9,2,1,3,0,1,16,0,0,0,1,0,0,1,0,0,0,,communications,1
+iam,Authorization Request - Link Expiration,411,1/1,4,4,0,0,8,8,0,1,4,1,1,15,0,0,0,1,0,0,2,0,0,0,,communications,1
+iam,Business User - Request Authorization Update,460,1/1,5,5,0,1,20,15,5,1,3,1,2,30,0,0,0,1,0,0,4,0,2,0,,organizations;communications,2
+iam,Business User - Self-Remove Authorization,531,1/1,4,4,0,1,13,10,3,1,3,1,2,22,0,0,0,1,0,0,2,0,0,0,,communications,1
+iam,External Party - Request User Authorization Removal,588,1/1,5,5,0,1,12,9,3,1,2,0,1,18,0,0,0,1,0,0,2,0,0,0,,communications,1
+iam,System Admin - Reviews External Authorization Removal Request,638,1/1,4,4,0,1,19,15,4,1,4,1,2,28,0,0,0,1,0,0,4,0,0,0,,communications,1
+iam,Automated Inactivity-Based Account Deactivation,708,1/1,4,4,0,0,12,12,0,2,6,1,1,19,0,0,0,2,0,0,3,0,0,0,,communications,2
+iam,System Admin - Manual Authorization Grant,764,1/1,5,5,0,1,22,16,6,1,4,0,1,28,0,0,0,1,0,0,4,0,2,0,,organizations;communications,1
+iam,Citizen User - Update Account Demographics,834,1/1,6,6,0,1,21,16,5,3,5,3,1,39,0,0,0,3,0,1,3,0,0,0,Mi-Key,communications;staffing,2
+iam,Citizen User - Cancel Pending Update Request,909,1/1,3,3,0,1,6,5,1,1,3,0,0,9,0,0,0,1,0,0,0,0,0,0,,,0
+iam,Identity Administrator - Resolve Identity Request,938,1/1,6,6,0,1,34,28,6,5,9,3,0,56,0,0,0,5,0,3,4,0,0,0,Mi-Key,communications;staffing,2
+iam,Business User - Request New ID (Near Match Escalation),1036,1/1,6,6,0,1,28,18,10,7,6,2,3,44,0,0,0,5,0,2,1,0,3,0,Mi-Key,communications,3
+iam,Business User - Request Link ID,1126,1/1,6,6,0,1,12,10,2,6,2,1,1,22,0,0,0,3,0,0,1,0,1,0,,staffing,3
+iam,Identity Resolution - Split/Retire ID (Mi-Key-Direct),1186,1/1,5,5,0,1,5,5,0,3,1,1,0,13,0,0,0,2,0,2,0,0,0,0,Mi-Key,,1
+iam,Integration Flows,1231,1/1,5,5,0,1,17,10,7,0,3,2,0,32,0,0,0,0,0,3,1,0,2,0,MiLogin,organizations,0
+iam,Notes,1343,none
+organizations,CEPI Nightly Sync,14,1/1,5,5,0,0,16,14,2,3,1,2,3,33,0,0,0,3,0,2,0,7,2,1,CEPI,,3
+organizations,Organization Search,94,1/1,5,5,0,1,10,5,5,0,0,1,0,18,0,0,0,0,0,0,0,3,1,0,,,0
+organizations,Organization Detail Lookup,145,1/1,4,4,0,0,8,4,4,0,0,1,0,15,0,0,0,0,0,0,0,3,1,0,,,0
+organizations,Hierarchy Resolution,189,1/1,4,4,0,0,9,6,3,0,2,1,0,16,0,0,0,0,0,0,0,3,1,0,,,0
+organizations,Lead Admin Lookup,235,1/1,4,4,0,0,8,5,3,0,1,1,0,15,0,0,0,0,0,0,0,3,1,0,,,0
+organizations,Degraded Operation (Sync Failure),281,1/1,5,5,0,0,8,6,2,0,1,0,3,16,0,0,0,0,0,0,0,3,0,0,,,0
+payments,Individual Payment Flow (Happy Path),14,1/1,7,7,0,1,21,16,5,4,6,0,1,29,0,0,0,1,2,2,2,0,2,0,CEPAS,credentialing;communications,1
+payments,Individual Payment Flow (Browser Closed - Missing Payment),87,1/1,9,9,0,1,21,17,4,5,5,0,4,34,0,0,0,2,2,2,2,0,0,0,CEPAS,credentialing;communications,2
+payments,Individual Payment Flow (Payment Failed),170,1/1,7,7,0,1,17,13,4,4,3,0,1,25,0,0,0,1,2,2,2,0,1,0,CEPAS,credentialing;communications,1
+payments,Bulk Payment Processing,235,1/1,7,7,0,1,32,24,8,4,9,0,0,39,0,1,1,1,2,3,3,0,3,0,CEPAS,credentialing;communications,1
+payments,Refund Request Processing (Single Approval ≤$500),328,1/1,8,7,1,1,26,20,6,5,7,0,0,33,0,0,0,1,2,1,2,0,3,0,CEPAS,credentialing;communications,1
+payments,Refund Request Processing (Dual Approval >$500),409,1/1,8,7,1,2,33,26,7,9,7,0,1,41,0,0,0,3,2,1,2,0,4,0,CEPAS,communications,3
+payments,Daily Posting File Reconciliation,501,1/1,6,6,0,0,26,25,1,8,9,3,3,48,0,0,0,6,1,0,0,0,0,0,,,4
+payments,CEPAS Service Unavailable,602,1/1,6,6,0,1,20,12,8,1,3,1,3,32,0,0,0,0,0,2,0,0,2,0,CEPAS,,0
+payments,Payment Retry After Failure,678,1/1,5,5,0,1,22,14,8,1,6,1,3,33,0,0,0,1,0,2,0,0,2,0,CEPAS,,0
+payments,Bulk Refund Processing,755,1/1,6,6,0,1,22,17,5,3,6,1,0,30,0,0,0,1,1,1,1,0,3,0,CEPAS,communications,1
+payments,Reconciliation Discrepancy Investigation,836,1/1,5,5,0,1,17,11,6,1,2,0,3,25,0,0,0,1,0,0,0,0,3,0,,,1
+proflearning,Program Application Submission and Approval,14,1/2,6,6,0,1,10,6,4,1,1,0,2,18,1,0,1,1,0,0,1,0,1,0,,documents,4
+proflearning,Program Application Submission and Approval,14,2/2,7,5,2,1,23,19,4,4,3,1,1,33,0,0,0,3,1,0,1,0,5,0,,documents,4
+proflearning,Add Attendees to Program,115,1/1,4,4,0,1,22,14,8,0,3,2,2,33,1,0,1,0,0,0,3,0,5,0,,iam,0
+proflearning,Adjust SCECH Awards and Certify Attendance,183,1/1,7,5,2,1,19,14,5,2,3,2,3,35,0,0,0,1,1,0,1,0,4,0,,credentialing,1
+proflearning,Sponsor Requests SCECH Correction,256,1/1,4,4,0,1,12,9,3,1,3,0,3,19,0,0,0,1,0,0,0,0,2,0,,,1
+proflearning,Admin Reviews Correction Request,310,1/1,6,4,2,1,19,15,4,3,3,1,3,29,0,0,0,2,1,0,0,0,4,0,,,2
+proflearning,Admin Configures Evaluation Questions,374,1/1,4,4,0,1,16,12,4,0,2,0,2,22,0,0,0,0,0,0,0,0,3,0,,,0
+proflearning,Admin Manages Program Categories,432,1/1,3,3,0,1,22,16,6,0,6,2,1,33,0,0,0,0,0,0,0,0,4,0,,,0
+proflearning,Educator Applies College Course for SCECH Credit,500,1/1,7,5,2,1,16,13,3,2,5,0,0,21,0,0,0,1,1,0,1,0,3,0,,credentialing,1
+proflearning,Public Catalog Search,555,1/1,3,3,0,1,17,10,7,0,1,1,1,26,0,0,0,0,0,0,0,0,4,0,,,0
+profpractice,Submit Self-Disclosure,14,1/1,5,5,0,1,17,12,5,2,2,0,2,24,0,0,0,2,0,0,1,0,3,0,,documents,2
+profpractice,Submit Professional Practice Review Response,78,1/1,5,5,0,1,21,16,5,3,5,2,8,41,0,0,0,3,0,0,1,0,3,0,,documents,3
+profpractice,Review Disclosure and Update Status,165,1/1,5,5,0,1,27,19,8,3,4,1,3,37,0,0,0,3,0,0,1,0,6,0,,documents,3
+profpractice,Manage Account Markers,245,1/1,5,5,0,1,35,27,8,8,5,1,3,48,4,0,4,8,0,0,0,0,6,0,,,3
+profpractice,Receive Rap Back Notification,343,1/1,5,5,0,1,15,11,4,4,4,2,6,31,0,0,0,4,0,2,0,0,2,0,MSP CHRISS Rap Back;Mi-Key,,4
+profpractice,Retrieve Full Rap Sheet for Review,418,1/1,4,4,0,1,10,6,4,0,1,0,4,18,0,0,0,0,0,1,0,0,2,0,MSP CHRISS Rap Back,,0
+profpractice,Process NASDTEC Nightly Batch,475,1/1,5,5,0,0,13,10,3,1,6,3,5,30,0,0,0,1,0,2,0,0,2,0,NASDTEC;Mi-Key,,1
+profpractice,Evaluate PPR Clearance for Credential Application,549,1/1,2,2,0,0,10,9,1,0,8,1,8,27,0,0,0,0,0,0,0,0,1,0,,,0
+profpractice,Evaluate Roster Eligibility for Employment,617,1/1,2,2,0,0,8,7,1,0,6,1,6,21,0,0,0,0,0,0,0,0,1,0,,,0
+profpractice,Log Non-System Action,677,1/1,5,4,1,1,11,8,3,1,1,0,3,18,0,0,0,1,0,0,0,0,1,0,,,1
+profpractice,Configure PPR Worklist,733,1/1,4,2,2,0,24,17,7,0,2,1,2,32,1,0,1,0,0,0,0,0,4,0,,,0
+profpractice,View Disclosure History,806,1/1,4,4,0,1,9,5,4,0,0,0,2,15,0,0,0,0,0,0,1,0,3,0,,documents,0
+profpractice,Export Disclosure Data,857,1/1,4,4,0,1,7,4,3,0,0,0,1,12,0,0,0,0,0,0,1,0,2,0,,reporting,0
+profpractice,Review NASDTEC Disciplinary Record,905,1/1,4,4,0,1,23,17,6,2,4,1,6,36,0,0,0,2,0,0,0,0,5,0,,,2
+profpractice,Generate PPR Compliance Report,989,1/1,5,5,0,1,16,9,7,0,1,1,4,27,1,0,1,0,0,2,0,0,1,0,Power BI,,0
+reporting,Browse Report Catalog,18,1/1,4,4,0,1,6,3,3,0,0,0,0,10,1,0,1,0,0,0,0,0,2,0,,,0
+reporting,Generate Embed Token and View Report,56,1/3,6,6,0,1,12,7,5,0,2,0,2,20,1,0,1,0,0,1,1,0,4,0,Power BI,organizations,0
+reporting,Generate Embed Token and View Report,56,2/3,4,4,0,1,7,4,3,0,1,0,1,12,1,0,1,0,0,0,0,0,2,0,,,0
+reporting,Generate Embed Token and View Report,56,3/3,4,4,0,1,8,5,3,0,2,0,2,14,1,0,1,0,0,0,0,0,2,0,,,0
+reporting,Register Report in Catalog,181,1/1,4,4,0,1,14,9,5,0,3,0,1,19,0,0,0,0,0,1,0,0,3,0,Power BI,,0
+reporting,Deactivate Report,234,1/1,3,3,0,1,6,4,2,0,1,0,1,10,0,0,0,0,0,0,0,0,1,0,,,0
+staffing,Add New Employee,14,1/1,6,6,0,1,26,13,13,1,3,3,1,47,1,0,1,0,1,0,3,0,6,0,,iam;profpractice;communications,1
+staffing,Update Employee Demographics,102,1/1,5,5,0,1,35,21,14,6,6,3,1,53,0,0,0,0,3,0,5,0,5,0,,iam;communications,1
+staffing,Assign Employee to Position,202,1/1,6,5,1,1,39,21,18,3,6,2,1,65,0,0,0,0,2,0,3,0,6,0,,credentialing;communications,2
+staffing,Certify Collection,319,1/1,5,4,1,1,31,18,13,2,6,1,1,45,0,0,0,0,1,0,1,0,4,0,,communications,1
+staffing,ISD Auditor Review District Submission,410,1/1,6,4,2,1,33,21,12,4,5,1,2,46,0,0,0,0,2,0,2,0,6,0,,communications,2
+staffing,Request Collection Exception,503,1/1,5,5,0,2,22,16,6,5,5,2,2,35,0,0,0,0,3,0,3,0,4,0,,communications,3
+staffing,Open New Collection,582,1/1,5,5,0,1,12,10,2,1,6,2,0,22,0,0,0,0,1,0,1,0,1,0,,communications,1
+staffing,Create New Position,640,1/1,5,5,0,1,17,9,8,1,4,2,0,28,0,0,0,0,1,1,1,0,2,0,EEM,communications,1
+staffing,Update Position Status,706,1/1,4,4,0,1,27,15,12,1,10,3,0,58,0,0,0,0,1,0,1,0,2,0,,communications,1

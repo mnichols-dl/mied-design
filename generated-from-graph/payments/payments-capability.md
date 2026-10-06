@@ -56,11 +56,11 @@ The Payments platform capability provides centralized payment processing infrast
 | **Posting File**               | Daily batch file from CEPAS containing previous day's confirmed transactions for reconciliation purposes                                                                                                                                                                                                                                                                             |
 | **Reconciliation**             | Process of matching CEPAS posting file records to internal MiEdWorkforce payment transactions to identify discrepancies                                                                                                                                                                                                                                                              |
 | **Reference Data**             | Custom 254-character field sent to CEPAS and returned in posting file for matching transactions (e.g., application ID)                                                                                                                                                                                                                                                               |
-| **Refund**                     | Return of payment to original payer, processed via CEPAS CancelPayment API, resulting in a new confirmation number.                                                                                                                                                                                                                                                                  |
+| **Refund**                     | Return of payment to original payer, processed via CEPAS CancelPayment API, resulting in new confirmation number                                                                                                                                                                                                                                                                     |
 | **Partial Refund**             | Return of less than the full original payment amount (e.g., processing fee retained)                                                                                                                                                                                                                                                                                                 |
-| **Bulk Payment**               | Single payment transaction covering fees for multiple credential applications (e.g., a district paying for 10 substitute credentials).                                                                                                                                                                                                                                               |
+| **Bulk Payment**               | Single payment transaction covering fees for multiple credential applications (e.g., district paying for 10 substitute credentials)                                                                                                                                                                                                                                                  |
 | **Payment Command Code**       | Indicator in posting file denoting transaction type: Payment (1), Refund (5), Void (6), Chargeback (9), Chargeback Reversal (10), Partial Refund (14), ACH Credit (15), or Processor Void (16). Only Payment and Refund are actively reconciled today (see "Daily Posting File Reconciliation"); all other codes land in `Discrepancy` for manual review, pending explicit handling. |
-| **Missing Payment**            | Transaction confirmed in the CEPAS posting file but not recorded in MiEdWorkforce during the real-time redirect flow.                                                                                                                                                                                                                                                                |
+| **Missing Payment**            | Transaction confirmed in CEPAS posting file but not recorded in MiEdWorkforce during real-time redirect flow                                                                                                                                                                                                                                                                         |
 | **Payment Amount**             | Fee total for credential application, pre-calculated and non-editable, sent to CEPAS for processing                                                                                                                                                                                                                                                                                  |
 | **Authorization Code**         | CEPAS-provided code indicating payment gateway approval (distinct from confirmation number)                                                                                                                                                                                                                                                                                          |
 | **Card Type**                  | Payment method indicator: VISA, MC, AMEX, DISC, STAR, Pulse, NYCE (not sent for eCheck)                                                                                                                                                                                                                                                                                              |
@@ -91,7 +91,17 @@ The Payments platform capability provides centralized payment processing infrast
 - **PaymentRefund** - Refund request metadata, refund confirmation number, refund amount, processed date
 - **BulkPaymentItem** - Association to parent bulk payment transaction (for multi-application payments)
 
-**Key Invariants:** Payment amount must be greater than zero. Payment amount is immutable after transaction creation (derived from credential type at initiation). Only transactions in Paid status can be refunded. Refund amount must be less than or equal to original payment amount. Hash validation must succeed before marking payment as confirmed. Transaction status progression: Pending -> Paid OR Failed -> optionally Refunded / PartiallyRefunded. Reference data field limited to 254 characters. Confirmation number required for refund processing. Bulk payment total must equal sum of individual application fees. Missing payment detection only updates status if current status is Pending. Paid/Refunded/PartiallyRefunded transactions cannot revert to Pending or Failed (enforced at the database layer via triggers, not just application logic); Refunded is a terminal state. Bulk payment confirmation updates the parent and all child transactions atomically — per payments-technical-design.md, if the child-row count after update doesn't match the expected item count, the whole update is rolled back.
+**Key Invariants:**
+- Payment amount must be greater than zero
+- Payment amount is immutable after transaction creation (derived from credential type at initiation)
+- Only transactions in `Paid` status can be refunded
+- Refund amount must be less than or equal to original payment amount
+- Hash validation must succeed before marking payment as confirmed
+- Transaction status progression: `Pending` -> `Paid` OR `Failed` -> optionally `Refunded` / `PartiallyRefunded`
+- Reference data field limited to 254 characters
+- Confirmation number required for refund processing
+- Bulk payment total must equal sum of individual application fees
+- Missing payment detection only updates status if current status is `Pending`
 
 **Key States:**
 - `Pending` - Awaiting payment (user has not completed CEPAS flow or payment in progress)
@@ -123,7 +133,12 @@ The Payments platform capability provides centralized payment processing infrast
 - **ReconciliationDiscrepancy** - Unmatched or conflicting records requiring manual review
 - **ReconciliationSummary** - Aggregate counts (total records, matched, missing, discrepancies)
 
-**Key Invariants:** One batch per calendar day per CEPAS application. Batch processing is idempotent (reprocessing same file yields same results). All posting file records must be categorized: Matched, Missing, or Discrepancy. Discrepancies remain flagged until manually resolved. Batch status progression: Received -> Processing -> Completed OR Failed. Auto-updates only apply to Pending transactions; Failed and Refunded transactions are never overwritten by the posting file. All auto-updates and discrepancy insertions for a given batch are wrapped in a single SQL transaction so the batch is processed atomically.
+**Key Invariants:**
+- One batch per calendar day per CEPAS application
+- Batch processing is idempotent (reprocessing same file yields same results)
+- All posting file records must be categorized: Matched, Missing, or Discrepancy
+- Discrepancies remain flagged until manually resolved
+- Batch status progression: `Received` -> `Processing` -> `Completed` OR `Failed`
 
 **Key States:** `Received`, `Processing`, `Completed`, `Failed`, `PartiallyCompleted`
 
@@ -145,7 +160,11 @@ The Payments platform capability provides centralized payment processing infrast
 - **RefundConfirmation** - CEPAS API response data (refund confirmation number, processed date)
 - **RefundAudit** - Immutable audit log of refund lifecycle events
 
-**Key Invariants:** Refund requests must reference an existing Paid transaction. Refund amount validation occurs before the CEPAS API call. Approved refunds cannot be cancelled (irreversible). Refund request status progression: Requested -> Approved / Rejected -> Processing -> Completed / Failed. Refunds <= $500 require a single Financial Admin approval (auto-approved by the system); refunds > $500 require the Credential Admin to initiate and a separate Financial Admin to authorize (dual approval); the threshold is configurable, default $500.
+**Key Invariants:**
+- Refund requests must reference existing Paid transaction
+- Refund amount validation occurs before CEPAS API call
+- Approved refunds cannot be cancelled (irreversible)
+- Refund request status progression: `Requested` -> `Approved` / `Rejected` -> `Processing` -> `Completed` / `Failed`
 
 **Key States:** `Requested`, `Approved`, `Rejected`, `Processing`, `Completed`, `Failed`
 
@@ -285,20 +304,20 @@ erDiagram
 
 Events published by this domain that other domains may subscribe to:
 
-| Event                          | Aggregate           | Trigger                                                                                        | Payload Highlights                                                                        | Consumers                          |
-| ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------- |
-| `PaymentInitiated`             | PaymentTransaction  | User clicks "Pay Fee"                                                                          | `{ transaction_id, application_id, amount, initiated_by, initiated_at }`                  | audit, analytics, credentials      |
-| `PaymentCompleted`             | PaymentTransaction  | CEPAS redirect returns success and hash validated (or posting file confirms a Pending payment) | `{ transaction_id, confirmation_number, amount, paid_date, card_type }`                   | credentials, audit, communications |
-| `PaymentFailed`                | PaymentTransaction  | CEPAS redirect returns a non-zero error code                                                   | `{ transaction_id, return_code, return_message, failed_at }`                              | credentials, audit, communications |
-| `PaymentReconciled`            | PaymentTransaction  | Posting file confirms a payment                                                                | `{ transaction_id, reconciliation_batch_id, reconciled_at }`                              | audit, analytics                   |
-| `MissingPaymentDetected`       | PaymentTransaction  | Posting file shows a payment not present in the system                                         | `{ transaction_id, confirmation_number, posting_file_date, detected_at }`                 | audit, monitoring, credentials     |
-| `PaymentDiscrepancyDetected`   | ReconciliationBatch | Posting file amount mismatch or other conflict                                                 | `{ transaction_id, expected_amount, actual_amount, discrepancy_type }`                    | audit, monitoring, support         |
-| `RefundRequested`              | RefundRequest       | Admin initiates a refund                                                                       | `{ refund_request_id, transaction_id, refund_amount, requested_by, reason }`              | audit, approvals                   |
-| `RefundApproved`               | RefundRequest       | Approver authorizes refund                                                                     | `{ refund_request_id, approved_by, approved_at }`                                         | audit, payments                    |
-| `RefundCompleted`              | RefundRequest       | CEPAS confirms the refund was processed                                                        | `{ refund_request_id, refund_confirmation_number, refund_amount, processed_date }`        | credentials, audit, communications |
-| `RefundFailed`                 | RefundRequest       | CEPAS API refund call fails                                                                    | `{ refund_request_id, error_message, failed_at }`                                         | audit, monitoring, support         |
-| `BulkPaymentCompleted`         | PaymentTransaction  | Bulk payment redirect success                                                                  | `{ bulk_transaction_id, application_ids[], total_amount, item_count }`                    | credentials, audit, communications |
-| `ReconciliationBatchCompleted` | ReconciliationBatch | Daily posting file processing finishes                                                         | `{ batch_id, file_date, total_records, matched_count, missing_count, discrepancy_count }` | audit, monitoring                  |
+| Event                          | Aggregate           | Trigger                                         | Payload Highlights                                                                        | Consumers                          |
+| ------------------------------ | ------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------- |
+| `PaymentInitiated`             | PaymentTransaction  | User clicks "Pay Fee"                           | `{ transaction_id, application_id, amount, initiated_by, initiated_at }`                  | audit, analytics, credentials      |
+| `PaymentCompleted`             | PaymentTransaction  | CEPAS redirect returns success + hash validated | `{ transaction_id, confirmation_number, amount, paid_date, card_type }`                   | credentials, audit, communications |
+| `PaymentFailed`                | PaymentTransaction  | CEPAS redirect returns error                    | `{ transaction_id, return_code, return_message, failed_at }`                              | credentials, audit, communications |
+| `PaymentReconciled`            | PaymentTransaction  | Posting file confirms payment                   | `{ transaction_id, reconciliation_batch_id, reconciled_at }`                              | audit, analytics                   |
+| `MissingPaymentDetected`       | PaymentTransaction  | Posting file shows payment not in system        | `{ transaction_id, confirmation_number, posting_file_date, detected_at }`                 | audit, monitoring, credentials     |
+| `PaymentDiscrepancyDetected`   | ReconciliationBatch | Posting file amount mismatch or other conflict  | `{ transaction_id, expected_amount, actual_amount, discrepancy_type }`                    | audit, monitoring, support         |
+| `RefundRequested`              | RefundRequest       | Admin initiates refund                          | `{ refund_request_id, transaction_id, refund_amount, requested_by, reason }`              | audit, approvals                   |
+| `RefundApproved`               | RefundRequest       | Approver authorizes refund                      | `{ refund_request_id, approved_by, approved_at }`                                         | audit, payments                    |
+| `RefundCompleted`              | RefundRequest       | CEPAS confirms refund processed                 | `{ refund_request_id, refund_confirmation_number, refund_amount, processed_date }`        | credentials, audit, communications |
+| `RefundFailed`                 | RefundRequest       | CEPAS API refund call fails                     | `{ refund_request_id, error_message, failed_at }`                                         | audit, monitoring, support         |
+| `BulkPaymentCompleted`         | PaymentTransaction  | Bulk payment redirect success                   | `{ bulk_transaction_id, application_ids[], total_amount, item_count }`                    | credentials, audit, communications |
+| `ReconciliationBatchCompleted` | ReconciliationBatch | Daily posting file processing finishes          | `{ batch_id, file_date, total_records, matched_count, missing_count, discrepancy_count }` | audit, monitoring                  |
 
 **Event Naming Convention:** PastTense + Noun + Action (e.g., `PaymentCompleted`, `RefundRequested`)
 
@@ -336,19 +355,24 @@ Events published by this domain that other domains may subscribe to:
 
 **Rule:** Payment amount is calculated once at transaction initiation based on credential type and cannot be modified afterward.
 
-**Rationale:** Prevents user confusion, ensures audit trail integrity, and matches CEPAS confirmation amounts. If the fee schedule changes, new applications pay the new rate; existing pending payments honor the original amount.
+**Rationale:** Prevents user confusion, ensures audit trail integrity, and matches CEPAS confirmation amounts. If fee schedule changes, new applications pay new rate; existing pending payments honor original amount.
 
 **Enforced By:** PaymentTransaction aggregate
 
-**Example:** User initiates payment for an Elementary Credential on Jan 1, 2026 (fee: $100). Fee schedule updated Jan 5, 2026 (new fee: $120). User completes payment Jan 10, 2026. Amount charged: $100 (original calculated amount). New applications after Jan 5 pay $120.
+**Example:**
+- User initiates payment for Elementary Credential on Jan 1, 2026 (fee: $100)
+- Fee schedule updated Jan 5, 2026 (new fee: $120)
+- User completes payment Jan 10, 2026
+- Amount charged: $100 (original calculated amount)
+- New applications after Jan 5 pay $120
 
 ---
 
 ### Hash Validation Required for Payment Confirmation
 
-**Rule:** All payment confirmations returned from a CEPAS redirect must pass SHA-1 hash validation before updating transaction status to Paid.
+**Rule:** All payment confirmations returned from CEPAS redirect must pass SHA-1 hash validation before updating transaction status to Paid.
 
-**Rationale:** Prevents spoofed payment confirmations and ensures data integrity. CEPAS provides a hash calculated as SHA-1(ConfirmationNumber + Amount + SecurityKey) which MiEdWorkforce must independently verify.
+**Rationale:** Prevents spoofed payment confirmations and ensures data integrity. CEPAS provides hash calculated as `SHA-1([ConfirmationNumber][Amount][SecurityKey])` which MiEdWorkforce must independently verify.
 
 **Enforced By:** Payment Confirmation Service
 
@@ -368,9 +392,9 @@ Example: SHA-1("12345100.00mySecretKey123") = "a1b2c3d4..."
 
 ### Posting File as Source of Truth
 
-**Rule:** The CEPAS posting file is the authoritative source of truth for payment status. If the posting file confirms a payment that MiEdWorkforce has as Pending, the system automatically updates it to Paid.
+**Rule:** The CEPAS posting file is the authoritative source of truth for payment status. If posting file confirms a payment that MiEdWorkforce has as Pending, system automatically updates to Paid.
 
-**Rationale:** Real-time redirect confirmations can be missed due to browser closures, network issues, or user navigation away. The posting file ensures no revenue is lost and all payments are eventually reconciled.
+**Rationale:** Real-time redirect confirmations can be missed due to browser closures, network issues, or user navigation away. Posting file ensures no revenue is lost and all payments are eventually reconciled.
 
 **Enforced By:** ReconciliationBatch processing
 
@@ -386,7 +410,7 @@ Example: SHA-1("12345100.00mySecretKey123") = "a1b2c3d4..."
 
 ### Refund Amount Validation
 
-**Rule:** Refund amount must be less than or equal to the original payment amount. Partial refunds must leave a non-zero remainder or represent the full amount.
+**Rule:** Refund amount must be less than or equal to original payment amount. Partial refunds must leave a non-zero remainder or represent full amount.
 
 **Rationale:** Prevents over-refunding and ensures financial integrity. CEPAS enforces this on their end, but MiEdWorkforce validates before API call to provide immediate user feedback.
 
@@ -406,9 +430,9 @@ Example: SHA-1("12345100.00mySecretKey123") = "a1b2c3d4..."
 
 ### Bulk Payment Individual Fee Integrity
 
-**Rule:** When processing a bulk payment, the system must validate that the total amount equals the sum of individual application fees. Bulk payment succeeds or fails atomically.
+**Rule:** When processing bulk payment, system must validate that total amount equals sum of individual application fees. Bulk payment succeeds or fails atomically.
 
-**Rationale:** Prevents partial-payment scenarios where some applications in a bulk batch are paid and others are not.
+**Rationale:** Prevents partial payment scenarios where some applications in bulk batch are paid and others are not.
 
 **Enforced By:** BulkPaymentTransaction aggregate
 
@@ -442,7 +466,7 @@ Example: SHA-1("12345100.00mySecretKey123") = "a1b2c3d4..."
 
 **Rule:** If CEPAS server is unreachable when user clicks "Pay Fee", system must display error message within MiEdWorkforce (before redirect attempt) and allow user to retry later. Application submission is not blocked.
 
-**Rationale:** Separates application submission from payment timing so users can submit applications and pay later, improving user experience during CEPAS outages.
+**Rationale:** Separates application submission from payment timing. Users can submit applications and pay later, improving user experience during CEPAS outages.
 
 **Enforced By:** Payment Initiation Service + CEPAS health check
 
