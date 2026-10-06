@@ -1,0 +1,747 @@
+openapi: 3.0.3
+info:
+  title: Question Sets API
+  version: 0.1.0
+  description: |
+    Draft API for the Question Sets platform capability (staged 2026-10-05, not merged).
+    Authoring endpoints are internal-user. Response creation, supersede and cancel are
+    internal-service (consuming domain, Managed Identity). Applicant answering endpoints are
+    external-client with Self-only scope.
+    Every x-permissions-required value must exist in solution-permissions.csv when merged.
+    Functional-area permissions are written with the area name filled in as {fa}; at merge
+    time either enumerate per area or document the pattern once, as Communications does.
+servers:
+  - url: /api/v1
+tags:
+  - name: Question Sets
+  - name: Versions
+  - name: Option Lists
+  - name: Prefill Sources
+  - name: Responses
+paths:
+  /question-sets:
+    get:
+      tags: [Question Sets]
+      operationId: listQuestionSets
+      summary: Search question sets
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { name: owningDomain, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [HasCurrent, DraftOnly, HasScheduled] } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        "200":
+          description: Page of question sets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/QuestionSetSummary" } }
+                  pagination: { $ref: "#/components/schemas/PaginationMetadata" }
+    post:
+      tags: [Question Sets]
+      operationId: createQuestionSet
+      summary: Create a question set with an initial draft
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.create"]
+      x-scope-sensitive: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateQuestionSetRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetDetail" }
+  /question-sets/{questionSetId}:
+    get:
+      tags: [Question Sets]
+      operationId: getQuestionSet
+      summary: Get a question set with version summary list
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+      responses:
+        "200":
+          description: Question set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetDetail" }
+    delete:
+      tags: [Question Sets]
+      operationId: deleteQuestionSet
+      summary: Delete a question set that was never published or used
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.delete"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+      responses:
+        "204": { description: Deleted }
+        "409": { description: Has published versions or responses }
+  /question-sets/{questionSetId}/versions:
+    get:
+      tags: [Versions]
+      operationId: listQuestionSetVersions
+      summary: List versions (drafts, scheduled, current, superseded)
+      description: Follows the versioned-resource convention (effectiveFrom and a history listing).
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+      responses:
+        "200":
+          description: Versions, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/QuestionSetVersionSummary" }
+    post:
+      tags: [Versions]
+      operationId: createQuestionSetDraft
+      summary: Create a draft from a base version
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.edit"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseVersionId: { type: string, format: uuid, description: Defaults to current version }
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetVersionDetail" }
+  /question-sets/{questionSetId}/versions/{versionId}:
+    get:
+      tags: [Versions]
+      operationId: getQuestionSetVersion
+      summary: Get a version with its full payload
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetVersionDetail" }
+    put:
+      tags: [Versions]
+      operationId: updateQuestionSetDraft
+      summary: Save a draft (full payload)
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.edit"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuestionSetVersionPayload" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetVersionDetail" }
+        "409": { description: Version is not a draft }
+    delete:
+      tags: [Versions]
+      operationId: discardQuestionSetDraft
+      summary: Discard a draft
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.edit"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      responses:
+        "204": { description: Discarded }
+  /question-sets/{questionSetId}/versions/{versionId}/publish:
+    post:
+      tags: [Versions]
+      operationId: publishQuestionSetVersion
+      summary: Publish a draft with an effective date
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.publish"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [effectiveFrom]
+              properties:
+                effectiveFrom: { type: string, format: date }
+                note: { type: string }
+                acknowledgeConflict: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Published (immediate or scheduled)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestionSetVersionDetail" }
+        "409":
+          description: Base version is no longer current; body carries a comparison
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VersionComparison" }
+        "422":
+          description: Publish validation failed (business rule violations keyed by question key)
+  /question-sets/{questionSetId}/versions/{versionId}/cancel:
+    post:
+      tags: [Versions]
+      operationId: cancelScheduledQuestionSetVersion
+      summary: Cancel a scheduled version that is not yet effective
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.edit"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      responses:
+        "204": { description: Cancelled }
+        "409": { description: Version is already effective }
+  /question-sets/{questionSetId}/versions/{versionId}/compare:
+    get:
+      tags: [Versions]
+      operationId: compareQuestionSetVersions
+      summary: Compare this version to another version of the same question set
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+        - { name: against, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Comparison keyed on question key
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VersionComparison" }
+  /question-sets/{questionSetId}/versions/{versionId}/simulate:
+    post:
+      tags: [Versions]
+      operationId: simulateQuestionSetVersion
+      summary: Simulate a version read only; nothing is persisted
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-question-sets.simulate"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/QuestionSetId" }
+        - { $ref: "#/components/parameters/VersionId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sampleProfileId: { type: string }
+                targetSubjectId: { type: string, description: Requires questionsets.simulate-target-subject.use }
+                answers: { type: object, additionalProperties: true }
+                context: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Simulation result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SimulationResult" }
+  /option-lists:
+    get:
+      tags: [Option Lists]
+      operationId: listOptionLists
+      summary: List option lists
+      x-access: internal-user
+      x-permissions-required: ["questionsets.option-lists.view"]
+      x-scope-sensitive: false
+      responses:
+        "200":
+          description: Option lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OptionList" }
+    post:
+      tags: [Option Lists]
+      operationId: createOptionList
+      summary: Create an option list
+      x-access: internal-user
+      x-permissions-required: ["questionsets.option-lists.manage"]
+      x-scope-sensitive: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OptionList" }
+      responses:
+        "201": { description: Created }
+  /option-lists/{optionListId}/options:
+    get:
+      tags: [Option Lists]
+      operationId: getOptionListOptions
+      summary: Resolve the options of a list (static or provider), with search
+      x-access: internal-user
+      x-permissions-required: ["questionsets.option-lists.view"]
+      x-scope-sensitive: false
+      parameters:
+        - { name: optionListId, in: path, required: true, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Options
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Option" }
+  /prefill-sources:
+    get:
+      tags: [Prefill Sources]
+      operationId: listPrefillSources
+      summary: List registered prefill sources
+      x-access: internal-user
+      x-permissions-required: ["questionsets.prefill-sources.view"]
+      x-scope-sensitive: false
+      responses:
+        "200":
+          description: Prefill sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PrefillSource" }
+  /responses:
+    post:
+      tags: [Responses]
+      operationId: createOrGetResponse
+      summary: Create a response for a consumer context, or return the existing one (idempotent)
+      x-access: internal-service
+      x-permissions-required: []
+      x-scope-sensitive: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateResponseRequest" }
+      responses:
+        "200":
+          description: Existing response returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseSummary" }
+        "201":
+          description: Created and pinned to the current version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseSummary" }
+    get:
+      tags: [Responses]
+      operationId: listResponses
+      summary: List responses for a consumer context
+      x-access: internal-service
+      x-permissions-required: []
+      x-scope-sensitive: false
+      parameters:
+        - { name: consumerDomain, in: query, required: true, schema: { type: string } }
+        - { name: contextType, in: query, required: true, schema: { type: string } }
+        - { name: contextId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Responses
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ResponseSummary" }
+  /responses/{responseId}:
+    get:
+      tags: [Responses]
+      operationId: getResponse
+      summary: Read a response with questions as worded in the pinned version (audited)
+      x-access: internal-user
+      x-permissions-required: ["questionsets.{fa}-responses.view"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      responses:
+        "200":
+          description: Response detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseDetail" }
+  /responses/{responseId}/form:
+    get:
+      tags: [Responses]
+      operationId: getResponseForm
+      summary: Pinned version, visible path, prefill suggestions and option values for the respondent
+      x-access: external-client
+      x-permissions-required: ["questionsets.response.complete"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      responses:
+        "200":
+          description: Form
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseForm" }
+  /responses/{responseId}/answers:
+    put:
+      tags: [Responses]
+      operationId: saveResponseAnswers
+      summary: Save partial answers; returns updated visible path, validation messages, and halt if any
+      x-access: external-client
+      x-permissions-required: ["questionsets.response.complete"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: object
+                  additionalProperties: { $ref: "#/components/schemas/AnswerValue" }
+      responses:
+        "200":
+          description: Evaluation result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnswerEvaluation" }
+        "409": { description: Response is Halted, Submitted, Superseded or Cancelled }
+  /responses/{responseId}/uploads/request:
+    post:
+      tags: [Responses]
+      operationId: requestResponseUpload
+      summary: Request an upload for a file question (delegates to Documents)
+      x-access: external-client
+      x-permissions-required: ["questionsets.response.complete"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionKey, filename, size, mimeType]
+              properties:
+                questionKey: { type: string }
+                filename: { type: string }
+                size: { type: integer }
+                mimeType: { type: string }
+      responses:
+        "200":
+          description: Upload target
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId: { type: string, format: uuid }
+                  uploadUrl: { type: string }
+  /responses/{responseId}/submit:
+    post:
+      tags: [Responses]
+      operationId: submitResponse
+      summary: Submit a response
+      x-access: external-client
+      x-permissions-required: ["questionsets.response.complete"]
+      x-scope-sensitive: true
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      responses:
+        "200":
+          description: Submitted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseSummary" }
+        "409": { description: Halted or not InProgress }
+        "422": { description: Required answers missing or uploads not Available }
+  /responses/{responseId}/supersede:
+    post:
+      tags: [Responses]
+      operationId: supersedeResponse
+      summary: Supersede a submitted response with a new in-progress one
+      x-access: internal-service
+      x-permissions-required: []
+      x-scope-sensitive: false
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      responses:
+        "201":
+          description: New response
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResponseSummary" }
+  /responses/{responseId}/cancel:
+    post:
+      tags: [Responses]
+      operationId: cancelResponse
+      summary: Cancel an in-progress or halted response (for example the application was withdrawn)
+      x-access: internal-service
+      x-permissions-required: []
+      x-scope-sensitive: false
+      parameters:
+        - { $ref: "#/components/parameters/ResponseId" }
+      responses:
+        "204": { description: Cancelled }
+components:
+  parameters:
+    QuestionSetId: { name: questionSetId, in: path, required: true, schema: { type: string, format: uuid } }
+    VersionId: { name: versionId, in: path, required: true, schema: { type: string, format: uuid } }
+    ResponseId: { name: responseId, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    PaginationMetadata:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+    QuestionSetSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        owningDomain: { type: string }
+        currentVersionId: { type: string, format: uuid, nullable: true }
+        currentEffectiveFrom: { type: string, format: date, nullable: true }
+        hasScheduled: { type: boolean }
+        draftCount: { type: integer }
+    QuestionSetDetail:
+      allOf:
+        - $ref: "#/components/schemas/QuestionSetSummary"
+        - type: object
+          properties:
+            description: { type: string }
+            versions: { type: array, items: { $ref: "#/components/schemas/QuestionSetVersionSummary" } }
+    CreateQuestionSetRequest:
+      type: object
+      required: [name, owningDomain]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        owningDomain: { type: string }
+    QuestionSetVersionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        versionNumber: { type: integer }
+        state: { type: string, enum: [Draft, Scheduled, Published, Superseded], description: Derived from effective dates except Draft }
+        effectiveFrom: { type: string, format: date, nullable: true }
+        effectiveTo: { type: string, format: date, nullable: true }
+        basedOnVersionId: { type: string, format: uuid, nullable: true }
+        note: { type: string }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+    QuestionSetVersionDetail:
+      allOf:
+        - $ref: "#/components/schemas/QuestionSetVersionSummary"
+        - type: object
+          properties:
+            payload: { $ref: "#/components/schemas/QuestionSetVersionPayload" }
+    QuestionSetVersionPayload:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/Question" }
+    Question:
+      type: object
+      required: [questionKey, type, text]
+      properties:
+        questionKey: { type: string, description: Stable across versions }
+        type: { type: string, enum: [YesNo, SingleChoice, Text, Date, Number, FileUpload] }
+        text: { type: string }
+        description: { type: string, description: Restricted markdown, links open in a new tab }
+        required: { type: boolean }
+        parentQuestionKey: { type: string, nullable: true }
+        trigger: { type: string, nullable: true, description: Answer value on the parent that shows this question }
+        validation: { $ref: "#/components/schemas/QuestionValidation" }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/AnswerOption" }
+        optionListId: { type: string, nullable: true }
+        optionListFilter: { type: object, additionalProperties: true }
+        allowOther: { type: boolean }
+        prefillSourceKey: { type: string, nullable: true }
+        uploadCategory: { type: string, nullable: true, description: Documents category slug }
+    QuestionValidation:
+      type: object
+      properties:
+        maxLength: { type: integer, nullable: true }
+        pattern: { type: string, nullable: true, enum: [numbers, letters, email, phone, url, custom] }
+        customPattern: { type: string, nullable: true }
+        dateConstraint: { type: string, enum: [Any, BeforeToday, AfterToday] }
+        min: { type: number, nullable: true }
+        max: { type: number, nullable: true }
+        acceptedTypes: { type: array, items: { type: string } }
+    AnswerOption:
+      type: object
+      properties:
+        value: { type: string }
+        label: { type: string }
+        halt: { $ref: "#/components/schemas/HaltOutcome" }
+        tags: { type: object, additionalProperties: { type: string }, description: Opaque consumer tags returned with the response }
+    HaltOutcome:
+      type: object
+      nullable: true
+      properties:
+        title: { type: string }
+        message: { type: string }
+        nextSteps: { type: string, nullable: true }
+    VersionComparison:
+      type: object
+      properties:
+        fromVersionId: { type: string, format: uuid }
+        toVersionId: { type: string, format: uuid }
+        fieldChanges: { type: array, items: { $ref: "#/components/schemas/FieldChange" } }
+        added: { type: array, items: { $ref: "#/components/schemas/Question" } }
+        removed: { type: array, items: { $ref: "#/components/schemas/Question" } }
+        changed:
+          type: array
+          items:
+            type: object
+            properties:
+              questionKey: { type: string }
+              fieldChanges: { type: array, items: { $ref: "#/components/schemas/FieldChange" } }
+    FieldChange:
+      type: object
+      properties:
+        field: { type: string }
+        before: {}
+        after: {}
+    SimulationResult:
+      type: object
+      properties:
+        visibleQuestions:
+          type: array
+          items:
+            type: object
+            properties:
+              questionKey: { type: string }
+              label: { type: string, description: Display numbering such as 2.1 }
+              prefillSuggestion: { type: string, nullable: true }
+        validationMessages: { type: object, additionalProperties: { type: string } }
+        halt: { $ref: "#/components/schemas/HaltOutcome" }
+    OptionList:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        sourceType: { type: string, enum: [Static, Provider] }
+        providerKey: { type: string, nullable: true }
+        parameters: { type: object, additionalProperties: true }
+        searchable: { type: boolean }
+        allowOther: { type: boolean }
+        options: { type: array, items: { $ref: "#/components/schemas/Option" } }
+    Option:
+      type: object
+      properties:
+        value: { type: string }
+        label: { type: string }
+    PrefillSource:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        valueType: { type: string }
+        origin: { type: string }
+        resolutionMode: { type: string, enum: [ConsumerSupplied, Provider] }
+    CreateResponseRequest:
+      type: object
+      required: [consumerDomain, contextType, contextId, questionSetId, subjectId]
+      properties:
+        consumerDomain: { type: string }
+        contextType: { type: string }
+        contextId: { type: string }
+        questionSetId: { type: string, format: uuid }
+        subjectId: { type: string }
+        asOf: { type: string, format: date, description: Defaults to today }
+        prefill: { type: object, additionalProperties: true, description: Keyed by prefill source key }
+        filterContext: { type: object, additionalProperties: true, description: Option list filter context such as credentialType }
+        actorId: { type: string, description: Set when staff answer on behalf of the subject }
+    ResponseSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        questionSetId: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+        status: { type: string, enum: [InProgress, Halted, Submitted, Superseded, Cancelled] }
+        pinnedVersionIsCurrent: { type: boolean }
+        submittedAt: { type: string, format: date-time, nullable: true }
+    ResponseDetail:
+      allOf:
+        - $ref: "#/components/schemas/ResponseSummary"
+        - type: object
+          properties:
+            answers:
+              type: array
+              items:
+                type: object
+                properties:
+                  questionKey: { type: string }
+                  label: { type: string, description: Display numbering }
+                  questionText: { type: string, description: As worded in the pinned version }
+                  value: {}
+                  selectedLabel: { type: string, nullable: true }
+                  isCustom: { type: boolean }
+                  tags: { type: object, additionalProperties: { type: string } }
+                  prefilledValue: { type: string, nullable: true }
+                  documentIds: { type: array, items: { type: string, format: uuid } }
+            halt: { $ref: "#/components/schemas/HaltOutcome" }
+    ResponseForm:
+      type: object
+      properties:
+        response: { $ref: "#/components/schemas/ResponseSummary" }
+        version: { $ref: "#/components/schemas/QuestionSetVersionPayload" }
+        visibleQuestionKeys: { type: array, items: { type: string } }
+        prefillSuggestions: { type: object, additionalProperties: true }
+        answers: { type: object, additionalProperties: true }
+    AnswerValue:
+      description: String, number, boolean, or file reference depending on question type
+    AnswerEvaluation:
+      type: object
+      properties:
+        visibleQuestionKeys: { type: array, items: { type: string } }
+        clearedQuestionKeys: { type: array, items: { type: string } }
+        validationMessages: { type: object, additionalProperties: { type: string } }
+        halt: { $ref: "#/components/schemas/HaltOutcome" }
