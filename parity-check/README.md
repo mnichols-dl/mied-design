@@ -2,7 +2,7 @@
 
 A plan and working log for verifying that the Solution Design Graph can reproduce the delivered solution design docs, and for getting the design to a state we are confident calling complete enough to start development.
 
-Started 2026-10-04. Status: credentialing survey done ([credentialing-survey.md](credentialing-survey.md)); permissions slice ([permissions-slice-results.md](permissions-slice-results.md)) and sequences slice ([sequences-slice-results.md](sequences-slice-results.md)) built and diffed; editor export dialog added. domain doc slice built and tried on a scratch copy ([domain-slice-results.md](domain-slice-results.md)). Next: commit, apply the domain and permissions re-ingest to the live graph, then the technical design doc and the other 10 domains.
+Started 2026-10-04. Status: credentialing survey done ([credentialing-survey.md](credentialing-survey.md)); permissions slice ([permissions-slice-results.md](permissions-slice-results.md)) and sequences slice ([sequences-slice-results.md](sequences-slice-results.md)) built and diffed; editor export dialog added. domain doc slice built and tried on a scratch copy ([domain-slice-results.md](domain-slice-results.md)). All 11 areas applied to the live graph ([all-domains-results.md](all-domains-results.md)). Next: review the graph-ahead fields, the remaining sequences differences, then API specs.
 
 Related tracked content, kept in its proper home rather than repeated here:
 - Decisions made for this effort: see [DECISIONS.md](../../hub/DECISIONS.md), entry dated 2026-10-04.
@@ -120,7 +120,7 @@ This folder moved here from `hub/solution-parity-check/`, and the other pieces m
 
 | Older notes say | Now |
 |---|---|
-| `SolutionDesign/solutions/MiEdWorkforce/inputs/original-solutioning` | `design/baselines/as-ingested/` |
+| `SolutionDesign/solutions/MiEdWorkforce/inputs/original-solutioning` | the `baseline-docs` git tag of `design` (the folder was removed; `working-docs/` was identical in content) |
 | `SolutionDesign/solutions/MiEdWorkforce/solution/MiEdWorkforce.ttl` | `design/graph/MiEdWorkforce.ttl` |
 | `SolutionDesign/solutions/MiEdWorkforce/export/` | `design/generated-from-graph/` |
 | `SolutionDesign/editor` and `SolutionDesign/ontology` | `supporting-artifacts/solution-design-editor/` |
