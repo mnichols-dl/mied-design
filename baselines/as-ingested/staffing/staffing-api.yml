@@ -1,0 +1,2708 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Staffing API
+  version: 1.0.0
+  description: |
+    Manages employment and position lifecycle for educators and staff within Michigan
+    educational organizations. Covers roster definition, employee assignment, credential
+    validation, data quality review, collection certification, and audit workflows.
+    Primary consumers are district HR users, ISD auditors, SOM administrators, and
+    external HR/SIS systems submitting staffing data on behalf of districts.
+
+servers:
+  - url: http://staffing-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/staffing/api/v1
+    description: External via APIM
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ----------------------------------------------------------------------------
+  # EMPLOYEE ROSTER
+  # ----------------------------------------------------------------------------
+
+  /employee-roster:
+    get:
+      summary: List employees for an entity
+      operationId: listEmployees
+      tags: [EmployeeRoster]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.employee-roster.view
+      x-scope-sensitive: true
+      description: |
+        Returns employees within the organization specified by X-Organization-Context.
+        Users with ISD-level authorization will see results for all constituent
+        districts and buildings.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/EmploymentStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of employees
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmployeeSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /employee-roster/search:
+    get:
+      summary: Search employees by name, DOB, or Unique ID
+      operationId: searchEmployees
+      tags: [EmployeeRoster]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.employee-roster.view
+      x-scope-sensitive: true
+      description: |
+        Global search for employees. Must be performed before adding a new employee
+        to identify existing Unique ID associations and prevent duplicates.
+        Returns only employees within the organization specified by X-Organization-Context.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Partial name match
+        - name: dateOfBirth
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: uniqueId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Employee search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmployeeSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /employee-roster/add-employee:
+    post:
+      summary: Add new employee with Mi-Key ID assignment
+      operationId: addEmployee
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.add-employee
+      x-scope-sensitive: true
+      description: |
+        Creates a new employee record for an organization. Triggers identity resolution
+        via the IAM domain's identity-resolution API (which in turn integrates with
+        Mi-Key) synchronously; Staffing holds no matching logic of its own. May return
+        202 if near-match resolution is required. Callable by district HR users via the
+        portal (internal-user) or by external HR/SIS systems submitting on behalf of a
+        district (external-client); in both cases X-Organization-Context determines the
+        target entity.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddEmployeeRequest'
+      responses:
+        '201':
+          description: Employee added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employeeRecordId:
+                    type: string
+                    format: uuid
+                  uniqueId:
+                    type: string
+                  status:
+                    $ref: '#/components/schemas/EmployeeRecordStatus'
+        '202':
+          description: Near-match resolution required before employee can be added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearMatchResolutionRequired'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: PPR restrictions prevent this employee from being added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Employee already exists in this organization's roster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /employee-roster/resolve-near-match:
+    post:
+      summary: Resolve Mi-Key near match by selecting a potential match
+      operationId: resolveNearMatch
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.add-employee
+      x-scope-sensitive: false
+      description: |
+        Resolves a pending near-match against a specific candidate Unique ID. Staffing
+        proxies this call to IAM's `/identity-resolution/requests/{requestId}/resolve`
+        endpoint, which owns the Near Match state; Staffing holds no matching state of
+        its own. Scope is resolved server-side from the employee record's owning
+        organization; X-Organization-Context is not required. Callable by the same
+        actor that initiated the add-employee request (internal-user or external-client).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeRecordId, selectedUniqueId]
+              properties:
+                employeeRecordId:
+                  type: string
+                  format: uuid
+                selectedUniqueId:
+                  type: string
+                  description: The Unique ID selected from the near-match candidates
+      responses:
+        '200':
+          description: Near match resolved; employee record associated with selected Unique ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employeeRecordId:
+                    type: string
+                    format: uuid
+                  uniqueId:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /employee-roster/request-new-id:
+    post:
+      summary: Request new Unique ID when rejecting all near-match potentials
+      operationId: requestNewId
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.add-employee
+      x-scope-sensitive: false
+      description: |
+        Submits a request for a new Unique ID after the district user has reviewed
+        and rejected all Mi-Key potential matches. Staffing proxies this call to IAM's
+        `/identity-resolution/requests/{requestId}/escalate` endpoint; approval/denial
+        is performed by an Identity Administrator via IAM's own identity-resolution
+        review capability, not by Staffing. Scope is resolved server-side from the employee
+        record's owning organization. Callable by the same actor that initiated the
+        add-employee request (internal-user or external-client).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeRecordId, justificationText]
+              properties:
+                employeeRecordId:
+                  type: string
+                  format: uuid
+                justificationText:
+                  type: string
+                  maxLength: 2000
+                  description: Explanation for why all potential matches were rejected
+      responses:
+        '202':
+          description: New ID request submitted and pending Identity Admin review
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [PendingAdminReview]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /employee-roster/{employeeId}/demographics:
+    get:
+      summary: Get employee demographic details
+      operationId: getEmployeeDemographics
+      tags: [EmployeeRoster]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.employee-roster.view
+      x-scope-sensitive: false
+      description: |
+        Returns demographic details for a single employee. Scope is resolved
+        server-side from the employee record's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Employee demographics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDemographics'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update employee demographics
+      operationId: updateEmployeeDemographics
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.update-demographics
+      x-scope-sensitive: false
+      description: |
+        Updates demographic fields, triggering identity resolution via IAM's
+        identity-resolution API (which synchronizes to Mi-Key). Cross-notifies
+        the district if updated by citizen, or the citizen if updated by a district
+        user. Callable by district HR users (internal-user) or external HR/SIS
+        systems (external-client). Scope is resolved server-side from the employee
+        record's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDemographicsRequest'
+      responses:
+        '200':
+          description: Demographics updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updateTimestamp:
+                    type: string
+                    format: date-time
+        '202':
+          description: |
+            Mi-Key returned a Near Match. The record is set to "Requires Resolution"
+            and the submitted data is held in temporary storage, not applied. Only
+            the candidate sharing the submitted Unique ID is returned (unlike the
+            Add New Employee path, other Unique IDs are never surfaced here). Caller
+            must resolve via `resolve-near-match` or `cancel-near-match` below.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employeeRecordId:
+                    type: string
+                    format: uuid
+                  candidateUniqueId:
+                    type: string
+                  matchScore:
+                    type: number
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Concurrent update conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /employee-roster/{employeeId}/demographics/resolve-near-match:
+    post:
+      summary: Resolve a Near Match returned during a demographics update
+      operationId: resolveDemographicsNearMatch
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.update-demographics
+      x-scope-sensitive: false
+      description: |
+        Confirms the near-match candidate (which always shares the submitted Unique
+        ID) is the correct individual. Staffing proxies this call to IAM's
+        `/identity-resolution/requests/{requestId}/resolve` endpoint. Unlike
+        `/employee-roster/resolve-near-match` (the Add New Employee path), there is no
+        option to request a new ID here — FDD 15.3 explicitly prohibits creating a new
+        ID from the Update path. Scope is resolved server-side from the employee
+        record's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [replaceMasterRecord]
+              properties:
+                replaceMasterRecord:
+                  type: boolean
+                  description: |
+                    If true, the submitted data overwrites the Mi-Key Master Record.
+                    If false, the Master Record is retained and the submitted
+                    (temporary) data is discarded.
+      responses:
+        '200':
+          description: Near match resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updateTimestamp:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /employee-roster/{employeeId}/demographics/cancel-near-match:
+    post:
+      summary: Cancel a Near Match returned during a demographics update
+      operationId: cancelDemographicsNearMatch
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.update-demographics
+      x-scope-sensitive: false
+      description: |
+        Discards the pending update; proxies to IAM's identity-resolution cancel
+        endpoint, which sends the cancellation to Mi-Key. Also invoked automatically
+        by IAM if a Near Match is left unresolved past the configured timeout (FDD
+        15.3; exact timeframe not yet defined — see `iam-domain.md` Open Question #11).
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Near match cancelled; no update applied
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /employee-roster/{employeeId}/employment-status:
+    patch:
+      summary: Update employment status and separation details
+      operationId: updateEmploymentStatus
+      tags: [EmployeeRoster]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.employee-roster.update-employment
+      x-scope-sensitive: false
+      description: |
+        Updates employment status. If terminating (providing end date), separation
+        reason is required. End date and separation reason must both be present or
+        both absent. Callable by district HR users (internal-user) or external
+        HR/SIS systems (external-client). Scope is resolved server-side from the
+        employee record's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmploymentStatusRequest'
+      responses:
+        '200':
+          description: Employment status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  employeeRecordId:
+                    type: string
+                    format: uuid
+                  newStatus:
+                    $ref: '#/components/schemas/EmploymentStatus'
+                  effectiveDate:
+                    type: string
+                    format: date
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # POSITIONS
+  # ----------------------------------------------------------------------------
+
+  /positions:
+    get:
+      summary: List positions for an entity
+      operationId: listPositions
+      tags: [Positions]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.position-roster.view
+      x-scope-sensitive: true
+      description: |
+        Returns positions within the organization specified by X-Organization-Context.
+        Users with ISD-level authorization will see results for all constituent
+        districts and buildings. Filterable by status, education job type, and building.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PositionStatus'
+        - name: educationJobType
+          in: query
+          schema:
+            $ref: '#/components/schemas/EducationJobType'
+        - name: buildingCode
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of positions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PositionSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create new position
+      operationId: createPosition
+      tags: [Positions]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.position-roster.create
+      x-scope-sensitive: true
+      description: |
+        Creates a new position record for the organization specified by
+        X-Organization-Context. Only allowed during a working window or open
+        collection. Callable by district users (internal-user) or external
+        HR/SIS systems (external-client).
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePositionRequest'
+      responses:
+        '201':
+          description: Position created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positionId:
+                    type: string
+                    format: uuid
+                  positionIdentifier:
+                    type: string
+                    description: System-generated unique position identifier
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /positions/{positionId}:
+    get:
+      summary: Get position details
+      operationId: getPosition
+      tags: [Positions]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.position-roster.view
+      x-scope-sensitive: false
+      description: |
+        Returns full position detail including spots and status history.
+        Scope is resolved server-side from the position's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/PositionId'
+      responses:
+        '200':
+          description: Position details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update position details
+      operationId: updatePosition
+      tags: [Positions]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.position-roster.update
+      x-scope-sensitive: false
+      description: |
+        Partial update of position fields (title, job category/function, approved FTE).
+        Callable by district users (internal-user) or external HR/SIS systems
+        (external-client). Scope is resolved server-side from the position's owning
+        organization.
+      parameters:
+        - $ref: '#/components/parameters/PositionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePositionRequest'
+      responses:
+        '200':
+          description: Position updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Cancel position (sets status to Cancelled)
+      operationId: cancelPosition
+      tags: [Positions]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.position-roster.delete
+      x-scope-sensitive: false
+      description: |
+        Positions cannot be physically deleted. This operation sets status to
+        Cancelled and requires a cancellation reason. Only allowed before the
+        position is established or certified. Scope is resolved server-side from
+        the position's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/PositionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cancellationReason]
+              properties:
+                cancellationReason:
+                  type: string
+                  maxLength: 1000
+                effectiveDate:
+                  type: string
+                  format: date
+                  description: Defaults to today if not specified
+      responses:
+        '200':
+          description: Position cancelled
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /positions/{positionId}/status:
+    post:
+      summary: Update position status
+      operationId: updatePositionStatus
+      tags: [Positions]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.position-roster.update
+      x-scope-sensitive: false
+      description: |
+        Transitions a position to a new status with business rule enforcement.
+        Filled requires an employee assignment; Approved requires a future start
+        date and no assigned employee; Cancelled requires a reason; Frozen ends
+        any active employee assignment. Callable by district users (internal-user)
+        or external HR/SIS systems (external-client). Scope is resolved server-side
+        from the position's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/PositionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newStatus, statusDate]
+              properties:
+                newStatus:
+                  $ref: '#/components/schemas/PositionStatus'
+                statusDate:
+                  type: string
+                  format: date
+                cancellationReason:
+                  type: string
+                  description: Required when newStatus = Cancelled
+                  maxLength: 1000
+                expectedStartDate:
+                  type: string
+                  format: date
+                  description: Required when newStatus = Approved (must be future-dated)
+      responses:
+        '200':
+          description: Position status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positionId:
+                    type: string
+                    format: uuid
+                  newStatus:
+                    $ref: '#/components/schemas/PositionStatus'
+                  statusDate:
+                    type: string
+                    format: date
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # ASSIGNMENTS
+  # ----------------------------------------------------------------------------
+
+  /assignments:
+    get:
+      summary: List assignments for an entity
+      operationId: listAssignments
+      tags: [Assignments]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.assignment.view
+      x-scope-sensitive: true
+      description: |
+        Returns assignments within the organization specified by X-Organization-Context.
+        Users with ISD-level authorization will see results for all constituent
+        districts and buildings.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: employeeUniqueId
+          in: query
+          schema:
+            type: string
+        - name: positionId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AssignmentStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignmentSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /assignments/validate-placement:
+    post:
+      summary: Validate credential and endorsement for assignment
+      operationId: validatePlacement
+      tags: [Assignments]
+      x-access: internal-service
+      x-permissions-required:
+        - staffing.assignment.view
+      x-scope-sensitive: false
+      description: |
+        Called internally during assignment creation to check credential and
+        endorsement alignment. Also callable from other internal services
+        (e.g., credentialing domain) via Managed Identity / mTLS. Does not
+        modify state. No user token is present; X-Organization-Context does not apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeUniqueId, positionId]
+              properties:
+                employeeUniqueId:
+                  type: string
+                positionId:
+                  type: string
+                  format: uuid
+                scedCode:
+                  type: string
+                  description: Required for teacher positions with course details
+                gradeLow:
+                  type: string
+                gradHigh:
+                  type: string
+      responses:
+        '200':
+          description: Placement validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlacementValidationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /assignments/create:
+    post:
+      summary: Create employee assignment to position
+      operationId: createAssignment
+      tags: [Assignments]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.assignment.create
+      x-scope-sensitive: true
+      description: |
+        Creates an assignment linking an employee to a position with spot details.
+        Requires that placement validation passes (credential/endorsement match).
+        Callable by district users (internal-user) or external HR/SIS systems
+        (external-client); X-Organization-Context determines the target entity.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignmentId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/AssignmentStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: PPR restriction prevents this assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Employee already assigned to same position/course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /assignments/create-with-justification:
+    post:
+      summary: Create assignment with credential error justification
+      operationId: createAssignmentWithJustification
+      tags: [Assignments]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.assignment.create
+        - staffing.assignment.submit-justification
+      x-scope-sensitive: true
+      description: |
+        Creates an assignment when credential or endorsement requirements are not met,
+        with district-provided justification text. Assignment status is set to Justified
+        and alerts the SOM Auditor. Restricted to internal-user because justified
+        placements require district accountability and attestation; external systems
+        should surface these cases back to a district user for resolution.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CreateAssignmentRequest'
+                - type: object
+                  required: [justificationText]
+                  properties:
+                    justificationText:
+                      type: string
+                      maxLength: 2000
+                      description: Required explanation for credential-unqualified placement
+      responses:
+        '201':
+          description: Assignment created with credential error justification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignmentId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [Justified]
+                  warning:
+                    type: string
+                    description: Reminder of potential aid deduction implications
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /assignments/{assignmentId}:
+    get:
+      summary: Get assignment details
+      operationId: getAssignment
+      tags: [Assignments]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.assignment.view
+      x-scope-sensitive: false
+      description: |
+        Returns full assignment detail including spot details, placement validation
+        result, and any justification text. Scope is resolved server-side from the
+        assignment's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Assignment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update assignment details
+      operationId: updateAssignment
+      tags: [Assignments]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.assignment.update
+      x-scope-sensitive: false
+      description: |
+        Partial update of assignment fields (FTE, end date, primary flag). Callable
+        by district users (internal-user) or external HR/SIS systems (external-client).
+        Scope is resolved server-side from the assignment's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: End assignment
+      operationId: endAssignment
+      tags: [Assignments]
+      x-access:
+        - internal-user
+        - external-client
+      x-permissions-required:
+        - staffing.assignment.update
+      x-scope-sensitive: false
+      description: |
+        Sets the assignment end date. Does not physically delete the record.
+        Callable by district users (internal-user) or external HR/SIS systems
+        (external-client). Scope is resolved server-side from the assignment's
+        owning organization.
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endDate]
+              properties:
+                endDate:
+                  type: string
+                  format: date
+                endReason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Assignment ended
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # COLLECTIONS
+  # ----------------------------------------------------------------------------
+
+  /collections:
+    get:
+      summary: List collections for an entity
+      operationId: listCollections
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.view
+      x-scope-sensitive: true
+      description: |
+        Returns collections within the organization specified by X-Organization-Context,
+        optionally filtered by school year or status.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: schoolYear
+          in: query
+          schema:
+            type: string
+            description: e.g. "2024-25"
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/CollectionStatus'
+      responses:
+        '200':
+          description: Collection list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectionSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /collections/{collectionId}/certification-status:
+    get:
+      summary: Get pre-certification task status
+      operationId: getCertificationStatus
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.view
+      x-scope-sensitive: false
+      description: |
+        Returns status of all pre-certification tasks (error counts, task completion,
+        quality review status) required before the collection can be certified.
+        Scope is resolved server-side from the collection's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/CollectionId'
+      responses:
+        '200':
+          description: Certification readiness status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /collections/{collectionId}/quality-review:
+    post:
+      summary: Run validation rules and generate quality report
+      operationId: runQualityReview
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.validate
+      x-scope-sensitive: false
+      description: |
+        Executes all validation rules (record-level, cross-record, historical,
+        EEM alignment). Returns errors (blocking), warnings (informational), and
+        justification-required conditions. Can be run multiple times. Scope is
+        resolved server-side from the collection's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/CollectionId'
+      responses:
+        '200':
+          description: Quality review results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityReviewResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /collections/{collectionId}/justifications:
+    post:
+      summary: Submit justifications for validation warnings
+      operationId: submitJustifications
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.validate
+      x-scope-sensitive: false
+      description: |
+        Submits justification text for one or more justification-required conditions
+        surfaced by the quality review. Must be resolved before the collection can be
+        certified. Scope is resolved server-side from the collection's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/CollectionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [justifications]
+              properties:
+                justifications:
+                  type: array
+                  items:
+                    type: object
+                    required: [conditionKey, justificationText]
+                    properties:
+                      conditionKey:
+                        type: string
+                        description: Identifier of the justification-required condition
+                      justificationText:
+                        type: string
+                        maxLength: 2000
+      responses:
+        '200':
+          description: Justifications saved
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /collections/{collectionId}/certify:
+    post:
+      summary: Certify collection after attestation
+      operationId: certifyCollection
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.employee-roster.certify
+        - staffing.position-roster.certify
+        - staffing.assignment.certify
+      x-scope-sensitive: false
+      description: |
+        Finalizes and locks collection data. All errors must be resolved and
+        justification-required conditions addressed. Triggers creation of an audit
+        work item for the district's ISD/RESA entity. Restricted to internal-user as attestation
+        and e-signature require an identified district official. Scope is resolved
+        server-side from the collection's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/CollectionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attestationAgreed, eSignature]
+              properties:
+                attestationAgreed:
+                  type: boolean
+                  description: Must be true to proceed
+                eSignature:
+                  type: string
+                  description: Full legal name as electronic signature
+      responses:
+        '200':
+          description: Collection certified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  certificationTimestamp:
+                    type: string
+                    format: date-time
+                  certifiedByUserId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Pre-certification conditions not met (errors exist, missing justifications, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /collections/{collectionId}/exception-eligibility:
+    get:
+      summary: Check if collection is eligible for exception request
+      operationId: checkExceptionEligibility
+      tags: [Collections]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.view
+      x-scope-sensitive: false
+      description: |
+        Returns whether the collection deadline has passed and an exception request
+        is available, along with any existing exception request status. Scope is
+        resolved server-side from the collection's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/CollectionId'
+      responses:
+        '200':
+          description: Exception eligibility status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deadlinePassed:
+                    type: boolean
+                  exceptionAvailable:
+                    type: boolean
+                  legislativeDeadline:
+                    type: string
+                    format: date
+                  existingExceptionRequest:
+                    type: object
+                    nullable: true
+                    properties:
+                      requestId:
+                        type: string
+                        format: uuid
+                      status:
+                        $ref: '#/components/schemas/ExceptionStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # COLLECTION EXCEPTIONS
+  # ----------------------------------------------------------------------------
+
+  /collection-exceptions:
+    post:
+      summary: Request extension past legislative deadline
+      operationId: requestCollectionException
+      tags: [CollectionExceptions]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.collection.request-exception
+      x-scope-sensitive: true
+      description: |
+        Submits a request for an approved extension. Only available after the
+        legislative deadline has passed. Pending review by a Staffing Data Admin
+        under `staffing.admin.process-exceptions`.
+        X-Organization-Context must match the entity code on the request.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collectionId, entityCode, justificationText, requestedExtensionDate]
+              properties:
+                collectionId:
+                  type: string
+                  format: uuid
+                entityCode:
+                  type: string
+                justificationText:
+                  type: string
+                  maxLength: 2000
+                requestedExtensionDate:
+                  type: string
+                  format: date
+                  description: Must be future-dated from request submission
+      responses:
+        '201':
+          description: Exception request submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ExceptionStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ----------------------------------------------------------------------------
+  # AUDIT
+  # ----------------------------------------------------------------------------
+
+  /audit/items:
+    get:
+      summary: List audit items for ISD/SOM auditor
+      operationId: getAuditItems
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.view
+      x-scope-sensitive: true
+      description: |
+        Returns audit work items scoped by X-Organization-Context. ISD Auditors
+        see items for their constituent districts; SOM Auditors see items across
+        all ISDs. Filterable by status, school year, and audit type.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AuditStatus'
+        - name: schoolYear
+          in: query
+          schema:
+            type: string
+        - name: auditType
+          in: query
+          schema:
+            $ref: '#/components/schemas/AuditType'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated audit items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditWorkItemSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /audit/{auditItemId}:
+    get:
+      summary: View district data collection audit report
+      operationId: getDistrictAuditReport
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.review-submission
+      x-scope-sensitive: false
+      description: |
+        Returns structured report sections for ISD Auditor review including employees
+        not appropriately placed, employees without assignments, credential error
+        justifications, and change summaries. Scope is resolved server-side from the
+        audit item's owning ISD.
+      parameters:
+        - $ref: '#/components/parameters/AuditItemId'
+      responses:
+        '200':
+          description: District audit report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistrictAuditReport'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit/{auditItemId}/request-documentation:
+    post:
+      summary: Request additional documentation from district
+      operationId: requestAuditDocumentation
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.request-documentation
+      x-scope-sensitive: false
+      description: |
+        Creates a documentation request directed to the district. Transitions the
+        audit item to AwaitingDistrictResponse. Scope is resolved server-side from
+        the audit item's owning ISD.
+      parameters:
+        - $ref: '#/components/parameters/AuditItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documentType, details]
+              properties:
+                documentType:
+                  type: string
+                  enum: [MasterSchedule, AttendanceRecords, CredentialCopy, EmploymentContract, Other]
+                details:
+                  type: string
+                  maxLength: 2000
+                  description: Specific documentation requested and why
+      responses:
+        '201':
+          description: Documentation request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentRequestId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [AwaitingDistrictResponse]
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit/{auditItemId}/findings:
+    post:
+      summary: Create audit finding
+      operationId: createAuditFinding
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.submit-finding
+      x-scope-sensitive: false
+      description: |
+        Documents a finding against the audit item (e.g., inappropriate placement,
+        missing documentation, data discrepancy). Scope is resolved server-side from
+        the audit item's owning ISD.
+      parameters:
+        - $ref: '#/components/parameters/AuditItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuditFindingRequest'
+      responses:
+        '201':
+          description: Audit finding created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  findingId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      summary: List audit findings for audit item
+      operationId: listAuditFindings
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.review-submission
+      x-scope-sensitive: false
+      description: |
+        Returns all findings recorded against an audit item. Scope is resolved
+        server-side from the audit item's owning ISD.
+      parameters:
+        - $ref: '#/components/parameters/AuditItemId'
+      responses:
+        '200':
+          description: Audit findings list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditFinding'
+
+  /audit/{auditItemId}/finalize:
+    post:
+      summary: Finalize audit report with attestation
+      operationId: finalizeAuditReport
+      tags: [Audit]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.audit.finalize
+      x-scope-sensitive: false
+      description: |
+        Locks the audit report as read-only after all required tasks are complete.
+        Requires attestation and e-signature. Triggers SOM Auditor notification.
+        Restricted to internal-user as attestation requires an identified ISD official.
+        Scope is resolved server-side from the audit item's owning ISD.
+      parameters:
+        - $ref: '#/components/parameters/AuditItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attestationAgreed, eSignature]
+              properties:
+                attestationAgreed:
+                  type: boolean
+                eSignature:
+                  type: string
+      responses:
+        '200':
+          description: Audit report finalized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  finalizationTimestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Required tasks not yet complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # EDUCATOR SEARCH (GLOBAL)
+  # ----------------------------------------------------------------------------
+
+  /educators/search:
+    get:
+      summary: Global search for educators by name or Unique ID
+      operationId: searchEducators
+      tags: [Educators]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.employee-roster.view
+      x-scope-sensitive: false
+      description: |
+        Cross-organization search for educators. Used by coordinators for lookup
+        purposes (e.g., mentor validation). Returns results from all organizations;
+        does not require X-Organization-Context because it is a system-wide identity
+        lookup, not an organizational data query.
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: uniqueId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Educator search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EducatorSearchResult'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  # ----------------------------------------------------------------------------
+  # ADMIN
+  # ----------------------------------------------------------------------------
+
+  /admin/collection-exceptions/{requestId}/approve:
+    post:
+      summary: Approve collection exception request
+      operationId: approveCollectionException
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.admin.process-exceptions
+      x-scope-sensitive: false
+      description: |
+        Approves a pending collection exception request and updates the collection
+        close date. Staffing Data Admin role only. Scope is not evaluated; this is
+        a system-wide admin action.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvedExtensionDate]
+              properties:
+                approvedExtensionDate:
+                  type: string
+                  format: date
+                adminNotes:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Exception approved; collection dates updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    format: uuid
+                  newCollectionCloseDate:
+                    type: string
+                    format: date
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/collection-exceptions/{requestId}/deny:
+    post:
+      summary: Deny collection exception request
+      operationId: denyCollectionException
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - staffing.admin.process-exceptions
+      x-scope-sensitive: false
+      description: |
+        Denies a pending collection exception request. Staffing Data Admin role only.
+        Scope is not evaluated; this is a system-wide admin action.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [denialReason]
+              properties:
+                denialReason:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Exception denied
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    EmployeeId:
+      name: employeeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Internal employee record ID
+
+    PositionId:
+      name: positionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    CollectionId:
+      name: collectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    AuditItemId:
+      name: auditItemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: district-10
+
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # ENUMERATIONS
+    # -------------------------------------------------------------------------
+
+    EmployeeRecordStatus:
+      type: string
+      enum: [Pending, Error, Active, Certified]
+
+    EmploymentStatus:
+      type: string
+      enum: [Contractual, Probationary, SubstituteTemporary, Tenured, Leave]
+
+    PositionStatus:
+      type: string
+      enum: [Pending, Active, Filled, Approved, Frozen, Cancelled]
+
+    EducationJobType:
+      type: string
+      enum: [Administrator, Instructional, StudentSupportStaff, NonInstructional]
+
+    AssignmentStatus:
+      type: string
+      enum: [Pending, Error, Active, Justified]
+
+    CollectionStatus:
+      type: string
+      enum: [Pending, Open, InProgress, QualityReview, AwaitingJustification, Certified, Reopened]
+
+    AuditStatus:
+      type: string
+      enum: [New, InProgress, AwaitingDistrictResponse, PendingSOMReview, Completed, Decertified]
+
+    AuditType:
+      type: string
+      enum: [SchoolSafety, AppropriatePlacementVerification]
+
+    ExceptionStatus:
+      type: string
+      enum: [Pending, Approved, Denied]
+
+    SeparationReason:
+      type: string
+      enum:
+        - Retirement
+        - BudgetaryReduction
+        - Misconduct
+        - Resignation
+        - ContractNonRenewal
+        - Deceased
+        - Transfer
+        - Other
+
+    # -------------------------------------------------------------------------
+    # VALUE OBJECTS
+    # -------------------------------------------------------------------------
+
+    GradeBand:
+      type: object
+      required: [lowGrade, highGrade]
+      properties:
+        lowGrade:
+          type: string
+          description: Grade level (e.g., PreK, K, 1-12)
+        highGrade:
+          type: string
+          description: Grade level (e.g., PreK, K, 1-12)
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        validationErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    # -------------------------------------------------------------------------
+    # EMPLOYEE ROSTER
+    # -------------------------------------------------------------------------
+
+    AddEmployeeRequest:
+      type: object
+      required: [entityCode, employmentStartDate, employmentStatus, demographics]
+      properties:
+        entityCode:
+          type: string
+          description: Organization code for the employing entity
+        existingUniqueId:
+          type: string
+          description: Provide if a matching Unique ID was found via search
+        employmentStartDate:
+          type: string
+          format: date
+          description: Must be on or before current date
+        employmentStatus:
+          $ref: '#/components/schemas/EmploymentStatus'
+        isNewTeacher:
+          type: boolean
+          default: false
+          description: True if within first 3 years of classroom teaching
+        demographics:
+          $ref: '#/components/schemas/EmployeeDemographicsInput'
+
+    EmployeeDemographicsInput:
+      type: object
+      required: [firstName, lastName, dateOfBirth]
+      properties:
+        firstName:
+          type: string
+        middleName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        ssn:
+          type: string
+          description: Encrypted; used for Mi-Key matching only
+        gender:
+          type: string
+        raceEthnicity:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+
+    EmployeeDemographics:
+      allOf:
+        - $ref: '#/components/schemas/EmployeeDemographicsInput'
+        - type: object
+          properties:
+            uniqueId:
+              type: string
+            updateHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  modifiedAt:
+                    type: string
+                    format: date-time
+                  modifiedBy:
+                    type: string
+                  modifiedByRole:
+                    type: string
+                    enum: [DistrictUser, CitizenUser, SystemAdmin]
+                  changedFields:
+                    type: array
+                    items:
+                      type: string
+
+    UpdateDemographicsRequest:
+      type: object
+      description: Partial update — include only fields being changed
+      properties:
+        firstName:
+          type: string
+        middleName:
+          type: string
+        lastName:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+
+    UpdateEmploymentStatusRequest:
+      type: object
+      required: [newStatus]
+      properties:
+        newStatus:
+          $ref: '#/components/schemas/EmploymentStatus'
+        employmentEndDate:
+          type: string
+          format: date
+          description: Required if separating employee
+        separationReason:
+          $ref: '#/components/schemas/SeparationReason'
+        effectiveDate:
+          type: string
+          format: date
+
+    NearMatchResolutionRequired:
+      type: object
+      properties:
+        employeeRecordId:
+          type: string
+          format: uuid
+        submittedData:
+          $ref: '#/components/schemas/EmployeeDemographicsInput'
+        potentialMatches:
+          type: array
+          items:
+            type: object
+            properties:
+              uniqueId:
+                type: string
+              matchScore:
+                type: number
+                format: float
+                description: Mi-Key probabilistic match score
+              demographics:
+                $ref: '#/components/schemas/EmployeeDemographicsInput'
+              differingFields:
+                type: array
+                items:
+                  type: string
+
+    EmployeeSummary:
+      type: object
+      properties:
+        employeeRecordId:
+          type: string
+          format: uuid
+        uniqueId:
+          type: string
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        entityCode:
+          type: string
+        employmentStatus:
+          $ref: '#/components/schemas/EmploymentStatus'
+        recordStatus:
+          $ref: '#/components/schemas/EmployeeRecordStatus'
+
+    # -------------------------------------------------------------------------
+    # POSITIONS
+    # -------------------------------------------------------------------------
+
+    CreatePositionRequest:
+      type: object
+      required: [entityCode, title, educationJobType, localJobCategory, approvedFte, buildingCode]
+      properties:
+        entityCode:
+          type: string
+        title:
+          type: string
+          maxLength: 200
+        educationJobType:
+          $ref: '#/components/schemas/EducationJobType'
+        localJobCategory:
+          type: string
+          description: e.g. Teacher, Principal, Counselor
+        localJobFunction:
+          type: string
+          description: Specific role within category
+        approvedFte:
+          type: number
+          format: decimal
+          minimum: 0.01
+        buildingCode:
+          type: string
+          description: Validated against EEM organization hierarchy
+
+    UpdatePositionRequest:
+      type: object
+      description: Partial update — include only fields being changed
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        localJobCategory:
+          type: string
+        localJobFunction:
+          type: string
+        approvedFte:
+          type: number
+          format: decimal
+          minimum: 0.01
+
+    PositionSummary:
+      type: object
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        positionIdentifier:
+          type: string
+        title:
+          type: string
+        educationJobType:
+          $ref: '#/components/schemas/EducationJobType'
+        status:
+          $ref: '#/components/schemas/PositionStatus'
+        approvedFte:
+          type: number
+        filledFte:
+          type: number
+        buildingCode:
+          type: string
+        spotCount:
+          type: integer
+
+    PositionDetail:
+      allOf:
+        - $ref: '#/components/schemas/PositionSummary'
+        - type: object
+          properties:
+            localJobCategory:
+              type: string
+            localJobFunction:
+              type: string
+            spots:
+              type: array
+              items:
+                $ref: '#/components/schemas/SpotSummary'
+            statusHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  status:
+                    $ref: '#/components/schemas/PositionStatus'
+                  effectiveDate:
+                    type: string
+                    format: date
+                  changedBy:
+                    type: string
+                    format: uuid
+                  reason:
+                    type: string
+                    nullable: true
+
+    SpotSummary:
+      type: object
+      properties:
+        spotId:
+          type: string
+          format: uuid
+        scedCode:
+          type: string
+          nullable: true
+        gradeBand:
+          $ref: '#/components/schemas/GradeBand'
+        fte:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        assignedEmployeeUniqueId:
+          type: string
+          nullable: true
+
+    # -------------------------------------------------------------------------
+    # ASSIGNMENTS
+    # -------------------------------------------------------------------------
+
+    AssignmentSummary:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+          format: uuid
+        employeeUniqueId:
+          type: string
+        positionId:
+          type: string
+          format: uuid
+        positionTitle:
+          type: string
+        status:
+          $ref: '#/components/schemas/AssignmentStatus'
+        isPrimary:
+          type: boolean
+        fte:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+
+    CreateAssignmentRequest:
+      type: object
+      required: [employeeUniqueId, positionId, spotDetails]
+      properties:
+        employeeUniqueId:
+          type: string
+        positionId:
+          type: string
+          format: uuid
+        spotDetails:
+          $ref: '#/components/schemas/SpotDetails'
+        isPrimary:
+          type: boolean
+          default: false
+          description: Whether this is the primary assignment for the employee
+
+    SpotDetails:
+      type: object
+      required: [fte, startDate]
+      properties:
+        scedCode:
+          type: string
+          description: Required for teacher positions (instructional assignments)
+        subjectArea:
+          type: string
+        gradeBand:
+          $ref: '#/components/schemas/GradeBand'
+        fte:
+          type: number
+          format: decimal
+          minimum: 0.01
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        interactionMode:
+          type: string
+          enum: [InPerson, Virtual, Hybrid]
+          nullable: true
+        specialEducationDetails:
+          $ref: '#/components/schemas/SpecialEducationDetails'
+          nullable: true
+        cteDetails:
+          $ref: '#/components/schemas/CteDetails'
+          nullable: true
+        specializedFunding:
+          $ref: '#/components/schemas/SpecializedFunding'
+          nullable: true
+
+    UpdateAssignmentRequest:
+      type: object
+      description: Partial update — include only fields being changed
+      properties:
+        fte:
+          type: number
+          format: decimal
+        endDate:
+          type: string
+          format: date
+        isPrimary:
+          type: boolean
+
+    AssignmentDetail:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+          format: uuid
+        employeeUniqueId:
+          type: string
+        positionId:
+          type: string
+          format: uuid
+        positionTitle:
+          type: string
+        status:
+          $ref: '#/components/schemas/AssignmentStatus'
+        isPrimary:
+          type: boolean
+        spotDetails:
+          $ref: '#/components/schemas/SpotDetails'
+        justificationText:
+          type: string
+          nullable: true
+          description: Present if assignment has credential error justification
+        placementValidation:
+          $ref: '#/components/schemas/PlacementValidationResult'
+
+    PlacementValidationResult:
+      type: object
+      properties:
+        meetsRequirements:
+          type: boolean
+          description: True only when meetsRequirementsLevel = Yes; retained for backward-compat boolean checks
+        meetsRequirementsLevel:
+          type: string
+          enum: [Yes, Partially, No]
+          description: |
+            Tri-state placement-fitness indicator (FDD 18 §18.1.6/18.1.7: employee assignment rows
+            display "Yes"/"Partially"/"No", with a distinct recommendation banner shown for
+            "Partially" — e.g. holds the credential but not the specific endorsement/grade band).
+        credentialStatus:
+          type: string
+          enum: [Valid, Missing, Expired, Suspended]
+          nullable: true
+        endorsementStatus:
+          type: string
+          enum: [Valid, Missing, GradeBandMismatch, SubjectMismatch]
+          nullable: true
+        pprStatus:
+          type: string
+          enum: [Cleared, UnderReview, Restricted]
+        validationMessages:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              severity:
+                type: string
+                enum: [Error, Warning]
+
+    SpecialEducationDetails:
+      type: object
+      properties:
+        ageGroup:
+          type: string
+          description: Age group served (e.g., 3-5, 6-13, 14-26)
+        serviceCategory:
+          type: string
+          description: Type of special education service
+
+    CteDetails:
+      type: object
+      properties:
+        careerCluster:
+          type: string
+        cipCode:
+          type: string
+
+    SpecializedFunding:
+      type: object
+      properties:
+        migrantEducation:
+          type: boolean
+          default: false
+        titleI:
+          type: boolean
+          default: false
+
+    # -------------------------------------------------------------------------
+    # COLLECTIONS
+    # -------------------------------------------------------------------------
+
+    CollectionSummary:
+      type: object
+      properties:
+        collectionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        schoolYear:
+          type: string
+        status:
+          $ref: '#/components/schemas/CollectionStatus'
+        entityCode:
+          type: string
+        openDate:
+          type: string
+          format: date
+        closeDate:
+          type: string
+          format: date
+        certificationDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    CertificationStatus:
+      type: object
+      properties:
+        collectionId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/CollectionStatus'
+        errorCount:
+          type: integer
+          description: Blocking errors that must be resolved
+        warningCount:
+          type: integer
+          description: Non-blocking warnings
+        justificationRequiredCount:
+          type: integer
+          description: Conditions requiring justification text
+        justificationsProvidedCount:
+          type: integer
+        qualityReviewRun:
+          type: boolean
+        preTasksComplete:
+          type: boolean
+        preTasks:
+          type: array
+          items:
+            type: object
+            properties:
+              taskName:
+                type: string
+              complete:
+                type: boolean
+              description:
+                type: string
+
+    QualityReviewResult:
+      type: object
+      properties:
+        reviewTimestamp:
+          type: string
+          format: date-time
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+        justificationRequired:
+          type: array
+          items:
+            type: object
+            properties:
+              conditionKey:
+                type: string
+              description:
+                type: string
+              affectedRecords:
+                type: array
+                items:
+                  type: string
+              existingJustification:
+                type: string
+                nullable: true
+
+    ValidationIssue:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        affectedEntityType:
+          type: string
+          enum: [EmployeeRecord, Position, Assignment]
+        affectedRecordId:
+          type: string
+          format: uuid
+        affectedRecordName:
+          type: string
+
+    # -------------------------------------------------------------------------
+    # AUDIT
+    # -------------------------------------------------------------------------
+
+    AuditWorkItemSummary:
+      type: object
+      properties:
+        auditItemId:
+          type: string
+          format: uuid
+        districtCode:
+          type: string
+        districtName:
+          type: string
+        isdCode:
+          type: string
+        auditType:
+          $ref: '#/components/schemas/AuditType'
+        status:
+          $ref: '#/components/schemas/AuditStatus'
+        schoolYear:
+          type: string
+        districtCertificationDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        credentialErrorJustificationsCount:
+          type: integer
+
+    DistrictAuditReport:
+      type: object
+      properties:
+        auditItemId:
+          type: string
+          format: uuid
+        districtCode:
+          type: string
+        schoolYear:
+          type: string
+        sections:
+          type: object
+          properties:
+            employeesNotAppropriated:
+              type: array
+              items:
+                type: object
+                properties:
+                  uniqueId:
+                    type: string
+                  employeeName:
+                    type: string
+                  positionTitle:
+                    type: string
+                  scedCode:
+                    type: string
+                    nullable: true
+                  credentialStatus:
+                    type: string
+                  justificationText:
+                    type: string
+                    nullable: true
+            employeesNoAssignment:
+              type: array
+              items:
+                $ref: '#/components/schemas/EmployeeSummary'
+            requiredPositionsNoAssignments:
+              type: array
+              description: Positions established in the Position Roster with no employee assigned (FDD 21 §21.4.1/21.7.2 "Required Positions with No Assignments")
+              items:
+                $ref: '#/components/schemas/PositionSummary'
+            buildingsNoAppropriatePositions:
+              type: array
+              description: Buildings with Open status in EEM but no assigned positions or staff (FDD 21 §21.4.1/21.7.2 "Buildings with No Appropriate Positions")
+              items:
+                type: object
+                properties:
+                  buildingCode:
+                    type: string
+                  buildingName:
+                    type: string
+            changesToPositions:
+              type: array
+              description: Organizational-chart changes for the audit period — additions, removals, FTE changes, renames, building moves (FDD 21 §21.4.1/21.7.2 "Changes to Positions"; distinct from changesSummary, which tracks employee roster changes)
+              items:
+                type: object
+                properties:
+                  changeType:
+                    type: string
+                  positionId:
+                    type: string
+                    format: uuid
+                  description:
+                    type: string
+            changesSummary:
+              type: array
+              description: Employee roster changes for the audit period — new hires and terminations (FDD 21 §21.4.1/21.7.2 "Changes to Employee Roster")
+              items:
+                type: object
+                properties:
+                  changeType:
+                    type: string
+                  count:
+                    type: integer
+                  description:
+                    type: string
+
+    CreateAuditFindingRequest:
+      type: object
+      required: [findingType, description]
+      properties:
+        findingType:
+          type: string
+          enum: [InappropriatePlacement, MissingDocumentation, DataDiscrepancy, Other]
+        affectedUniqueId:
+          type: string
+          nullable: true
+          description: Specific educator if individual-level finding
+        description:
+          type: string
+          maxLength: 4000
+        justification:
+          type: string
+          maxLength: 2000
+        documentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: References to uploaded documentation via Documents API
+
+    AuditFinding:
+      allOf:
+        - $ref: '#/components/schemas/CreateAuditFindingRequest'
+        - type: object
+          properties:
+            findingId:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+            createdBy:
+              type: string
+              format: uuid
+
+    # -------------------------------------------------------------------------
+    # EDUCATOR SEARCH
+    # -------------------------------------------------------------------------
+
+    EducatorSearchResult:
+      type: object
+      properties:
+        uniqueId:
+          type: string
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        activeCredentialSummary:
+          type: string
+          nullable: true
+          description: Brief description of active credentials (for mentor validation)
+
+    # -------------------------------------------------------------------------
+    # SHARED
+    # -------------------------------------------------------------------------
+
+    Address:
+      type: object
+      properties:
+        street1:
+          type: string
+        street2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        state:
+          type: string
+        zip:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Optimistic concurrency conflict or duplicate creation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            staffing:read: Read staffing data
+            staffing:write: Modify roster and assignment data
+            staffing:admin: Administrative operations
+
+security:
+  - MiLogin:
+      - staffing:read

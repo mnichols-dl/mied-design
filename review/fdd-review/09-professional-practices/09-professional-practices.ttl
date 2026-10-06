@@ -1,0 +1,426 @@
+# FDD 09 review — "9 - Professional Practice Review (PPR) (9.1-9.6)" (Features 9.1-9.5;
+# 9.6 "Document Upload" is a header label folded into 9.1.1's own acceptance criteria, not a
+# separately-numbered feature anywhere in the document). Ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Professional Practices graph
+# (profpractice-domain.ttl / profpractice-permissions.ttl / profpractice-api.ttl /
+# profpractice-sequences.ttl, all loaded together), plus a cross-domain check against
+# reporting-capability.ttl/-api.ttl/-permissions.ttl and documents-api.ttl for Feature 9.5 and
+# the disclosure-attachment sub-flows respectively. Per CONVENTIONS.md's own note, the source
+# folder is named "profpractice" (no trailing s) but sd:identifier/prefix are
+# "profpractices"/`profp:` — kept exactly as the existing convention states; no new prefix
+# invented.
+#
+# UNUSUAL FINDING WORTH FLAGGING UP FRONT: profpractice-domain.ttl's own header comment and
+# several of its sd:notes already cite "BRD 9.1.19", "BRD 9.1.20", "BRD 9.1.6", "BRD 9.1.7",
+# "BRD 9.1.8", "BRD 9.1.9b", and "BRD 9.4.1" by number — i.e. the mied-v3 Phase 1 conversion of
+# this domain was ALREADY written with this exact FDD open next to it. This pass is therefore
+# unusually confirmatory rather than exploratory for most numbered items: most of Feature
+# 9.1-9.4's stories already have a close, sometimes verbatim, match in the domain model. This is
+# noted rather than treated as suspicious — it explains why the Satisfied count below is high
+# relative to other FDD folders in this batch, and it does NOT mean every item was rubber-stamped
+# (9.2.2 is rejected outright per an explicit reviewer comment; several items are satisfied only
+# partially, with the gap named in sd:notes; Feature 9.5 turns out to be satisfied almost
+# entirely by the separate Reporting bounded context, not by profpractice's own artifacts).
+#
+# Structure of the document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section and a 42-row "High Level Scenarios" paraphrase
+#   table both restate the same disclosure/PPR-response/worklist/admin behaviors at coarser
+#   grain than the Addendum below — both are skipped per CONVENTIONS.md as duplicative of the
+#   Addendum, which has the FDD's own real Feature/story numbering (9.1.1-9.1.8, an unnumbered
+#   Feature-9.2 intro story, 9.2.1-9.2.4, 9.3.1-9.3.6, 9.4.1, 9.5.1-9.5.4) and per-story
+#   acceptance criteria the paraphrase table lacks.
+# - Feature 9.2's own intro line ("As a Credentialing Admin, I want to manage all the email
+#   templates...") is never given a number anywhere in the document, unlike every other story —
+#   modeled below with a synthetic ID (profp:Req_09_2_0), same convention FDD 29's pass used for
+#   its own un-numbered-but-real Business-Specifications items.
+# - Feature 9.6 ("Document Upload"), named only in the Feature-9.1 heading's own title
+#   ("Feature: 9.1 Individual User Disclosure & 9.6 Document Upload"), is never given its own
+#   numbered story anywhere — document upload is folded entirely into 9.1.1's acceptance
+#   criteria (the Upload field, the Select-Type-per-document dropdown, deleting an uploaded file
+#   before submission). Not modeled as a separate Requirement for a feature number that has no
+#   actual content of its own.
+#
+# Comments (147 total across comments.xml/commentsExtended.xml/commentsExtensible.xml/
+# commentsIds.xml, several duplicated verbatim across two review passes — 2025-10 through
+# 2025-12, then again 2026-01 and 2026-03 — evidently the same open items were carried forward
+# and re-flagged rather than resolved in between). Two threads surfaced findings substantial
+# enough to promote to standalone Annotations (9.2.2's outright rejection; 9.1.8's
+# computed-vs-stored-flag architecture mismatch). A representative sample of the many
+# "To be changed"/"To be confirmed"/"To be defined" single-word placeholder comments (dozens,
+# mostly Sinha (DTMB-Contractor) editorial placeholders from the 2025-10/11 pass, largely
+# resolved by the later Dontje/Groom replies) are folded into the relevant Requirement's own
+# sd:notes rather than transcribed one-by-one, per this project's dedup convention — the
+# repetition itself (a heavily-iterated, still-being-revised document even past its nominal
+# 08/01/2025 sign-off date) is the finding, stated once here rather than per-comment.
+#
+# Tracked changes: not separately reconstructed as a diff (per CONVENTIONS.md); one deleted
+# paragraph inside 9.3.3's acceptance criteria (comment 728676430, "Rap Back Reviewer
+# responsibility; Removed from PPR") could not be recovered as literal text since the paragraph
+# itself is now empty in document.xml — the comment's intent is clear enough (a RapBack-specific
+# sub-capability was scoped out of the PPR Reviewer role) to note in Req_09_3_3's own sd:notes
+# without fabricating the removed wording.
+#
+# Wireframes: document.xml embeds ~34 screenshots via <w:drawing>, but NONE carry a "Wireframe N"
+# caption the way FDD 29's did — they're inserted inline next to the story they illustrate with
+# no caption at all. A packaging quirk matching FDD 29's own "packaging quirk" note is present
+# here too: nine of the images (image20.png-image28.png) are each referenced TWICE, once via a
+# normal numbered rId near their apparent authoring position (9.1.4/9.1.7/9.2.4/9.3.1/9.3.3/9.5.1)
+# and again via a second, large-integer rId with an absolute "/media/imageN.png" target near an
+# EARLIER story (9.1.1/9.1.3/9.1.4/9.3.5) — i.e. the same ~28 distinct images are effectively
+# reused/duplicated across roughly 34 embed sites, not 34 independent screenshots. Six
+# representative images were extracted and actually viewed (confirmed by viewing, not assumed
+# from position) to wireframes/: the Business-Specifications-section "Professional Practice
+# questions" annual-review form (image1 -> wireframe-01), the "Uploaded Documents" list/upload
+# panel (image2 -> wireframe-02), the reviewer-facing "Professional Practices Review" detail
+# screen with Action dropdown, PPR Admin Flag / PPR Additional Review Flag toggles, and
+# External/Internal Remarks (image3 -> wireframe-03) — a close match for 9.3.1/9.3.5 — the "My
+# Disclosure History" Responses/Disclosures-tab screen with search, filter, and download icons
+# (image19 -> wireframe-04) — a close match for 9.1.4/9.1.5/9.1.6 — the "Professional Practice
+# Review" worklist with Unresolved/Resolved tabs and a Type column literally showing "Yearly",
+# "Disclosure", and "Rapback" values side by side (image22 -> wireframe-05) — direct visual
+# confirmation of comment 136's point that the worklist is NOT self-disclosures-only — and the
+# admin hamburger menu showing "Report Management" as its own top-level nav item alongside
+# "Business Rules"/"Communication Management"/"Questions Management"/"System Reports" (image26 ->
+# wireframe-06) — visual support for treating Feature 9.5's admin report-catalog management as a
+# cross-cutting capability rather than PPR-specific (see the Feature 9.5 notes below). The
+# remaining ~22 embed sites were not individually viewed; per CONVENTIONS.md's depth-calibration
+# guidance, the six sampled span early/mid/late document position and cover the visually distinct
+# screen types (citizen self-disclosure form, admin/reviewer worklist, disclosure history,
+# navigation chrome) — nothing suggests the unsampled sites are a materially different, unseen
+# feature rather than more of the same screens repeated near their other authoring sites.
+#
+# CROSS-DOMAIN CHECK (Feature 9.5, per this review's own reading of the domain model before
+# writing anything): Feature 9.5's own reviewer comments (on 9.5.2 and 9.5.4) say "This should be
+# moved to #2 Reports" / "...will use the MiEdWorkforce standards defined in #2", echoing this
+# FDD's own Dependencies section ("supported...by the business specifications defined in
+# Reporting (2)"). Checked against the actual graph rather than taken on faith: reporting-
+# capability.ttl/-api.ttl/-permissions.ttl (a real, independently-converted domain in this same
+# mied-v3 batch) already models almost exactly what 9.5.1/9.5.2 describe — rpt:ReportDefinition
+# Aggregate (workspace/report IDs, permission-key gating, per-domain association, Active/Inactive
+# status) plus admin CRUD operations (rpt:Op_AdminCreateReport, rpt:Op_AdminListReports,
+# rpt:Op_AdminUpdateReport, rpt:Op_AdminUpdateReportStatus — the last one matching 9.5.2's
+# Active/Inactive toggle almost operation-for-operation) and view-side operations
+# (rpt:Op_ListReports, rpt:Op_GetReport, rpt:Op_GenerateEmbedToken) matching 9.5.3. All four 9.5.x
+# stories are therefore modeled below as SATISFIED, but by rpt: (Reporting) nodes rather than by
+# any profpractice-owned artifact — profpractice's own profp:Seq_GeneratePPRComplianceReport /
+# profp:Op_GetPprReportData supply only the PPR-specific data feed a rendered report would query,
+# not the report-catalog admin/embed machinery itself. This is the one place this pass disagrees
+# with a literal reading of "which domain does this FDD file live under" — the content is real
+# and accounted for, just cross-domain, exactly as the FDD's own dependency note and reviewer
+# comments already say.
+#
+# Feature 9.1's attachment sub-flow (upload/label/delete-before-submission) is satisfied via
+# docs:Op_RequestDocumentUpload (a real mied-v3 Documents operation, same good match FDD 29's own
+# pass found for its own upload story — not the placeholder stub the pre-mied-v3 pass had to use).
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+profp:Fdd09Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/09 - Professional Practices/9 - Professional Practice.docx" ;
+    sd:notes "Covers Features 9.1-9.5 (the document's own subtitle: '9 - Professional Practice Review (PPR) (9.1-9.6)', though no 9.6-numbered story exists anywhere — see this file's header). Author(s) Beth Dontje / Caitlin Groom / Kate Boswell Gallagher; approved by Dontje (MDE) and Groom (CEPI) both 08/01/2025 per the sign-off table — but the comment threads (comments.xml/commentsExtended.xml/commentsExtensible.xml/commentsIds.xml) contain dated entries from 2025-10 through 2026-03, well past that nominal approval date, meaning the document continued to be actively revised long after its sign-off. Not resolved here; noted so the sign-off table isn't read as 'nothing changed after this' (same caveat FDD 29's own pass raised for its document)." .
+
+profp:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-01-annual-ppr-review-questions.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Practice questions' form — two Yes/No misdemeanor/felony questions, an inline conviction table (Type/Conviction Date/Description) with edit/delete icons, a second 'Regarding any professional credentials...' block (suspended/revoked, surrendered/nullified, pending action questions) with its own conviction table, Cancel/Save actions. Matches the Business-Specifications-section Annual PPR Review question set (9.1.3) closely, including the exact question wording." ;
+    sd:definedIn profp:Fdd09Doc .
+profp:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-02-uploaded-documents.png" ;
+    sd:notes "Confirmed by viewing: 'Uploaded Documents' table (File name/Description/uploaded by/Date/Size, edit+delete icons per row) plus an 'Upload Additional Documents' panel (Browse/Upload, 1MB max for PDF files stated inline). Corroborates 9.1.1's upload/delete-before-submission acceptance criteria and Rule_AttachmentManagement's soft-delete framing." ;
+    sd:definedIn profp:Fdd09Doc .
+profp:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-03-ppr-reviewer-detail-flags.png" ;
+    sd:notes "Confirmed by viewing: reviewer-facing 'Professional Practices Review' detail screen for one educator (Name/Unique ID/SSN/Gender header, prior-conviction table with MDE Remarks column, credential-suspension/surrender/pending-action Yes/No block), an Action dropdown pre-populated with the full disclosure status list (PPR Hold, PPR Document Hold, Reviewed - Felony/Listed/No Action Required/Non-Enumerated/Misdemeanor/Arraignment) matching profp:DiscState_* one-for-one, PPR Admin Flag and PPR Additional Review Flag toggles shown directly on this same screen (not a separate profile page), and External Remarks (labelled 'visible to the educator') / Internal Remarks fields side by side. Direct visual confirmation of 9.3.1's Actions dropdown and 9.3.5's flag-toggle placement — see Req_09_3_5's own notes on the still-open 'where do these flags actually live' review thread, since this wireframe answers it one way (inline on the disclosure record) while the comment thread treats that as unresolved." ;
+    sd:definedIn profp:Fdd09Doc .
+profp:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-04-my-disclosure-history.png" ;
+    sd:notes "Confirmed by viewing: 'My Disclosure History' citizen-facing screen, Responses/Disclosures tabs, a search box, and both a filter icon and a download icon in the table's top-right corner. Table columns shown (Submission Date/Type/New Disclosures/Status) match 9.1.4's Responses-tab column list. Direct visual confirmation that 9.1.4 (view history), 9.1.5 (download), and 9.1.6 (filter) are three facets of this one screen, not three separate screens." ;
+    sd:definedIn profp:Fdd09Doc .
+profp:Wireframe5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-05-ppr-review-worklist.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Practice Review' worklist, Unresolved/Resolved tabs, search-by-name-or-ID, filter and download icons, and a results table whose Type column shows 'Yearly', 'Disclosure', and 'Rapback' values across different rows for the SAME columns (Application #/Name/Unique ID/Certificate Type/Type/School District/Has Conviction?/Status). Direct visual confirmation of comment 136's point (the worklist spans self-disclosures, annual PPR responses, AND Rap Back records, not self-disclosures alone) and of 9.3.1's Unresolved/Resolved tab structure." ;
+    sd:definedIn profp:Fdd09Doc .
+profp:Wireframe6 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/09-professional-practices/wireframes/wireframe-06-admin-hamburger-menu.png" ;
+    sd:notes "Confirmed by viewing: the admin hamburger menu listing 'Report Management' as its own top-level item, alongside 'Business Rules', 'Communication Management', 'Position Management', 'Credential Management', 'Questions Management', 'System Users & Roles', and 'System Reports' — none of them scoped under a 'Professional Practice' heading. Visual support (not proof) for this pass's read that Feature 9.5's report-catalog admin page is generic/cross-cutting UI chrome rather than a PPR-specific build item — see the Feature 9.5 cross-domain note in this file's header." ;
+    sd:definedIn profp:Fdd09Doc .
+
+#################################################################
+# Feature 9.1: Individual User Disclosure & 9.6 Document Upload
+#################################################################
+
+profp:Req_09_1_1 a sd:UserStory ;
+    sd:requirementId "9.1.1" ;
+    sd:title "Self-disclosure form submission" ;
+    sd:statement "As a citizen user, I want to fill out a self-disclosure form, so that I can report new misdemeanors or felonies." ;
+    sd:acceptanceCriteria "Two-step form (Step 1 of 2 / Step 2 of 2) reached via MiLogin + hamburger-menu navigation; Type (Felony/Misdemeanor), Conviction Date (must not be future-dated), Description (max 5000 chars), file Upload (.jpg/.docx/.pdf, system-wide size standard), and a per-document Select Type dropdown (Judgment of Sentence/Register of Action/Certificate of Conviction/Copy of Court Docket/Order of Probation — confirmed as the complete, final list per comment 11, no 'Other' option); user may delete an uploaded file before submission; review screen groups Personal Information and Disclosures before Submit; confirmation message shown; every submission event is audit-logged (Modified By, Date Modified), audit log read-only and retained per data-retention policy." ;
+    sd:satisfiedBy profp:Seq_SubmitSelfDisclosure, profp:Op_SubmitDisclosure, profp:Op_GetDisclosureQuestions,
+        docs:Op_RequestDocumentUpload, profp:DisclosureType, profp:DisclosureConvictionDate,
+        profp:DisclosureDescription, profp:DisclosureAttachments, profp:Rule_SevenYearAuditRetention ;
+    sd:notes "Strong match, including field-for-field validation rules (future-date rejection, 5000-char cap) matching profp:DisclosureAggregate's own sd:invariants verbatim. Wireframe1 and Wireframe2 (both confirmed by viewing) directly corroborate the question form and the upload/delete panel. The 5-item Select-Type dropdown for uploaded-document type is NOT modeled as its own controlled-vocabulary ValueObject in profpractice-domain.ttl (profp:DisclosureAttachments is a single opaque ValueObject) — a minor granularity gap, not raised as its own Annotation. Comments 4/5 and 17/18 (intro-page verbiage and confirmation-page verbiage both still 'To be Confirmed'/'To be provided' as of the visible text) are copy/content placeholders, not functional gaps." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_2 a sd:UserStory ;
+    sd:requirementId "9.1.2" ;
+    sd:title "Full audit trail for submissions" ;
+    sd:statement "As a MiEdWorkforce system, I want to log all submissions, so that a full audit trail is maintained for tracking and compliance purposes." ;
+    sd:acceptanceCriteria "Every submission event automatically logged (Modified By, Date Modified); audit log stored securely, cannot be altered/deleted by end users; accessible to authorized administrative users for review/reporting; retained per data-retention policy." ;
+    sd:satisfiedBy profp:Rule_SevenYearAuditRetention, profp:DisclosureReviewHistory, profp:DisclosureSubmittedEvent ;
+    sd:notes "Direct match — this story is essentially restating profp:Rule_SevenYearAuditRetention's own statement (seven-year minimum retention for disclosure records, review actions, status changes, and audit-log entries) and profp:DisclosureAggregate's DisclosureReviewHistory entity. adt:AuditContext is modeled as subscribing to DisclosureSubmittedEvent specifically to support this cross-cutting audit concern." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_3 a sd:UserStory ;
+    sd:requirementId "9.1.3" ;
+    sd:title "Submit annual Professional Practice Review" ;
+    sd:statement "As a citizen user, I want the ability to submit a Professional Practice Review, so I can stay compliant with the state's policy." ;
+    sd:acceptanceCriteria "Two-step form; five Yes/No questions (new misdemeanor/felony; credential suspended/revoked/surrendered/nullified/pending action), default blank; answering Yes to any question for the first time surfaces an '+ Add Misdemeanor' modal (Type/Conviction Date/Description/Upload, all mandatory); previously-Yes users see a table of prior responses with an option to add a new one; review screen groups Personal Information and all Q&A plus Disclosures if any Yes answers; Submit produces a confirmation and the same audit-logging behavior as 9.1.1/9.1.2." ;
+    sd:satisfiedBy profp:Seq_SubmitPPRResponse, profp:Op_SubmitPprResponse, profp:Op_GetPprQuestions,
+        profp:ProfessionalPracticeResponseAggregate, profp:PPRResponseQuestions, profp:PPRResponseAnswers ;
+    sd:notes "Direct match. Wireframe1 (confirmed by viewing) shows this exact question set and inline conviction table. profp:ProfessionalPracticeResponseAggregate's own invariant ('If any answer is Yes, at least one new Disclosure must be created') matches the '+ Add Misdemeanor modal creates a Disclosure' behavior described here precisely." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_4 a sd:UserStory ;
+    sd:requirementId "9.1.4" ;
+    sd:title "View disclosure history" ;
+    sd:statement "As a citizen user, I want to view my disclosure history, so that I can track all submissions over time." ;
+    sd:acceptanceCriteria "'My PPR Responses and Disclosure History' page with Responses and Disclosures tabs; each tab has a free-text search bar; Disclosures tab table columns: Type/Conviction Date/Description/Attachment (Yes/No); Responses tab table columns: Submission Date/Type (PPR or Self Disclosure)/New disclosure (Yes/No)/Review status; empty-state text when no history exists; clicking a history hyperlink shows Status/Questions-Answers/Uploaded documents detail." ;
+    sd:satisfiedBy profp:Seq_ViewDisclosureHistory, profp:Op_ListDisclosures, profp:Op_GetDisclosure ;
+    sd:notes "Wireframe4 (confirmed by viewing) matches this screen closely, including both the Responses/Disclosures tabs and the search bar. profp:Seq_ViewDisclosureHistory's own SequenceReference for its list call is flagged resolutionStatus 'ambiguous' in profpractice-sequences.ttl (the sequence narrative shows GET /educators/{id}/disclosures, but profpractice-api.yml's real endpoint is GET /disclosures with no educatorId path segment, self-scoped implicitly) — carried forward as an existing, already-documented discrepancy rather than re-raised here. Comment 106/107 confirms the page title itself ('My PPR Responses and Disclosure History') was a late naming correction; comments 116-123 (several 'do we need this?' review questions on hyperlink behavior, download, filter, and the Attachment column's exact semantics) were all answered 'Yes' in-thread by Groom, so treated as resolved rather than open." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_5 a sd:UserStory ;
+    sd:requirementId "9.1.5" ;
+    sd:title "Download submitted disclosure data" ;
+    sd:statement "As a citizen user, I want to download my submitted disclosure data, so that I have a personal copy for records." ;
+    sd:acceptanceCriteria "Download option available on both Disclosures and Responses tabs; Excel/PDF/Word format options; downloaded file contains questions+responses and disclosure status." ;
+    sd:satisfiedBy profp:Seq_ExportDisclosureData ;
+    sd:notes "Modeled only as far as profpractice-sequences.md's own 'Export Disclosure Data' sequence goes — and that sequence's own SequenceReferences (profpractice-sequences.ttl) already flag its export call (POST /export/disclosures) as resolutionStatus 'no-such-endpoint': no such endpoint exists anywhere in profpractice-api.yml, and no ExportService bounded context exists in the project's registry at all. This pass does not silently upgrade that to 'resolved' — the capability is narratively documented (format options, content) but has no real backing API operation anywhere in this project. A genuine, if narrow, implementation gap inherited from the domain conversion, not newly discovered here." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_6 a sd:UserStory ;
+    sd:requirementId "9.1.6" ;
+    sd:title "Filter submitted disclosure data" ;
+    sd:statement "As a citizen user, I want to filter my submitted disclosure data, so that I can easily view and locate specific submissions based on criteria." ;
+    sd:acceptanceCriteria "Filter option on both Disclosures tab (Conviction Date/Type/Description/Attachment Yes-No) and Responses tab (Submission Date/Type/New Disclosure/Status); only matching records displayed; filters clearable; filters persist until cleared or navigation away; 'no results' messaging when nothing matches." ;
+    sd:satisfiedBy profp:Op_ListDisclosures ;
+    sd:notes "Wireframe4 (confirmed by viewing) shows a filter icon on the disclosure-history screen, consistent with this story. profp:Op_ListDisclosures is a generic list endpoint (profpractice-api.ttl documents its response shape but not a specific filter-parameter contract) — the operation exists and is the natural backing call, but the exact filterable-field set this story enumerates is not independently documented at the API level. A minor, narrow gap (parameter-level detail, not the capability itself), not raised as its own Annotation." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_7 a sd:UserStory ;
+    sd:requirementId "9.1.7" ;
+    sd:title "Status set to Pending Review on submission" ;
+    sd:statement "As a citizen user, I want the status of my PPR to be set to \"Pending Review\" when I submit my disclosure so that I can be assured that my information has been received and is ready for review." ;
+    sd:acceptanceCriteria "Status auto-updates to Pending Review immediately on successful submission; visible in My Disclosure History; timestamp recorded; status cannot change before submission; failed submission does not change status (error shown instead); routes to the appropriate PPR Reviewer worklist once Pending Review; status remains until a PPR Reviewer updates it." ;
+    sd:satisfiedBy profp:DiscState_PendingReview, profp:Seq_SubmitSelfDisclosure, profp:DisclosureRoutedToWorklistEvent ;
+    sd:notes "Direct match — profp:DiscState_PendingReview is a real, non-terminal state, and profp:Seq_SubmitSelfDisclosure's own content shows 'Note over PPRService: State: Pending Review' immediately on creation, plus the DisclosureRoutedToWorklist event this story's own routing requirement describes." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_1_8 a sd:UserStory ;
+    sd:requirementId "9.1.8" ;
+    sd:title "Automatic annual Needs Responses flag reset" ;
+    sd:statement "As a system, I must automatically reset the Needs Responses flag to 'Yes' each year (on June 30th) so that applicants must reconfirm their conviction information when applying for credentials after that date." ;
+    sd:acceptanceCriteria "Automatic annual reset on a defined date (e.g. June 30) with no manual intervention; applies to all applicants with active/eligible PPR records; records already Needs Responses = Yes remain unchanged; post-reset, applying/updating requires new PPR responses; reset date/time recorded for audit; a log/report entry confirms completion; reset date configurable by an authorized admin." ;
+    sd:satisfiedBy profp:Rule_AnnualPPRComplianceRequirement, profp:LastPPRResponseDate, profp:NextPPRDueDate ;
+    sd:notes "Functionally satisfied but via a DIFFERENT mechanism than this story literally describes — see profp:Question_ComplianceModelVsFlagReset below for the discrepancy this pass is flagging (not silently reconciled)." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Question_ComplianceModelVsFlagReset a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ;
+    sd:findingType "discrepancy" ;
+    rdfs:comment "9.1.8 describes a literal batch/scheduled job that resets a stored 'Needs Responses' flag to Yes for every applicant each June 30. profp:Rule_AnnualPPRComplianceRequirement — the rule this pass is otherwise treating as satisfying 9.1.8 — explicitly does the opposite by design: 'Compliance is determined by whether the educator has submitted a PPR response since June 30 of the current year... The computed approach eliminates the need for batch marker reset jobs.' There is no stored, resettable 'Needs Responses' boolean anywhere in profp:EducatorPPRStatusAggregate; compliance is derived on-demand from profp:LastPPRResponseDate/profp:NextPPRDueDate. The end-user-visible outcome is the same either way (an applicant who hasn't responded since last June 30 is treated as needing a response), so this is not a functional coverage gap — but it is a genuine architectural discrepancy between what this specific FDD story asks for (a real flag, real reset job, real audit log entry for 'the reset process was completed successfully') and what the domain model deliberately implements instead (no flag, no job, nothing to log a completion event for). Worth a client/architecture conversation before assuming either document is simply wrong." ;
+    oa:hasTarget profp:Req_09_1_8 ;
+    sd:impact "M" ;
+    sd:status "open" ;
+    sd:definedIn profp:Fdd09Doc .
+
+#################################################################
+# Feature 9.2: Admin User
+#################################################################
+
+profp:Req_09_2_0 a sd:UserStory ;
+    sd:requirementId "9.2.0" ;
+    sd:title "Manage email templates (unnumbered Feature 9.2 intro story)" ;
+    sd:statement "As a Credentialing Admin, I want to manage all the email templates so that I can ensure consistent, accurate, and timely communication is sent to citizen users, districts, and internal staff throughout the credentialing and PPR processes." ;
+    sd:notes "Never given a number anywhere in the document, unlike every other story in this FDD (assigned a synthetic '9.2.0' id here, same convention FDD 29's pass used for its own un-numbered-but-real items). Out of scope for profpractices: email/SMS template authoring and delivery-schedule management is explicitly owned by the Communications capability per profpractice-domain.ttl's own bounded-context notes ('Explicitly does NOT own:... email/SMS notifications and templates (communications); PPR publishes events, Communications resolves/delivers'), and the FDD's own Dependencies section names 'the system will support the alert, email, and communications business specifications... to support the Professional Practice communications (6.0)' as a distinct, separately-owned dependency." ;
+    sd:definedIn profp:Fdd09Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Email-template authoring/management (the unnumbered Feature 9.2 intro story) belongs to the Communications capability (comm:CommunicationsContext), which profpractice's own conversion already models as the consumer of profpractice's domain events and the owner of all outbound notification content. Not a Professional Practices build item." ;
+    oa:hasTarget profp:Req_09_2_0 ; sd:status "resolved" ; sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_2_1 a sd:UserStory ;
+    sd:requirementId "9.2.1" ;
+    sd:title "Define and configure the PPR worklist" ;
+    sd:statement "As a Credentialing Admin, I want to define and configure the PPR worklist based on the status of the disclosure and the disclosure date, so that I can ensure PPR reviewers receive accurate, prioritized, and properly filtered cases for review." ;
+    sd:acceptanceCriteria "Configure worklist-population criteria (Disclosure Status/Date/Type); full list of valid disclosure statuses selectable; date-based criteria (on/after, before, range); activate/deactivate criteria; only matching disclosures appear; dynamic update on config change; confirmation on save; restricted to Credentialing Admin role; historical worklist records unaffected by config changes; preview/summary before save; validation of required fields; revert-to-default option." ;
+    sd:satisfiedBy profp:Seq_ConfigurePPRWorklist, profp:Op_CreateWorklist, profp:Op_UpdateWorklist, profp:Op_ListWorklists,
+        profp:Perm_WorklistConfigure, profp:PPRWorklistAggregate ;
+    sd:notes "Direct match to profp:PPRWorklistAggregate's WorklistRoutingRules/WorklistPriorityRules/WorklistFilterConfiguration value objects and profp:Seq_ConfigurePPRWorklist. This is the exact FDD citation profpractice-domain.ttl's own profp:Question_PPRWorklistRoutingScope Annotation already names as evidence that real admin-configurable worklist routing is likely intentional (not just the platform's simpler worklist-as-filtered-list pattern) — not re-raised as a new Annotation here, since it's already tracked at the domain-model level with this exact FDD cited. 'Revert to default configuration' and a distinct 'preview/summary screen before saving' are not independently modeled beyond the general PUT /worklists/{id} update operation — minor UI-level gaps, not raised separately." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_2_2 a sd:UserStory ;
+    sd:requirementId "9.2.2" ;
+    sd:title "Manage visibility of PPR statuses and flags for reviewers" ;
+    sd:statement "As a Credentialing Admin, I want to manage the visibility of PPR statuses and flags for the PPR Reviewer so that reviewers only see information relevant to their assigned disclosures and can perform their reviews efficiently." ;
+    sd:acceptanceCriteria "Configure visibility per status and per flag; Credentialing-Admin-only access; hidden statuses/flags suppressed everywhere in the reviewer UI; all visible by default; changes take effect immediately, no restart." ;
+    sd:notes "REJECTED, not merely superseded: comment 131 (Sinha, DTMB-Contractor, 2025-12-08) states verbatim 'This user story is outdated and will be removed,' and the identical text is repeated in a second, later review pass as comment 1774396353 (2026-03-11) — the same finding surfaced and left unaddressed across two separate review cycles, strengthening rather than weakening the rejection. No profpractice artifact models per-status/per-flag reviewer-visibility configuration, and none should be added on this story's account." ;
+    sd:definedIn profp:Fdd09Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "9.2.2 (configurable per-status/per-flag visibility for PPR Reviewers) is explicitly marked outdated and slated for removal by the vendor team (comment 131, 2025-12-08), and the identical note recurs unaddressed in a second review pass (comment 1774396353, 2026-03-11). Treated as a deliberate rejection, not a coverage gap — do not build reviewer-visibility configuration on this story's account." ;
+    oa:hasTarget profp:Req_09_2_2 ; sd:status "resolved" ; sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_2_3 a sd:UserStory ;
+    sd:requirementId "9.2.3" ;
+    sd:title "Manage PPR disclosure questions" ;
+    sd:statement "As the Credentialing Admin, I want to manage PPR disclosure questions so that I can ensure the questions are accurate, up-to-date, and aligned with regulatory and organizational requirements, enabling citizen users to provide complete and relevant self-disclosures." ;
+    sd:notes "No acceptance criteria given in the source (title-only story; comment 133 says this is 'to be defined after the business rules engine/question sets discussion'). Satisfied at the data-model level by profp:PPRQuestionConfigurationAggregate (QuestionText/ResponseType/IsRequired/ValidationRules/BranchingLogic/DisplayOrder, versioned via EffectiveDate/IsActive) and gated by profp:Perm_QuestionsManage, but profp:Perm_QuestionsManage's own sd:notes already flag a real gap: 'profpractice-api.yml only exposes GET endpoints for question configuration... no create/update/activate endpoint.' Same underlying open question as profp:Question_QuestionConfigOwnership (does PPR itself own this configuration surface, or a cross-domain forms/configuration capability?) — not re-raised as a second Annotation, just cross-referenced here." ;
+    sd:satisfiedBy profp:PPRQuestionConfigurationAggregate, profp:Perm_QuestionsManage ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_2_4 a sd:UserStory ;
+    sd:requirementId "9.2.4" ;
+    sd:title "Audit logs on PPR worklist item" ;
+    sd:statement "As a PPR Reviewer or Credential Admin, I want to see audit logs on the PPR worklist item that include the Action, Modified By, and Modified Date so that I can track all changes made during the review process and ensure accuracy, accountability, and compliance." ;
+    sd:acceptanceCriteria "View list of self-disclosures assigned to worklist; open a disclosure and navigate to an Audit Log tab; audit log fields at minimum Action/Modified By/Modified Date+timestamp; chronological, most-recent-first; read-only, cannot be edited/deleted by any user; scoped to the selected item only; records status changes, flag assignments, disclosure-detail edits, and document actions (add/delete/rename); visible for the disclosure's entire lifecycle and retained per retention policy." ;
+    sd:satisfiedBy profp:Perm_AuditView, profp:DisclosureReviewHistory, profp:AccountMarkerHistory ;
+    sd:notes "Same structural shape the FDD 29 pass's Req_29_1_7 pattern established for this project: the underlying entities exist (DisclosureReviewHistory and AccountMarkerHistory both explicitly model 'audit trail of... changes, who/when/why') and profp:Perm_AuditView is a real Permission gating 'view disclosure and marker audit logs' — but profp:Perm_AuditView's own sd:notes already document that no ApiOperation or Sequence anywhere in profpractice-api.ttl/profpractice-sequences.ttl actually exposes an audit-log read endpoint or UI flow. A real, already-documented gap between the permission/data model and the exposed surface, not newly discovered here." ;
+    sd:definedIn profp:Fdd09Doc .
+
+#################################################################
+# Feature 9.3: Disclosure Processing
+#################################################################
+
+profp:Req_09_3_1 a sd:UserStory ;
+    sd:requirementId "9.3.1" ;
+    sd:title "Change disclosure status to process disclosures" ;
+    sd:statement "As a PPR Reviewer, I want to change the status of a disclosure so that I can process all the disclosures submitted by citizen users." ;
+    sd:acceptanceCriteria "Worklist view of all disclosure submissions (annual responses, self-disclosures, Rap Back) assigned to the reviewer, with Application Number/Name/Unique ID/Certificate Type/Type/School District/Has Conviction?/Status columns; open a record to view Personal Details/PP Flags/Response Details/Responses/Attachments/Review actions/Messages; Actions dropdown offers the full controlled status list; Internal Remarks tab (staff-only) and an external Messages/+Add Message flow (visible to citizen, reviewer, and admin, may trigger communications); confirmation on save; audit log of reviewer/timestamp/previous+new status; only PPR Reviewer role can change status; a Resolved tab lists all finalized statuses; updating an item from Resolved moves it back to Unresolved." ;
+    sd:satisfiedBy profp:Seq_ReviewDisclosureAndUpdateStatus, profp:Op_UpdateDisclosureStatus, profp:Op_GetWorklistDisclosures,
+        profp:Op_AddDisclosureRemark, profp:Perm_StatusUpdate, profp:Perm_RemarksAdd, profp:DiscState_ReviewedNoActionRequired ;
+    sd:notes "Wireframe3 and Wireframe5 (both confirmed by viewing) directly corroborate the Actions dropdown, flag toggles, and Unresolved/Resolved tab structure respectively; Wireframe5 also visually confirms comment 136's point that the worklist's own Type column literally includes 'Rapback' rows alongside 'Yearly' and 'Disclosure' — i.e. this worklist is not self-disclosure-only, consistent with profp:PPRWorklistAggregate's WorklistQueuedDisclosureIds spanning all of profp:DisclosureAggregate's SourceType values. profp:Perm_StatusUpdate's own sd:notes already flag a permission-id naming mismatch between this catalog and profpractice-sequences.md's own sequence header ('profpractice.disclosure.update-status') — an existing, already-documented discrepancy, not re-raised here. The Resolved<->Unresolved tab MOVEMENT RULE (an item leaves Resolved the moment its status is updated again) is not independently modeled as its own invariant beyond the ten DiscState_Reviewed-* states' own sd:isTerminal true/false split — a minor granularity gap." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_3_2 a sd:UserStory ;
+    sd:requirementId "9.3.2" ;
+    sd:title "Add, edit, delete, and update self-disclosures during review" ;
+    sd:statement "As a PPR Reviewer, I want to add, edit, delete, and update self-disclosures submitted by citizen users so that I can manage and maintain accurate disclosure records during the Professional Practices Review process." ;
+    sd:acceptanceCriteria "View/open disclosures per 9.3.1's own detail layout; add a new disclosure record on behalf of a citizen user (minimum fields: type, date of incident, description, date reported); edit existing disclosure details and replace uploaded documents while status is Under PPR Review, logged with timestamp+reviewer; delete attachments (soft-deleted, retained for audit, logged); delete an entire disclosure record entered in error while Under PPR Review, with a confirmation prompt; prevent edit/delete once a disclosure reaches a final Reviewed status; only PPR Reviewer role has these permissions; updates immediately visible to Credentialing Admin and reflected in OEE/citizen worklists." ;
+    sd:satisfiedBy profp:Seq_ReviewDisclosureAndUpdateStatus, profp:Op_UpdateDisclosure, profp:Rule_DisclosureEditingRestrictions,
+        profp:Rule_AttachmentManagement, profp:Perm_DisclosureEdit ;
+    sd:notes "The 'edit while Under PPR Review, locked once Reviewed' half of this story is a strong, direct match to profp:Rule_DisclosureEditingRestrictions verbatim, and attachment soft-delete matches profp:Rule_AttachmentManagement verbatim ('reviewer requests soft-delete... removing them from the disclosure view but retaining them... for audit'). Two of this story's own sub-asks are NOT modeled with a backing operation, per profpractice-permissions.ttl's own already-documented gaps: 'add a new disclosure record on behalf of a citizen user' has no create-on-behalf endpoint (profp:Op_SubmitDisclosure is scoped scope:SelfOnly to the submitting educator, not a reviewer acting for someone else — comment 151/152 confirms this exact scenario is 'a valid scenario... wording updated to adding a new disclosure on behalf'), and 'delete an entire disclosure record' has no backing operation at all (profp:Perm_DisclosureDelete's own sd:notes: 'No API operation or sequence currently models this permission... a documented gap'). Both are carried-forward, already-documented gaps rather than newly raised Annotations, consistent with this project's convention of not re-raising a gap already flagged at the domain-model level." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_3_3 a sd:UserStory ;
+    sd:requirementId "9.3.3" ;
+    sd:title "View RapBack response record" ;
+    sd:statement "As a PPR Reviewer, I want to see the RapBack response record for a citizen user so that I can review up-to-date criminal history information and make informed decisions during the Professional Practices Review process." ;
+    sd:acceptanceCriteria "View RapBack response records for the reviewer's assigned users only; readable format showing at minimum notification date/event type/jurisdiction/status/case-number identifiers; expand/collapse detail; indicate pending-not-yet-received; read-only, cannot be modified; error message on retrieval failure; restricted to PPR Reviewer/Credentialing Admin roles; updates in real-time or as soon as available." ;
+    sd:satisfiedBy profp:Seq_RetrieveFullRapSheet, profp:Op_GetExternalCheck, profp:Perm_RapbackView, profp:ExternalBackgroundCheckAggregate ;
+    sd:notes "Direct match — profp:ExternalBackgroundCheckAggregate's CheckNotificationDate/CheckMatchStatus/CheckState_Pending fields and states line up with this story's field list and 'indicate pending' criterion respectively; the read-only/never-modified invariant matches profp:ExternalBackgroundCheckAggregate's own sd:invariants verbatim ('Rap Back responses are read-only for PPR staff'). One paragraph of this story's own acceptance criteria was deleted in a later revision with the comment (728676430, undated in the visible thread) 'Rap Back Reviewer responsibility; Removed from PPR' — the deleted text itself could not be recovered (the paragraph is now empty in document.xml), but the comment's clear intent is that SOME sub-capability originally listed here was reassigned to a distinct 'Rap Back Reviewer' responsibility outside PPR's own role model. profpractice-permissions.md/.ttl model only a single undifferentiated 'PPR Reviewer' role for Rap Back viewing (profp:Perm_RapbackView) — no separate Rap Back Reviewer role exists anywhere in this domain's converted permission catalog. Whether a role split is actually coming, and if so what moves with it, is unresolved — flagged here rather than guessed at." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_3_4 a sd:UserStory ;
+    sd:requirementId "9.3.4" ;
+    sd:title "Status set to Under PPR Review on reviewer open" ;
+    sd:statement "As a PPR Reviewer user, I want to update the status of a disclosure to be set to \"Under PPR Review\" when I begin reviewing it so that I can clearly indicate that the review process has started and prevent other reviewers from duplicating work." ;
+    sd:acceptanceCriteria "Status auto-updates to Under PPR Review the moment the reviewer opens the disclosure (first review action); not locked from other reviewers despite the status change; visible to the reviewer within the record; timestamp+assignee recorded; audit entry (user ID, date/time, previous+new status); citizen sees the updated status in their own history; notifications/alerts routed per communication rules; status remains Under PPR Review until manually changed, even if the reviewer navigates away without further action." ;
+    sd:satisfiedBy profp:DiscState_UnderPprReview, profp:DisclosureReviewStartedEvent, profp:Seq_ReviewDisclosureAndUpdateStatus ;
+    sd:notes "profp:DisclosureReviewStartedEvent ('PPR reviewer begins reviewing disclosure') matches this story's trigger exactly and profp:DiscState_UnderPprReview is a real, non-terminal state. The AUTOMATIC-on-open transition specifically (as opposed to the reviewer manually selecting 'Under PPR Review' from the Actions dropdown, which profp:Seq_ReviewDisclosureAndUpdateStatus's own sequence content shows) is not independently distinguished in that sequence's own PUT /disclosures/{id}/status step — a minor granularity gap between 'the event exists' and 'the transition is proven to be automatic rather than reviewer-initiated', not raised as its own Annotation." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_3_5 a sd:UserStory ;
+    sd:requirementId "9.3.5" ;
+    sd:title "Assign PPR Admin Flag and PPR Additional Review Flag at individual level" ;
+    sd:statement "As a PPR Reviewer, I want to assign the PPR Admin Flag and the PPR Additional Review Flag at an individual level so that I can ensure appropriate oversight, escalate cases that require additional review, and manage disclosure processing accurately based on an individual's circumstances." ;
+    sd:acceptanceCriteria "View/open disclosures per 9.3.1's own detail layout; assign or remove the PPR Admin Flag per individual (when on: future credential applications go to PPR Hold on submission, citizen notified of delay/denial risk; when off: Rapback/NASDTEC review continues, PPR Review role notified of results); assign or remove the PPR Additional Review Flag per individual (when on: alert sent to PPR Admin Review role, processing continues); scoped to individuals assigned to the reviewer's own worklist; immediate effect; flags not visible to the citizen; all flag assignment/removal actions audit-logged (user, date/time, flag type, action)." ;
+    sd:satisfiedBy profp:Seq_ManageAccountMarkers, profp:Op_SetMandatoryHold, profp:Op_SetEnhancedMonitoring, profp:Op_ClearMandatoryHold,
+        profp:Op_ClearEnhancedMonitoring, profp:Rule_MandatoryHoldAutoHold, profp:Rule_EnhancedMonitoringStatusBehavior,
+        profp:MandatoryHoldRequirement, profp:EnhancedMonitoringStatus, profp:Perm_MarkersManage ;
+    sd:notes "Very strong match — 'PPR Admin Flag' = profp:MandatoryHoldRequirement and 'PPR Additional Review Flag' = profp:EnhancedMonitoringStatus, and profp:Rule_MandatoryHoldAutoHold / profp:Rule_EnhancedMonitoringStatusBehavior restate this story's own on/off branches near-verbatim (citizen notified of delay/denial risk when Mandatory Hold is on; Rap Back/NASDTEC checks continue and PPR Review is notified when off). Wireframe3 (confirmed by viewing) shows both flags as toggles directly on the disclosure/individual detail screen, matching this story's own 'view/open disclosures... assign flag' framing. profp:Perm_MarkersManage's own sd:notes already flag a discrepancy between the single system-wide permission modeled here and the four narrower per-marker permission ids profpractice-sequences.md's own sequence header names — carried forward, not re-raised. GENUINELY NEW to this pass: comment 167 (Punniyamoorthy, 'Since these flags are Profile level, how do PPR Reviewer manage these flags? at present these are displayed as part of a PPR record') and Dontje's reply (comment 168, 'We need to review 9.3.5 with AO to decide where flag will exist in the designs') show the FDD's OWN reviewers were still unsettled, as of this review pass, on whether these are individual/profile-level markers surfaced on every disclosure record (as Wireframe3 and profp:EducatorPPRStatusAggregate both model them) or something requiring a dedicated account-level screen — an open UX/IA question the domain model has already picked an answer for, but which the FDD's own review thread had not yet closed as of the visible comments. See profp:Question_MarkerFlagUiPlacement below." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Question_MarkerFlagUiPlacement a sd:Annotation ;
+    oa:motivatedBy oa:questioning ;
+    rdfs:comment "Is the PPR Admin Flag / PPR Additional Review Flag UI meant to live inline on every individual disclosure record (as Wireframe3 shows, and as profp:EducatorPPRStatusAggregate's account-level MandatoryHoldRequirement/EnhancedMonitoringStatus value objects imply — one set of markers per educator, surfaced wherever a disclosure for that educator is viewed), or does it need a dedicated account/profile-level screen distinct from any one disclosure? The FDD's own review thread (comments 167/168) treats this as unresolved as of this pass ('need to review 9.3.5 with AO to decide where flag will exist in the designs'), even though the wireframe and domain model already model one specific answer." ;
+    oa:hasTarget profp:EducatorPPRStatusAggregate ;
+    sd:status "open" ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_3_6 a sd:UserStory ;
+    sd:requirementId "9.3.6" ;
+    sd:title "Capture non-system actions taken during PPR review" ;
+    sd:statement "As a PPR Reviewer, I want to capture non-system actions taken during the PPR review so that I can document external steps, communications, or decisions that are relevant to the case and maintain a complete and auditable review history." ;
+    sd:acceptanceCriteria "View/open disclosures per 9.3.1's own detail layout; check/uncheck non-system-action options from a 'Non-system Actions Taken' section, including at minimum Notified School District, Referred to Professional Practices Review, and Notified MSP for Removal." ;
+    sd:satisfiedBy profp:Seq_LogNonSystemAction, profp:Op_LogNonSystemAction, profp:NonSystemActionLoggedEvent, profp:Perm_ActionsLog ;
+    sd:notes "Direct match, including the exact three named action types — profp:NonSystemActionLoggedEvent's own payloadHighlights list 'NotifiedSchoolDistrict|ReferredToPPR|NotifiedMSPRemoval' verbatim, and its own sd:content sequence diagram lists two further options (ContactedEducator, ReviewedExternalDocuments) beyond what this specific FDD story enumerates, so the domain model's action-type set is a strict superset of this story's own minimum list, not a narrower one. profp:Perm_ActionsLog's own sd:notes already document a permission-id naming mismatch against profpractice-sequences.md's own sequence header — carried forward, not re-raised." ;
+    sd:definedIn profp:Fdd09Doc .
+
+#################################################################
+# Feature 9.4: Stop Checks
+#################################################################
+
+profp:Req_09_4_1 a sd:UserStory ;
+    sd:requirementId "9.4.1" ;
+    sd:title "Automatic stop-check on actionable PPR flag" ;
+    sd:statement "As the MiEdWorkforce system, I want an automatic stop-check to be applied when a PPR (Professional Practice Review) flag status indicates an actionable offense, so that application processing is halted immediately to ensure compliance, even if the Needs Responses flag is clear 'No'." ;
+    sd:acceptanceCriteria "Automatic PPR-flag evaluation on credential-application processing; if actionable, halt further processing; existing application cannot be approved and is auto-set to Denied; prevent creating a new application for the same credential; halts regardless of Needs Responses flag status; clear message/status logged/displayed; audit trail records the halted application with reason (PPR actionable offense) and timestamp; downstream automated processes (renewals, approvals) do not proceed for flagged applications." ;
+    sd:satisfiedBy profp:Rule_AutomaticStopCheckOnApplicationCreation, profp:Rule_ReviewedListedAbsoluteBlock, profp:PPRClearanceOperation ;
+    sd:notes "profp:Rule_AutomaticStopCheckOnApplicationCreation cites 'BRD 9.4.1' by number in its own sd:statement — i.e. this exact story number was already read and modeled when profpractice-domain.ttl was written. One literal mismatch worth flagging rather than silently smoothing over: this story says an EXISTING application is 'automatically set to Denied' when a Blocked-triggering condition is discovered, but profp:Rule_AutomaticStopCheckOnApplicationCreation's own statement and example both describe blocking at NEW-APPLICATION-CREATION time only ('application creation is prevented', 'before rendering the application form') — an automatic transition of an ALREADY-SUBMITTED, in-flight application straight to a terminal Denied status is not itself described by that rule or by any Credentialing-side application state transition visible from this domain's own files. Not resolved here since credentialing's own application-state-machine file is outside this pass's scope to re-verify — noted as a possible gap at the Credentialing/PPR boundary for that domain's own review pass to confirm." ;
+    sd:definedIn profp:Fdd09Doc .
+
+#################################################################
+# Feature 9.5: Professional Practice Reporting
+#
+# All four stories below are satisfied by the separate Reporting bounded context (rpt:), not by
+# any profpractice-owned artifact — see this file's header for the full cross-domain finding.
+#################################################################
+
+profp:Req_09_5_1 a sd:UserStory ;
+    sd:requirementId "9.5.1" ;
+    sd:title "Configure and make available Power BI reports for Professional Practice" ;
+    sd:statement "As a Credentialing Administrator, I want to configure and make available Power BI reports related to Professional Practice, so that authorized users can monitor disclosure trends, review statuses, and workforce compliance metrics." ;
+    sd:acceptanceCriteria "Report Management page reachable via hamburger menu, listing existing reports (Report Name/Category/Added Date/Report Status) with search and per-column filter; Add Report flow captures Report Name/Description/Power BI Link/Workspace/Role-based Availability/Category/Sub-category/Active-or-Inactive Status; Cancel/Preview/Save & Add Report actions; access restricted by authorized role selection; standard interactive report functionality (filter/sort/column add-remove); reports can pull both current MiEdWorkforce data and CEPI Data Warehouse historical data; export to PDF/Excel/CSV." ;
+    sd:satisfiedBy rpt:ReportDefinitionAggregate, rpt:Op_AdminListReports, rpt:Op_AdminCreateReport, rpt:Op_AdminUpdateReport,
+        rpt:Perm_CatalogManage, ext:PowerBISystem ;
+    sd:notes "Satisfied, but entirely by the Reporting bounded context's generic report-catalog admin capability, not by any profpractice-specific artifact — see this file's header note. rpt:ReportDefinitionAggregate's own PowerBIReportReference (workspaceId/reportId) and PermissionKeyVO/DomainAssociationVO value objects match this story's Power BI Link/Workspace and role-based-availability fields closely; rpt:Op_AdminCreateReport/rpt:Op_AdminListReports/rpt:Op_AdminUpdateReport back the Add/List/Edit flows. NOT modeled anywhere in either domain: per-column search/filter on the admin report list, a distinct Preview step before saving, and pulling from 'both current MiEdWorkforce data and CEPI Data Warehouse historical data' specifically (reporting-capability.ttl's own ext:PowerBISystem integrationNotes mention CEPI CEDS Data Warehouse dashboards only as a largely-unspecified, separately-flagged Phase-4 item — see rpt:Question_PowerBILicensingModel and the [NEEDS INPUT] markers that file's own header describes). These are genuine, narrower gaps within an otherwise well-matched cross-domain capability, not raised as new Annotations here since they belong to Reporting's own review pass, not this one." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_5_2 a sd:UserStory ;
+    sd:requirementId "9.5.2" ;
+    sd:title "Set PPR reports Active or Inactive on-demand" ;
+    sd:statement "As a Credentialing Admin, I need the ability to set PPR related reports as Active or Inactive on-demand, so that I can control report visibility to end-users dynamically." ;
+    sd:acceptanceCriteria "Admins (by functional area) can set reports Active or Inactive; status change takes effect immediately; an Inactive report is completely hidden from the UI with no indication of its existence/unavailability; immediate retiring of report availability." ;
+    sd:satisfiedBy rpt:Op_AdminUpdateReportStatus, rpt:Perm_CatalogManage, rpt:ReportDefinitionAggregate ;
+    sd:notes "Excellent match, essentially operation-for-operation: rpt:Op_AdminUpdateReportStatus (PATCH /admin/reports/{reportDefinitionId}/status) is exactly this story's Active/Inactive toggle, and rpt:ReportDefinitionAggregate's own invariant 'Only reports with status = Active are surfaced in the portal catalog or eligible for token generation' matches the 'completely hidden' requirement precisely. This is also the story an explicit reviewer comment (184, Dontje: 'This should be moved to #2 Reports') directly names as belonging to the Reporting domain — confirmed accurate against the actual graph, not just taken on the comment's word." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_5_3 a sd:UserStory ;
+    sd:requirementId "9.5.3" ;
+    sd:title "Access and interact with Power BI Professional Practice reports" ;
+    sd:statement "As a MiEdWorkforce User, I want to access and interact with Power BI reports related to Professional Practice, so that I can monitor workforce compliance metrics, disclosure trends, and review statuses." ;
+    sd:acceptanceCriteria "Requires an authorized role with report permissions; reports listed under Credential Management > Reports > Professional Practice, alphabetically under an 'All Reports' tab; user can filter reports, mark favorites, or click a report name to view it; a 'Favorite Reports' tab lists favorited reports; clicking a report name shows it as configured by the Credentialing Admin." ;
+    sd:satisfiedBy rpt:Op_ListReports, rpt:Op_GetReport, rpt:Op_GenerateEmbedToken, rpt:ReportDefinitionAggregate,
+        profp:Op_GetPprReportData, profp:Seq_GeneratePPRComplianceReport ;
+    sd:notes "The core view/embed capability is satisfied by rpt:Op_ListReports/rpt:Op_GetReport/rpt:Op_GenerateEmbedToken (generic Reporting-domain catalog browsing and embed-token issuance), with profp:Op_GetPprReportData/profp:Seq_GeneratePPRComplianceReport supplying the PPR-specific underlying data feed one of these embedded reports would query. NOT modeled anywhere in either domain: a per-user 'Favorite Reports' concept — no favoriting/bookmarking value object or operation exists on rpt:ReportDefinitionAggregate or anywhere else in reporting-capability.ttl/-api.ttl. A real, narrow coverage gap, but one that belongs to Reporting's own domain file rather than being fabricated here." ;
+    sd:definedIn profp:Fdd09Doc .
+
+profp:Req_09_5_4 a sd:UserStory ;
+    sd:requirementId "9.5.4" ;
+    sd:title "Export reports in multiple formats" ;
+    sd:statement "As a System User, I need the ability to export reports in a variety of formats including PDF, Excel, and CSV, for sharing and analysis." ;
+    sd:acceptanceCriteria "Export available to users with appropriate report permissions; explicitly PDF/Excel/CSV formats; user can download the exported file; export/download availability is a configurable setting managed by admins per functional area; paginated reports must be highly formatted/pixel-perfect for print/PDF." ;
+    sd:satisfiedBy rpt:ReportDefinitionAggregate, ext:PowerBISystem ;
+    sd:notes "Satisfied only loosely: export to PDF/Excel/CSV is native, built-in Power BI embedded-report functionality (Power BI Service handles export natively once a report is embedded via rpt:Op_GenerateEmbedToken), not a capability either domain's own API models as a distinct operation — consistent with reporting-capability.ttl's own header note that Reporting 'owns none of the underlying report data or definitions... report editing/authoring... not exposed in the portal UI' beyond the catalog/embed-token layer. A configurable per-functional-area export on/off toggle specifically is not modeled anywhere. This is also the story an explicit reviewer comment (185, Dontje: 'This should be moved to #2 reports. The PPR reports will use the MiEdWorkforce standards defined in #2') directly names as belonging to Reporting, consistent with the read above." ;
+    sd:definedIn profp:Fdd09Doc .

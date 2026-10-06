@@ -1,0 +1,297 @@
+# FDD 02 review — "2 - Reporting" (Feature 2.1: Reporting Framework Implementation).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Reporting graph
+# (reporting-capability.ttl / reporting-permissions.ttl / reporting-api.ttl /
+# reporting-sequences.ttl / reporting-technical-design.ttl, all loaded together). No
+# cross-domain node (iam:/orgs:/staff:) is referenced directly by IRI in this file — every
+# satisfiedBy/oa:hasTarget target below resolves within Reporting's own five files, so
+# validation doesn't need iam/organizations/staffing's own files loaded.
+#
+# Source: "2 - Reporting.docx" (subtitle "Reporting (2.0)"). Read the .md sibling first,
+# then unzipped the .docx for comments.xml/commentsExtended.xml (thread structure via
+# w15:paraIdParent) and word/media (15 UNCAPTIONED images, image1.jpg-image15.jpg,
+# embedded inline within the Addendum's own acceptance-criteria bullets — no "Wireframe N"
+# captions anywhere in this document, unlike FDD 29/11/16). Confirmed by viewing 10 of
+# the 15 (image1, 4, 5, 9, 10, 12, 13, 15, plus 2 near-duplicates) that the images fall
+# into six distinct screens, extracted to wireframes/wireframe-01 through -06; the
+# remaining 9 (image2,3,6,7,8,11,14 and one more near-duplicate of the list screen) were
+# not individually re-extracted — sampling confirmed they are repeats of the same six
+# screens at different UI-highlight states (e.g. image2 = image1 with "Add Report" button
+# highlighted; image8 = the list screen with a row's kebab menu highlighted, same screen
+# family as wireframe-03), not distinct undocumented screens.
+#
+# Structure of the document, and what's used as the Requirement unit:
+# - A "Business Specifications" prose section (bulleted, not numbered) and a
+#   "HIGH LEVEL SCENARIOS" paraphrase table (12 rows, numbered 1-12/Ref column) both
+#   restate largely the same ground at coarser grain. The HLS table is skipped per
+#   CONVENTIONS.md (duplicative paraphrase).
+# - An "Addendum" under "Feature: 2.1 Reporting Framework Implementation" gives the FDD's
+#   only real numbered user stories: 2.1.1 through 2.1.6. Unlike FDD 29 (where the
+#   Addendum's ~40 stories fully superseded the Business Specifications prose), THIS
+#   FDD's Business Specifications section is markedly BROADER than its own 6-story
+#   Addendum — it describes several distinct capabilities (report versioning, admin-set
+#   report availability windows and aggregation level, export-tool selection per report,
+#   ad-hoc report authoring/saving, source-data provenance, in-report visualization
+#   customization, comparative-dataset definition, and a richer audit-detail set than
+#   2.1.4 itself covers) that were never promoted into the Addendum's 2.1.x numbering at
+#   all. Following the precedent set by the FDD 29 pass for its own three
+#   never-promoted Business-Specification features, these are modeled below with
+#   synthetic rpt:Req_02_BizSpec_N IDs and flagged as a discrepancy
+#   (rpt:Question_BusinessSpecificationsBroaderThanAddendum) rather than silently
+#   dropped or forced into the Addendum's own numbering.
+# - 2.1.6's own visible text is itself garbled — a run of tracked-changes-era edits left
+#   two overlapping sentence fragments concatenated ("I need the ability to export
+#   reports in a variety of formats MiEdWorkforce report interface to support the export
+#   functions defined within Power BI, including PDF, Excel, and CSV, so that...") and its
+#   Acceptance Criteria repeats the same "system must allow...PDF/Excel/CSV" point twice
+#   in different words. Not reconstructed as a diff (no w:ins/w:del spans survive around
+#   this text — it was already merged by the time of tracked-changes acceptance); the
+#   comment thread on this exact story (Ross/Groom, see below) resolves the AMBIGUITY the
+#   garbled text leaves (whose responsibility export actually is), so the substance is not
+#   in doubt even though the prose itself is rough. Quoted here as-is, not smoothed over.
+#
+# Comments (17 total, read via comments.xml + commentsExtended.xml's w15:paraIdParent
+# thread links): five (ids 5,8,10,12, all "@Chapman, Molly — Updated.") are administrative
+# tag-and-update notes on the Business Specifications prose with no substantive content —
+# not modeled. The remaining threads carry real signal and are folded into the relevant
+# Requirement's own sd:notes rather than each becoming a standalone Annotation, except two
+# that surfaced genuine, still-open findings (Question_ManualPowerBIIdEntryAndRoleScoping,
+# Question_ReportFilterAndDownloadFilenameConvention below).
+#
+# Wireframes vs. text: the "New Report" admin form (wireframe-02, confirmed by viewing)
+# shows a single free-text "Power BI Link" URL field and a "Workspace" dropdown, and an
+# "Availability" panel with Role / Category / Sub-Category / Status selectors — a
+# meaningfully different shape than reporting-api.ttl's modeled ReportCreate request
+# (separate workspaceId/reportId GUIDs per rpt:PowerBIReportReference, a single flat
+# rpt:DomainAssociationVO enum, a single rpt:PermissionKeyVO string). See
+# Question_ReportFormShapeVsModeledAggregate below — a genuine, wireframe-confirmed
+# discrepancy, not a guess from filenames. Separately, wireframe-03 (a report row's
+# context menu) shows "Deactivate" AND "Delete Report" as sibling options, and
+# wireframe-05 (the category-level report list) shows a "Favorite Reports" tab with
+# per-report star icons — NEITHER hard-delete-a-report-definition NOR
+# per-user-favoriting appears anywhere in this FDD's own Business Specifications, HLS
+# table, or Addendum text. See Question_WireframeOnlyFeaturesNotInStories below.
+#
+# Tracked changes: none found as live w:ins/w:del spans in document.xml (the visible text
+# is already the "accepted" merge, per the 2.1.6 garbling noted above) — not reconstructed.
+#
+# Cross-document notes: the FDD's own Dependencies section names "User Authorization
+# (1.0)" (iam — already converted, matches reporting-capability.ttl's own iam Dependency)
+# and "Interfaces and Integrations Setup (8)" (not converted in mied-v3; see this file's
+# closing report to the orchestrating session for the GAPS.md entry). Its Assumptions
+# section also names "Technology Standards and Audit requirements (32.13)" as the source
+# of the PowerBI-as-reporting-framework decision (Tech Standards, FDD 32 — also not
+# converted). The folder's "2 Power BI (Reports)" subfolder holds two supplementary
+# reference docx (not FDD-numbered, not cited by name inside 2 - Reporting.docx's own
+# text, so not the confirmed "load-bearing named reference" exception CONVENTIONS.md
+# carves out for things like a Role Matrix xlsx) — "Interface Design document - Power BI
+# Gov.docx" (confirms Azure Entra ID + service-principal auth, matching
+# reporting-technical-design.ttl's rpt:TP_EmbedTokenGeneration exactly — corroboration,
+# no new node needed) and "PowerBI Best Practices by EISBI.docx" (general PowerBI
+# authoring/administration guidance — the report-authoring side of the boundary
+# rpt:Rule_ReportDefinitionsOwnedOutsideApplication already draws as explicitly outside
+# this application; not itself a source of new Requirements). Neither produced its own
+# Requirement instances; read for corroboration only, per this file's depth calibration
+# for a 6-story FDD.
+#
+# Depth calibration: a small FDD (6 numbered stories) with an unusually large
+# non-numbered Business Specifications section. Given the gap between the two, this file
+# spends more of its effort on the Business Specifications synthetic items and the
+# wireframe-vs-model comparison than a 6-story FDD would otherwise warrant — consistent
+# with CONVENTIONS.md's "calibrate to apparent importance," since Business Specifications
+# is where most of this FDD's real content and its real gaps actually live.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+rpt:Fdd02Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/02 - Reporting/2 - Reporting.docx" ;
+    sd:notes "Subtitle 'Reporting (2.0)'. Authors Vidhya Punniyamoorthy (DTMB)/Beth Dontje (MDE)/Caitlin Groom (CEPI); approved by Dontje and Groom 08/01/2025 per the signoff table — but comments.xml contains dated entries through 2026-03-05, well after that nominal approval date (same pattern the FDD 29 pass flagged for its own document: the signoff table isn't 'nothing changed after this')." .
+
+rpt:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-01-admin-report-management-list.jpg" ;
+    sd:notes "Confirmed by viewing: 'Report Management' admin screen — Search box, 'Add Report' button, filter icon, and a table (Report Name/Category/Added Date/[unlabeled columns]/Status) of Active reports, paginated (footer shows '1-10 of 6115 items' — a placeholder/sample row count, not a real figure). Directly corroborates 2.1.1's admin management interface and 2.1.2's Add Report entry point." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-02-new-report-form.jpg" ;
+    sd:notes "Confirmed by viewing (two highlight variants, image4 and image5, same underlying screen): 'New Report' form — Report Details panel (Report Name text field, Report Description textarea with a 255-char counter, a single free-text 'Power BI Link' URL field populated with a placeholder http://www.maspa.org, a 'Workspace' dropdown) and an Availability panel (Role / Category / Sub-Category / Status dropdowns, Status defaulting to Active), with Cancel/Preview/Add Report actions. See Question_ReportFormShapeVsModeledAggregate below — this shape does not match rpt:ReportDefinitionAggregate's modeled fields." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-03-row-menu-deactivate-delete.jpg" ;
+    sd:notes "Confirmed by viewing: a report row's context (kebab) menu, showing exactly two options — 'Deactivate' and 'Delete Report'. Deactivate matches 2.1.3/rpt:Op_AdminUpdateReportStatus well; Delete Report has no corresponding story, acceptance criterion, or modeled API operation anywhere (reporting-api.yml has no DELETE /admin/reports/{id}). See Question_WireframeOnlyFeaturesNotInStories below." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-04-functional-area-nav-menu.jpg" ;
+    sd:notes "Confirmed by viewing: the end-user functional-area navigation menu (School Name context switcher; Personnel Search, Employment Management, Credential Management [expanded: Permits, Renew Daily Substitutes, Career Authorizations, Special Education Approvals, Unpaid Applications, Reports], Professional Learning, Education Prep, Professional Practices, User Management). Directly corroborates 2.1.5's primary-functional-area-menu acceptance criterion, and shows 'Reports' as one leaf item within a functional area's own expanded menu (not a single global 'Reports' top-level entry) — consistent with the report catalog being scoped per functional area rather than centralized." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Wireframe5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-05-category-report-list-favorites.jpg" ;
+    sd:notes "Confirmed by viewing (two highlight variants, image12 and image15, same underlying screen): a 'Credential Reports > [Category] Reports' breadcrumb-and-list screen (Dashboard > Credential Management > Credential Reports > [Category] Reports), with 'All Reports'/'Favorite Reports' tabs, a search box, and a list of Report Name rows each with a star (favorite) icon. Directly corroborates 2.1.5's three-level functional-area > subcategory > report-list navigation. The 'Favorite Reports' tab and per-report star/favorite affordance has no corresponding story or acceptance criterion anywhere in this FDD — see Question_WireframeOnlyFeaturesNotInStories below." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Wireframe6 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/02-reporting/wireframes/wireframe-06-embedded-report-placeholder.jpg" ;
+    sd:notes "Confirmed by viewing: the terminal 'Report Name' screen with a large placeholder panel labeled 'Power BI' where the embedded report renders — the endpoint of 2.1.5's navigation flow, consistent with rpt:Op_GenerateEmbedToken's role." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+#################################################################
+# Addendum Feature 2.1 — Reporting Framework Implementation
+#################################################################
+
+rpt:Req_02_1_1 a sd:UserStory ;
+    sd:requirementId "2.1.1" ;
+    sd:title "Administrative interface to manage embedded Power BI reports" ;
+    sd:statement "As a MiEdWorkforce Administrator (by functional area), I want an administrative interface to manage embedded Power BI reports, so that I can ensure the correct reports are accessible to the appropriate user roles and scoped to the relevant functional area data." ;
+    sd:acceptanceCriteria "The system must provide the functional administrator the ability to define and maintain reports and define user viewability/availability using the Power BI framework without requiring developer support. The system must enforce authorization access for all system functionality at the entity, group, and role level." ;
+    sd:satisfiedBy rpt:Op_AdminListReports, rpt:Op_AdminGetReport, rpt:ReportDefinitionAggregate, rpt:Perm_CatalogManage, rpt:Rule_ReportAccessGatedByDomainPermissions ;
+    sd:notes "Wireframe1 (Report Management list screen) directly corroborates the admin interface itself. 'Entity, group, and role level' authorization enforcement is the general IAM/PermissionScope machinery (scope:Entity etc., per permission-scopes.ttl) rather than anything Reporting-specific — not re-modeled here, just cited as the existing mechanism." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_1_2 a sd:UserStory ;
+    sd:requirementId "2.1.2" ;
+    sd:title "\"Add Report\" function to register a new embedded Power BI report" ;
+    sd:statement "As a MiEdWorkforce Administrator (by functional area), I want an \"Add Report\" function within my administrative interface to register a new embedded Power BI report, so that I can define the report's resources, access permissions, and availability for my designated functional area and user roles." ;
+    sd:acceptanceCriteria "An 'Add Report' button/function on the administrative page (e.g., Staffing Admin page, Credential Admin page) initiates new report creation. The administrator defines and maintains the report without developer support. The system prompts the administrator to input the external report identifier or link necessary to embed the Power BI content (report creation happens externally in Power BI). The administrator specifies the functional area (e.g., Credentialing, Staffing, PPR) for the new report. The System Administrator can define/maintain standard reports related to user authorization. The Credential Admin manages reports/settings related to Credential report availability and PPR Processes. The Staffing Data Admin manages reports/settings related to Staffing Data Collections. The system allows a 'Preview' of the report prior to adding it; once reviewed, the report is added by selecting 'Add Report.'" ;
+    sd:satisfiedBy rpt:Op_AdminCreateReport, rpt:Seq_RegisterReportInCatalog, rpt:ReportDefinitionAggregate, rpt:DomainAssociationVO, rpt:PermissionKeyVO ;
+    sd:notes "Good structural match: Op_AdminCreateReport validates workspaceId/reportId against the real Power BI report before creating the catalog entry, matching 'report creation happens externally in Power BI'; Seq_RegisterReportInCatalog's register-then-activate pattern matches this story's implicit two-step (add, then presumably a separate activation per 2.1.3) flow. Two genuine gaps, both wireframe-confirmed (Wireframe2) rather than assumption-based: (1) no 'Preview' capability exists anywhere in reporting-api.ttl/reporting-sequences.ttl — Op_AdminCreateReport has no preview/dry-run mode, only a real create; (2) the wireframe's actual field shape (single free-text Power BI Link + Workspace dropdown + Role/Category/Sub-Category, vs. the modeled workspaceId+reportId GUID pair + flat DomainAssociation + PermissionKey string) doesn't match the aggregate as documented — see Question_ReportFormShapeVsModeledAggregate below." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Wireframe2 (the 'New Report' admin form, confirmed by viewing both highlight variants) shows a single free-text 'Power BI Link' URL field and a 'Workspace' dropdown, not the two Power BI Service GUIDs (workspaceId, reportId) rpt:PowerBIReportReference/reporting-api.yml's ReportCreate schema actually model — nothing in either document describes how a pasted link would be parsed into those two identifiers, or whether the Workspace dropdown is really a second, separate field the wireframe redundantly also shows. Separately, the wireframe's Availability panel offers Role / Category / Sub-Category dropdowns, richer than the single flat rpt:DomainAssociationVO enum (iam/credentialing/profpractice/staffing/proflearning/epp/reporting) and single rpt:PermissionKeyVO string the domain model actually captures — Category/Sub-Category also matches the two-level functional-area/subcategory navigation Wireframe4/Wireframe5 show on the end-user side (2.1.5), suggesting the real taxonomy is deeper than DomainAssociation's flat enum. A UI-vs-model shape mismatch, not merely underspecified — this is evidence the domain model may need a genuine two-tier category taxonomy and a Role-based (not raw string PermissionKey) availability mechanism, not just documentation polish." ;
+    oa:hasTarget rpt:Req_02_1_2, rpt:ReportDefinitionAggregate, rpt:DomainAssociationVO, rpt:PermissionKeyVO ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_1_3 a sd:UserStory ;
+    sd:requirementId "2.1.3" ;
+    sd:title "Set reports Active or Inactive on-demand" ;
+    sd:statement "As a MiEdWorkforce System Admin (by functional area), I need the ability to set reports as Active or Inactive on-demand, so that I can control report visibility to end-users dynamically." ;
+    sd:acceptanceCriteria "Administrators, by functional area, can set reports Active or Inactive. The status change takes effect on-demand (immediately). When Inactive, the report is completely hidden from the UI and users are not notified of its existence or unavailability. The admin can immediately retire report availability." ;
+    sd:satisfiedBy rpt:Op_AdminUpdateReportStatus, rpt:Seq_DeactivateReport, rpt:ReportDefState_Active, rpt:ReportDefState_Inactive ;
+    sd:notes "Direct, strong match — ReportDefinitionAggregate's own invariant ('Only reports with status = Active are surfaced in the portal catalog or eligible for token generation') is exactly the 'completely hidden, no notification' behavior this story asks for, and Seq_DeactivateReport's key decision (outstanding tokens remain valid; no Power BI-side revocation call) is a reasonable, already-documented interpretation of 'immediate' that this story doesn't itself address one way or the other. Wireframe3's context menu ('Deactivate'/'Delete Report') visually corroborates the Deactivate half; see Question_WireframeOnlyFeaturesNotInStories for the sibling 'Delete Report' option this story doesn't mention." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_1_4 a sd:UserStory ;
+    sd:requirementId "2.1.4" ;
+    sd:title "Internal audit log for report-related changes" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want the system to store audit details in an internal audit log for report related changes made within the MiEdWorkforce system, so that I can track, review and verify who made changes, what was changed and when, for accountability and compliance purposes." ;
+    sd:acceptanceCriteria "Store audit details for: a report being added; modification of Report Name and/or Description; Workspace association changes; changes in access and permissions. Availability audit details include Active/Inactive status and Begin/End Date ranges. Report audit details include Report Name, description of the audit event, and Date." ;
+    sd:notes "No satisfiedBy: this story asks for a CATALOG-CHANGE audit trail (who edited a report's name/description/workspace/permissions, and when) — a genuinely different audit concept from what rpt:EmbedTokenRequestAggregate/rpt:Op_AdminListEmbedAudit actually model, which is an EMBED-TOKEN-REQUEST audit (who viewed/attempted to view which report, granted or denied, and why). reporting-capability.ttl's own ERD note mentions REPORT_DEFINITIONS carries created_at/updated_at timestamps, but no admin-facing endpoint exposes a change history, no old-value/new-value field-level tracking exists, and nothing tracks 'who' made a catalog edit at all (no actor/user field on ReportDefinition). This is a real, confirmed coverage gap distinct from the embed-token audit already modeled — not to be papered over by pointing at Op_AdminListEmbedAudit, which answers a different question. Additionally, 'Begin/End Date ranges' as an audited field presupposes those fields exist on ReportDefinition at all, which they don't — see rpt:Req_02_BizSpec_2 below (Business Specifications' own admin-settable availability-window feature, also unmodeled)." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No catalog-change audit trail (who edited a ReportDefinition's name/description/workspace/permission-key, and when) exists anywhere in reporting-domain.ttl/reporting-api.ttl — only an embed-TOKEN-request audit (rpt:EmbedTokenRequestAggregate/rpt:Op_AdminListEmbedAudit) is modeled, which answers a different question (who tried to VIEW a report, not who EDITED its catalog metadata). 2.1.4 explicitly asks for the catalog-change kind. A real, confirmed gap, not a terminology quibble." ;
+    oa:hasTarget rpt:Req_02_1_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_1_5 a sd:UserStory ;
+    sd:requirementId "2.1.5" ;
+    sd:title "Navigate functional-area menus to access and view embedded reports" ;
+    sd:statement "As a System User, I want to navigate through functional area menus and subcategories to access specific reports, so that I can view embedded Power BI data visualizations directly within the MiEdWorkforce system." ;
+    sd:acceptanceCriteria "A primary navigation menu is organized by functional areas. Selecting a functional area displays a secondary list of associated report subcategories. Selecting a subcategory displays a comprehensive list of all reports in that grouping. The user can select an individual report to initiate viewing. Selected reports render as fully functional, embedded Power BI objects within the interface. The system maintains the user's navigational context so they can return to subcategory/functional-area menus. Access to reports and categories adheres to the user's existing security permissions and data access levels." ;
+    sd:satisfiedBy rpt:Op_ListReports, rpt:Op_GetReport, rpt:Op_GenerateEmbedToken, rpt:Seq_BrowseReportCatalog, rpt:Seq_GenerateEmbedTokenHappyPath, rpt:DomainAssociationVO, rpt:Perm_CatalogView ;
+    sd:notes "Strong match end-to-end: Seq_BrowseReportCatalog's server-side permission filtering matches 'adheres to existing security permissions' well, and Seq_GenerateEmbedTokenHappyPath's render step matches 'fully functional embedded Power BI objects'. Wireframe4 and Wireframe5 (confirmed by viewing) visually corroborate the exact three-level functional-area > subcategory > report-list flow this story describes. The functional-area/subcategory two-level grouping this story assumes is the same DomainAssociation-vs-wireframe-Category/Sub-Category granularity gap already raised on 2.1.2 — not re-raised as a second Annotation, same underlying finding (Question_ReportFormShapeVsModeledAggregate). 'Maintains navigational context on return' is a client-side UX concern with no corresponding API/Sequence concept to satisfy it against — not flagged as a gap, since nothing in Reporting's own API contract would need to change to support it (it's ordinary client-side routing state)." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_1_6 a sd:UserStory ;
+    sd:requirementId "2.1.6" ;
+    sd:title "Export reports via Power BI's native export functions" ;
+    sd:statement "As a System User, I need the ability to export reports in a variety of formats [text overlaps two revisions in the source — see this file's header note] MiEdWorkforce report interface to support the export functions defined within Power BI, including PDF, Excel, and CSV, so that I can share critical data with stakeholders and perform offline analysis outside of the MiEdWorkforce system." ;
+    sd:acceptanceCriteria "A user with appropriate report permissions can export standardized reports; the MiEdWorkforce UI supports and displays the export capabilities enabled within the embedded Power BI reports for authorized users. Users can export in a variety of formats, explicitly including PDF, Excel, and CSV, as defined in the Power BI configuration. Users can download the exported report. For Paginated Reports, the system supports Power BI's paginated export features for pixel-perfect print/PDF optimization." ;
+    sd:satisfiedBy rpt:Op_GenerateEmbedToken, rpt:Seq_GenerateEmbedTokenHappyPath, ext:PowerBISystem ;
+    sd:notes "Comment thread (Ross, 2026-01-21: 'Ability to export will reside within the Power BI embedded report'; Groom, 2026-02-09: 'The ability to define the export of reports will live in Power BI, but MiEd will need to support the export functions defined within Power BI'; Caswell: 'User story revised, per Caitlin's comment') is decisive and resolves this story to exactly what's already modeled: Reporting's own obligation ends at successfully embedding the report (rpt:Op_GenerateEmbedToken/Seq_GenerateEmbedTokenHappyPath) — export itself is a native Power BI Service capability of the rendered report object, not a MiEdWorkforce-built feature, consistent with rpt:Rule_ReportDefinitionsOwnedOutsideApplication's existing scope boundary. Satisfied by design, not by omission. See Question_ReportFilterAndDownloadFilenameConvention below for one genuinely open, unresolved sub-question from a later comment on this same story." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Question_ReportFilterAndDownloadFilenameConvention a sd:Annotation ;
+    oa:motivatedBy oa:questioning ;
+    rdfs:comment "Punniyamoorthy, 2026-02-05 (comment 34, no reply on record): (1) will these Power BI reports within MiEdWorkforce have filter options like date range or certificate type, and (2) is a defined filename convention needed for downloads (example given: 'Teaching Cert_MSU_02052026.pdf' for a Teaching certificate report run for MSU as of 2/5/2026)? Filtering is presumably native Power BI report interactivity (see rpt:UT_AdHocExploration) and thus not a MiEdWorkforce-side gap, but a download-filename convention, if wanted, WOULD be something Reporting's own embed/export integration would need to control or coordinate with Power BI's export naming — currently unaddressed anywhere in reporting-capability.md/reporting-technical-design.md. Left open; no reply thread exists to resolve it." ;
+    oa:hasTarget rpt:Req_02_1_6 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .
+
+#################################################################
+# Wireframe-only features not reflected in any numbered story
+#################################################################
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Two features are visually confirmed in this FDD's own wireframes but appear NOWHERE in its Business Specifications prose, HIGH LEVEL SCENARIOS table, or Addendum stories: (1) Wireframe3's report-row context menu offers 'Delete Report' as a sibling option to 'Deactivate' — a hard-delete of a catalog entry, distinct from (and more destructive than) the well-documented Active/Inactive toggle (2.1.3); reporting-api.yml has no DELETE /admin/reports/{id} operation, and rpt:ReportDefinitionAggregate's invariants say nothing about deletion being permitted or forbidden. (2) Wireframe5's category-level report list has an 'All Reports'/'Favorite Reports' tab pair with a per-report star icon — a per-user favoriting capability with no mention anywhere in the text, no corresponding field on any Reporting aggregate, and no plausible ownership elsewhere (unlike the dashboard-preference-persistence gap FDD 11/16 and FDD 29 both found and attributed to the Dashboards capability stub, favoriting a REPORT specifically is squarely Reporting's own catalog concern, not a generic dashboard-widget-arrangement concept). Both are genuine gaps introduced by evidence the FDD itself carries (its own wireframes), not modeling assumptions." ;
+    oa:hasTarget rpt:ReportDefinitionAggregate ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .
+
+#################################################################
+# Business Specifications — capabilities never promoted into the Addendum's
+# 2.1.x numbering. Synthetic IDs, per the FDD 29 pass's own precedent for this
+# exact situation (three never-promoted Business-Specification features there).
+#################################################################
+
+rpt:Req_02_BizSpec_1 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.1" ;
+    sd:title "Report versioning on admin update" ;
+    sd:statement "(No user-story stem given — a flat Business Specifications bullet.) The system will version reports updated by the system admin." ;
+    sd:notes "No satisfiedBy: no versioning concept (version number, prior-version retention, or version history) exists anywhere on rpt:ReportDefinitionAggregate — only a two-state Active/Inactive lifecycle and (per the ERD note) created_at/updated_at timestamps, neither of which is 'versioning' in the sense this bullet implies (the HLS table's own paraphrase, row 2, explicitly separates 'the system admin will be able to update the report' from '2. The MiEdWorkforce system will version the updated report(s)' as two distinct expectations). Genuine coverage gap." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_BizSpec_2 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.2" ;
+    sd:title "Per-report admin controls: export tool selection, availability window, aggregation level" ;
+    sd:statement "(No user-story stem given.) The MiEdWorkforce administrators, by functional area, will be able to: select tools used for exporting a specific report; set active/inactive on-demand; set a timeframe for report availability (Begin Date, which can be a future date, and End Date); and set the level of aggregation (building, district, ISD, statewide, etc.)." ;
+    sd:notes "Active/inactive on-demand is the one clause here that IS modeled and covered — see 2.1.3/rpt:Op_AdminUpdateReportStatus. The other three are genuine gaps: (1) per-report export-tool selection has no field on ReportDefinition and no admin operation to set it (distinct from 2.1.6's end-user-facing native Power BI export, which is a different, already-satisfied concern); (2) a Begin/End Date availability window (with a future-dated Begin Date explicitly called out) has no corresponding fields anywhere — confirmed as a real, intended feature (not a dropped idea) by comment thread 25/26: Punniyamoorthy asks 'Do we need to have validity period on any report?' and Dontje replies 'The validity period is a report setting' — i.e. this was affirmed as real scope, just never modeled; (3) 'level of aggregation (building, district, ISD, statewide)' as an admin-settable report attribute has no field either — RLS-driven org scoping exists at embed-token time (rpt:ResolvedParameters/OrgAncestorCodes) but that's runtime data-scoping for the VIEWER, not an admin-authored 'this report reports at the district level' catalog attribute. All three: coverage-gap." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Report-level availability windowing (Begin/End Date, future-dated Begin Date) and aggregation-level ('building, district, ISD, statewide') are both real, review-confirmed Business Specifications features (see rpt:Req_02_BizSpec_2's own notes for the confirming comment thread) with no corresponding fields anywhere on rpt:ReportDefinitionAggregate. Grouped with rpt:Req_02_BizSpec_1's versioning gap since all three are 'ReportDefinition needs more admin-authored catalog attributes than currently modeled' findings of the same shape." ;
+    oa:hasTarget rpt:Req_02_BizSpec_1, rpt:Req_02_BizSpec_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_BizSpec_3 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.3" ;
+    sd:title "Save, print, and download standardized and ad-hoc reports" ;
+    sd:statement "(No user-story stem given.) The system will allow a user, with a role that has the appropriate report permissions, to do the following with standardized AND ad-hoc reports: download, save, print." ;
+    sd:notes "Download and print for STANDARDIZED (catalog-registered) reports are covered by 2.1.6's resolution (native Power BI export/print, satisfied by Op_GenerateEmbedToken/ext:PowerBISystem). 'Save' and the entire 'ad-hoc' half of this bullet are different: rpt:Rule_ReportDefinitionsOwnedOutsideApplication is explicit that report AUTHORING happens in Power BI Desktop outside the application, and rpt:UT_AdHocExploration's own definition draws the line at 'drilldowns, filtering, and data slicing within an embedded report... does NOT mean users can edit report definitions.' Building or saving a genuinely new ad-hoc report from within the MiEdWorkforce portal (as opposed to exploring an already-catalog-registered one) is therefore out-of-scope for Reporting by its own existing, documented design boundary — not a gap, a deliberate exclusion this bullet's phrasing just doesn't spell out as clearly as the technical-design docs do." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "In-portal ad-hoc report authoring/saving (the 'ad-hoc reports' and 'save' clauses of this Business Specifications bullet) falls outside Reporting's own documented scope boundary — rpt:Rule_ReportDefinitionsOwnedOutsideApplication is explicit that report authoring requires Power BI Desktop/Pro-Premium licensing not exposed in this portal, and rpt:UT_AdHocExploration's definition explicitly distinguishes in-report exploration (in scope) from editing/creating report definitions (out of scope)." ;
+    oa:hasTarget rpt:Req_02_BizSpec_3 ; sd:status "resolved" ; sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_BizSpec_4 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.4" ;
+    sd:title "Source report data from combined MDE/CEPI, historical, and integrated-system sources" ;
+    sd:statement "(No user-story stem given.) MiEdWorkforce will source data for reports using any combination of MDE/CEPI system data, historical data, and data from integrated systems — various data elements (Staffing, Person, Credential) across current and historical date ranges." ;
+    sd:notes "Out-of-scope for Reporting itself: reporting-capability.ttl's own header note is explicit that Reporting 'owns none of the underlying report data or definitions — those live in Power BI Service and each domain respectively.' Data sourcing/provenance for a given report's dataset is a Power BI dataset-design and source-domain concern (Staffing/Credentialing/etc. each own their own data), not something Reporting's own bounded context builds or models — consistent with, not contradicting, the existing scope note." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Report dataset sourcing/provenance across MDE/CEPI systems, the historical warehouse, and integrated systems is owned by Power BI's own dataset layer and by each source domain (Staffing/Credentialing/etc.), consistent with reporting-capability.ttl's own explicit 'owns none of the underlying report data' scope statement — not a Reporting-side build item." ;
+    oa:hasTarget rpt:Req_02_BizSpec_4 ; sd:status "resolved" ; sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_BizSpec_5 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.5" ;
+    sd:title "In-report interactivity, visualization customization, and comparative datasets" ;
+    sd:statement "(No user-story stem given.) The system will allow a user to generate a report with filtering, sorting, add/remove columns and fields, printing, and exporting in a variety of formats; will offer visualization customization (comparative models, anomaly data representation, interactive visuals, sequential color scales, other data visualizations); and will have the ability to define comparative data sets and elements meeting a specific criterion (e.g. comparing academic years, FTE count of teachers year-to-year by district)." ;
+    sd:satisfiedBy rpt:Op_GenerateEmbedToken, rpt:Seq_GenerateEmbedTokenHappyPath, ext:PowerBISystem ;
+    sd:notes "Satisfied by design, same resolution as 2.1.6: all of filtering/sorting/column selection/printing/visualization customization/comparative-dataset definition are native, built-in capabilities of an embedded Power BI report once rendered (rpt:UT_AdHocExploration: 'Drilldowns, filtering, and data slicing within an embedded report... possible within embedded reports'); MiEdWorkforce's own obligation is limited to successfully generating the embed token and rendering the report object (Op_GenerateEmbedToken), consistent with Rule_ReportDefinitionsOwnedOutsideApplication's scope boundary (report/visual design happens in Power BI Desktop by the report author, not in this portal). Not a build item for Reporting beyond what's already modeled." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Req_02_BizSpec_6 a sd:Requirement ;
+    sd:requirementId "2.BizSpec.6" ;
+    sd:title "Staffing-submission-role-gated reports" ;
+    sd:statement "(No user-story stem given.) Staffing submission reports are viewable to those with staffing submission roles." ;
+    sd:satisfiedBy rpt:PermissionKeyVO, rpt:Rule_ReportAccessGatedByDomainPermissions, rpt:Op_GenerateEmbedToken ;
+    sd:notes "This is exactly the general domain-owned-PermissionKey gating mechanism reporting-capability.ttl already documents (each report declares one PermissionKey, e.g. a hypothetical staffing.reports.view, checked by IAM before token issuance) — a specific instance of a pattern already fully modeled, not a new capability. The specific staffing.reports.view-equivalent permission itself is staffing's own domain permission to define (not modeled in this file, per reporting-permissions.ttl's own note that domain-owned {domain}.reports.view permissions belong to each referenced domain's own permissions file, not Reporting's)." ;
+    sd:definedIn rpt:Fdd02Doc .
+
+rpt:Question_BusinessSpecificationsBroaderThanAddendum a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "This FDD's Business Specifications prose section describes at least six distinct capabilities (report versioning, per-report export-tool/availability-window/aggregation-level admin controls, ad-hoc report saving, cross-system data sourcing, in-report visualization/comparative-dataset customization, and staffing-submission-role gating) that were never promoted into the Addendum's own 2.1.1-2.1.6 numbering — the inverse of FDD 29's pattern (where the Addendum fully superseded and exceeded its own Business Specifications section). Modeled here as rpt:Req_02_BizSpec_1 through _6 with synthetic IDs, following the precedent FDD 29's own pass set for its three never-promoted Business-Specification features. Two of the six (versioning, availability-window/aggregation-level) are genuine coverage gaps; three (ad-hoc authoring/saving, cross-system data sourcing, in-report visualization) resolve to out-of-scope or already-satisfied by Reporting's existing design boundary; one (staffing-submission gating) is already covered by the general PermissionKey mechanism." ;
+    oa:hasTarget rpt:Req_02_BizSpec_1, rpt:Req_02_BizSpec_2, rpt:Req_02_BizSpec_3, rpt:Req_02_BizSpec_4, rpt:Req_02_BizSpec_5, rpt:Req_02_BizSpec_6 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn rpt:Fdd02Doc .

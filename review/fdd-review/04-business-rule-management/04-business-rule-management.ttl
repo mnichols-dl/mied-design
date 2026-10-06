@@ -1,0 +1,360 @@
+# FDD 04 review — "4.0 Business Rules Management (4.1 - 4.2)".
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md. Unlike every other FDD ingested so
+# far in this session, this one has NO existing bounded context of its own to reconcile
+# against — see the "no home" finding below, which is the whole point of this pass.
+#
+# Source: "4 - Business Rule Management.docx" (primary) plus its companion folder
+# "Business Rule Engine/" containing "Business Rule Engine Requirements.docx" (an earlier,
+# example-driven prose draft of the same content — CEPI/MDE example rules and a bulleted
+# "Add/Manage Business Rule/Validation Requirements" list restating, at coarser grain and
+# without user-story numbering, almost exactly what Feature 4.2's Addendum stories say more
+# precisely; treated as corroborating background, not re-derived into its own Requirements,
+# same treatment as a "high level scenarios" paraphrase table gets under CONVENTIONS.md),
+# "BusinessRuleTruthTableTemplate.xlsx" (a blank condition/rule-fires truth-table template —
+# reference material for how rule logic would be authored, not itself a requirement), and
+# "BusinessRulesEngine.vsdx" plus a "Question sets/" tree of per-permit-type decision-tree
+# .xmind/.pdf pairs (ACA and four Permit sub-types) — all skipped per CONVENTIONS.md's
+# instruction to skip .vsdx/.xmind, and skipped for the PDFs too since they are just
+# rendered exports of the same .xmind decision trees, not independent narrative content;
+# their existence is noted below as corroborating evidence for Req_04_1_8's "developer-
+# defined workflow logic" and Feature 4.2's "decision tree logic" framing, nothing more.
+#
+# Structure of the document itself, and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "HIGH LEVEL SCENARIOS" paraphrase table
+#   (20 rows, numbered 1-11 with a/b/c sub-lettering) both restate the same rule-engine and
+#   question-set capabilities at coarser grain — skipped per CONVENTIONS.md as duplicative
+#   of the Addendum, which is the primary Requirement unit used below.
+# - The "Addendum" has real Feature/story numbering: Feature 4.1 Question Sets (4.1.1-
+#   4.1.9) and Feature 4.2 Business Logic/Rules (4.2.1-4.2.11) — 20 stories total, all
+#   modeled as sd:UserStory below (all are in "As a <role>, I want <goal>, so that
+#   <benefit>" form; 4.2.5/4.2.6 use "As a MiEdWorkforce System" rather than a human role
+#   but are still narrative first-person goal statements, so UserStory fits, same treatment
+#   FDD 29 gave its own system-voiced stories).
+# - 4.1.9's Acceptance Criteria heading is present with NO content under it in the source
+#   document (confirmed by inspecting document.xml directly, not just the .md extraction) —
+#   modeled as-is with sd:acceptanceCriteria left unset and a note explaining why; see
+#   Question_PreviewStoryAcOrphaned below for the likely cause (a rewrite of 4.1.8 that
+#   absorbed what 4.1.9 was probably going to say).
+#
+# THE CENTRAL FINDING OF THIS PASS: no bounded context or admin-facing configuration
+# surface for a cross-domain "Business Rule Management" authoring tool exists ANYWHERE in
+# the 11 converted domains, confirmed by grepping abox/mied-v3 before treating this as a
+# gap rather than a stale claim: staffing-technical-design.ttl's staff:TP_ValidationRuleEngine
+# is domain-scoped (Staffing's own Collection quality-review rule catalog, not a shared
+# authoring surface other domains configure through); credentialing's
+# CredentialDefinitionAggregate/EndorsementDefinitionAggregate/AssessmentDefinitionAggregate
+# model configurability internally, same story. But "Business Rule Engine" (as "BRM") is a
+# NAMED, UNRESOLVED participant in multiple sequence diagrams in
+# credentialing-sequences.ttl and epp-sequences.ttl (both files' own header comments say so
+# explicitly: "Calls to unmodeled internal collaborators (Business Rule Engine, ...) aren't
+# modeled as references — there's nothing for them to resolve to") and GAPS.md's own FDD 29
+# entry already flagged it as referenced-but-missing. This FDD is the first real source
+# document for that long-referenced-but-never-built capability, so — following the same
+# precedent proflearning-domain.ttl set when it stubbed qset:QuestionSetContext for a
+# cross-cutting capability it referenced but didn't own — a new stub bounded context,
+# bre:BusinessRuleEngineContext, is minted below for Feature 4.2's Business Logic/Rules
+# content. This is flagged in this pass's final report as a candidate addition to
+# CONVENTIONS.md's stub-only registry table, same as proflearning flagged qset: there.
+#
+# Feature 4.1 (Question Sets) is DIFFERENT: it maps onto qset:QuestionSetContext, a stub
+# ALREADY minted (by the proflearning v3 pass) and already referenced by proflearning,
+# credentialing, and epp sequence content as "the Question Set framework (cross-cutting
+# capability)". This FDD is the first real source document naming that same capability's
+# own admin-authoring requirements (search/edit/version Question Sets) rather than just a
+# downstream GET-questions-for-a-domain call. No new stub needed for 4.1 — qset: already
+# exists — but nothing in qset:QuestionSetContext's own minimal stub (one GET operation,
+# for consumption by other domains) implements any of this FDD's authoring-side
+# requirements either, so every Req_04_1_* below is still a coverage gap, just one with an
+# existing conceptual home rather than a brand-new one.
+#
+# Comments (25 total, read via comments.xml): most early-stage threads (ids 4, 6, 7, 8, 10,
+# 12, 13, 18) are editorial "split for scenarios"/"add scenario" remarks on the High Level
+# Scenarios table structure, not the Addendum content used here — not transcribed. Five
+# threads surfaced substantive, Addendum-relevant findings and are modeled as standalone
+# Annotations below: the "is this story needed" / "removed" contradiction on 4.2.5 (the
+# single most important finding of this pass, structurally identical to FDD 29's cover-
+# letter finding — a comment thread says content was cut, the visible document still has
+# it in full), the claimed-but-absent gap/overlap date-validation edit on 4.2.2, the still-
+# open "Standardized System Live Date" design question on 4.2.2, the orphaned-AC finding on
+# 4.1.8/4.1.9, and the incompletely-applied submission-notes edit on 4.2.8. Three further
+# resolved single-comment threads (ids 20/21/22 on the prose spec's "Etc." workflow list;
+# 24/25/26 on Question Set Code provenance) are folded into the relevant story's own
+# sd:notes rather than given their own Annotation, per the "dedupe near-identical/resolved
+# threads" depth-calibration guidance.
+#
+# Tracked changes: not inspected in detail — the comment threads above (several explicitly
+# describing "I have rewritten/revised this story") are a more direct signal of what
+# changed and why than a raw w:ins/w:del diff would be for a document this size.
+#
+# Wireframes: 12 embedded images (word/media/image1.png-image12.png, confirmed in strict
+# document order via document.xml's blip r:embed sequence, all inline within the Addendum's
+# own acceptance-criteria bullets rather than captioned standalone figures like FDD 29's
+# "Wireframe N" pattern). All depict the SAME two underlying screens at different
+# crop/zoom levels: a "Manage question sets" search/copy screen (image1-3) and a multi-
+# question "Question Set" builder/editor screen with per-question conditional branching,
+# "Question Detail" sub-view, and a separate "Business Rules"/rule-detail admin screen
+# pair (image4-10 for the question builder + detail; image11-12 for Business Rules). Five
+# representative images were viewed and extracted (confirming the general shape described
+# above, not assumed): wireframe-01 (image1, Manage Question Sets), wireframe-02 (image4,
+# the fullest view of the Question Set builder with conditional branching/jump-to logic and
+# a broken "Question 4 — Question no longer exists" reference left visible in the mockup
+# itself), wireframe-03 (image6, the "Question Detail" sub-screen with a Data-Source-backed
+# question type), wireframe-04 (image11, the Business Rules list — paginated at "6115
+# items", i.e. explicitly modeled as a large-scale catalog, not a handful of rules), and
+# wireframe-05 (image12, a single Business Rule's detail/edit screen showing Status,
+# Effective Date, and a read-only "Actions" list of what firing the rule does — send email,
+# send notification, add to a worklist). The remaining 7 images (2-3, 5, 7-10) were not
+# individually viewed — they are further crops of the same two screens already confirmed,
+# consistent with their surrounding acceptance-criteria bullet text (Question Text/Type/
+# Description fields, error-message editing) rather than a distinct undocumented screen.
+#
+# Validation note: this file's Requirements have NO sd:satisfiedBy anywhere (by design —
+# see the central finding above) and every one is instead covered by a coverage-gap
+# Annotation. The "unaccounted-for" check therefore depends entirely on the two grouped
+# Annotations below (one per Feature) correctly oa:hasTarget-ing all 20 Req_04_* instances,
+# not on any per-story Annotation — verified by direct enumeration before validation.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix bre:   <urn:solutiondesign:instance:businessruleengine:> .
+@prefix qset:  <urn:solutiondesign:instance:questionsets:> .
+
+#################################################################
+# Stub bounded context — minted by this pass (see header note)
+#################################################################
+
+bre:BusinessRuleEngineContext a sd:BoundedContext ;
+    sd:identifier "businessruleengine" ; sd:displayName "Business Rule Engine" ;
+    sd:kind "PlatformCapability" ; sd:status "stub" ;
+    sd:purpose "The cross-domain admin-facing authoring/configuration surface this FDD (4.0 Business Rules Management) describes: assigning validations to a functional area/collection/category/data element, toggling them on/off (on-demand or by effective-date range), setting severity (Error/Warning) and justification requirements, connecting to external data sources (EEM, Data Warehouse) for cross-system validation, applying validations uniformly across online/bulk/API entry points, versioning rule changes with an audit trail, managing the workflow error-message catalog, and producing business-rule/file-schema extracts for external publication. Feature 4.2 (Business Logic/Rules) of this FDD is the primary source for this stub; Feature 4.1 (Question Sets) is a related but conceptually distinct cross-cutting capability that already has its own stub — see qset:QuestionSetContext — not modeled as part of this context." ;
+    sd:notes "MINTED BY THIS PASS, not previously in CONVENTIONS.md's stub-only registry. Justification: 'Business Rule Engine' (as the mermaid participant alias 'BRM') already appears, unresolved, as a named collaborator in multiple sequence diagrams in BOTH credentialing-sequences.ttl and epp-sequences.ttl — both files' own header comments explicitly say calls to it aren't modeled as SequenceReferences because 'there's nothing for them to resolve to'. GAPS.md's own FDD 29 entry independently flagged the same gap from the credentialing side ('Business Specification #4 — Business Rule Management... no bounded context... exists anywhere'). This FDD is the first real source document for that long-referenced capability, so it gets a real (if minimal) stub IRI now, the same way proflearning-domain.ttl minted qset:QuestionSetContext for a cross-cutting capability it referenced but didn't own. Deliberately NOT populated with any Aggregate/ApiOperation/Sequence beyond this bare BoundedContext declaration — this FDD's own Addendum describes only the desired admin UI/behavior, not any concrete API or domain-model shape, and inventing one here would be exactly the kind of fabricated satisfiedBy target this project's conventions warn against. Flagged in this pass's final report as a candidate addition to CONVENTIONS.md's stub-only registry table." .
+
+#################################################################
+# Source documents
+#################################################################
+
+bre:Fdd04Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/04 - Business Rule Management/4 - Business Rule Management.docx" ;
+    sd:notes "Covers Features 4.1-4.2 (document subtitle: '4.0 Business Rules Management (4.1 - 4.2)'). Author Vidhya Punniyamoorthy (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/01/2025 per the signoff table — but comments.xml contains dated entries through 2026-04-01, well after that signoff date, same 'approved-but-still-actively-revised' pattern the FDD 29 pass already found for that document. Not resolved here; noted so the signoff table isn't read as 'nothing changed after this.'" .
+
+bre:BreRequirementsDoc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/04 - Business Rule Management/Business Rule Engine/Business Rule Engine Requirements.docx" ;
+    sd:notes "Companion prose draft (CEPI/MDE example business rules plus a coarser 'Add/Manage Business Rule/Validation Requirements' bullet list) — corroborating background for Feature 4.2, not independently re-derived into Requirements of its own since it restates the same content the Addendum states more precisely and with real story numbering. No sign-off table or author metadata of its own." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/04-business-rule-management/wireframes/wireframe-01-manage-question-sets.png" ;
+    sd:notes "Confirmed by viewing: 'Manage question sets' screen — optional Group filter, '+ Add question set' action, an 'Include historical versions' checkbox, and a 'Select a set of questions to edit or copy' picker with a Copy action. Directly corroborates 4.1.1 (search) and 4.1.2 (edit/copy existing sets)." ;
+    sd:definedIn bre:Fdd04Doc .
+bre:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/04-business-rule-management/wireframes/wireframe-02-question-set-builder-teaching-cert.png" ;
+    sd:notes "Confirmed by viewing: 'Standard Teaching Certificate' > 'Preliminary Teaching Certificate Questions' builder, showing 5 sequential Question cards with per-question Question Text/Question Type, conditional 'If Yes'/'If No' branching (Show Next Question / Show Error Message with custom text / Jump to Question N), a Select-type question with an inline option-list editor (Add Option), and — notably — a broken branch in the mockup itself: Question 2's 'If No' branch reads 'Jump to Question 4' with a visible validation error 'Question no longer exists.' This is the mockup's own author demonstrating what the branching-integrity validation from 4.1.2/4.2's story text should prevent, not a defect in this ingestion — but it's also a real, mockup-level illustration of exactly the kind of dangling-reference risk 4.1.2's comment thread (Question_PreviewStoryAcOrphaned below) was probing when it asked whether workflows could be left orphaned." ;
+    sd:definedIn bre:Fdd04Doc .
+bre:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/04-business-rule-management/wireframes/wireframe-03-question-detail-data-source.png" ;
+    sd:notes "Confirmed by viewing: single-question 'Question Detail' sub-screen ('Completed Approved Teacher or Prep Program') with Question Name, Question Text, a 'Select from Data Source' Question Type bound to a named Data Source ('Michigan Higher Education Institutions'), plus Status/Effective Date fields. The 'Select from Data Source' question type is new information not spelled out in 4.1.3's own acceptance criteria (which only lists text/numeric/date/boolean as example types) — a real, if minor, type the Addendum text doesn't enumerate." ;
+    sd:definedIn bre:Fdd04Doc .
+bre:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/04-business-rule-management/wireframes/wireframe-04-business-rules-list.png" ;
+    sd:notes "Confirmed by viewing: paginated 'Business Rules' list (breadcrumb: Dashboard > Credentialing > Credential Data & Management > Business Rules) explicitly showing '1-10 of 6115 items' — i.e. the mockup's own author modeled this as a large-scale catalog (thousands of rules), not a handful of hand-managed toggles, which matters for reading 4.2.1/4.2.9's search/filter/frequency-review requirements as necessary rather than nice-to-have at this scale. Each row has a status toggle; a filter icon and an export/download icon sit above the table." ;
+    sd:definedIn bre:Fdd04Doc .
+bre:Wireframe5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/04-business-rule-management/wireframes/wireframe-05-business-rule-detail.png" ;
+    sd:notes "Confirmed by viewing: single Business Rule's 'Details' tab (Rule Name, Description, Status, Effective Date) plus a read-only 'Actions' panel listing what firing the rule does (Send Email to Application Submitter, Send Notification to Application Submitter, Add application to a named worklist) — i.e. the mockup ties a business rule directly to Communications-style side effects and worklist routing, a concrete detail neither Feature 4.2's Addendum text nor this stub context currently spells out. Also has its own 'History' tab (not screenshotted), consistent with 4.2.8's versioning/audit requirement." ;
+    sd:definedIn bre:Fdd04Doc .
+
+#################################################################
+# Requirements — Feature 4.1: Question Sets
+#################################################################
+
+bre:Req_04_1_1 a sd:UserStory ;
+    sd:requirementId "4.1.1" ;
+    sd:title "Search existing Question Sets" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to search for existing Question Sets based on the assigned code or defining text so that I can locate the specific application form or validation logic to maintain." ;
+    sd:acceptanceCriteria "Search interface within the Business Rule Management area; input a Question Set Code or Text (Name, Description) to retrieve records; results display Code, Name, Version, and Status; results limited to Question Sets corresponding to workflows associated with the admin's functional-area permissions." ;
+    sd:notes "Functional-area-scoped search results imply a Permission/PermissionScope concept scoped by functional area — no such scoping concept exists on any Permission anywhere in the 11 converted domains beyond the existing generic PermissionScope vocabulary (System-wide/Entity/District/etc.), none of which is 'functional area.' Wireframe1 (confirmed by viewing) directly corroborates the search+picker UI." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_2 a sd:UserStory ;
+    sd:requirementId "4.1.2" ;
+    sd:title "Maintain Question Sets via edit/copy, not net-new creation" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to maintain Question Sets by editing text or creating new versions of existing sets so that I can update language and options without developer intervention." ;
+    sd:acceptanceCriteria "'Edit' function modifies text parameters (Question Text, Error Messages, Option Text) of an existing Question Set; 'Copy'/'Version' function duplicates an existing set's structure/text into a new draft; net-new Question Set creation (new workflows/structures from scratch) is restricted to developer/database updates — Admin UI only maintains existing defined sets; Admin can modify Question Options (e.g. add a dropdown value) within a version; actions restricted to Admins with permission for the specific Functional Area." ;
+    sd:notes "Deliberately narrow authoring scope (text/options only, no new workflow structures) is a significant, load-bearing design decision for this whole capability — an admin CANNOT define a brand-new application flow through this UI, only retexture an existing developer-built one. This bounds every other 4.1/4.2 story's 'no developer intervention needed' framing to cosmetic/parametric changes only, not new business logic. Wireframe1 corroborates the Edit/Copy actions." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_3 a sd:UserStory ;
+    sd:requirementId "4.1.3" ;
+    sd:title "Define Question Set Details (Group, Question, Type, Description)" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to define Question Set Details including Group, Question, Type, and Description so that the set is properly categorized and displayed." ;
+    sd:acceptanceCriteria "Entry form requires a 'Group' selection/entry; user enters 'Question' text shown to the end-user; user selects a 'Question Type' (e.g. text, numeric, date, boolean/yes-no); user enters a 'Description' for internal context; mandatory fields (Group, Question, Type) validated before saving." ;
+    sd:notes "Wireframe3 (confirmed by viewing) shows a 'Select from Data Source' Question Type bound to a named external data source ('Michigan Higher Education Institutions') that this story's own example list (text/numeric/date/boolean) doesn't mention — the mockup is richer than the acceptance criteria text here. The prose Business Specifications section (not the Addendum) separately lists example workflows this framework applies to (Permit Application, Teaching Certification Application, Teaching Cert Renewal, 'Etc.') — comment thread 20 (Caswell: 'Please confirm the scope of Etc.') -> 21 (Groom: notes a decision-tree/dependency-matrix discussion is needed to determine which workflows apply) -> 22 (Caswell: 'Revised this specification per your comment... please resolve') shows this was reworked during review; the resolution isn't visible in the extracted text (the revision replaced rather than annotated the passage), so the current 'Etc.' framing should be read as still slightly provisional rather than a closed list." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_4 a sd:UserStory ;
+    sd:requirementId "4.1.4" ;
+    sd:title "Auto-assign Question Set Code and provenance fields" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want the system to assign a Question Set Code and automatically display the Created by and Creation date so that provenance is tracked." ;
+    sd:acceptanceCriteria "Unique Question Set Code auto-generated/assigned on initial save; 'Created by' captures the creating admin's username/ID; 'Creation date' captures the creation timestamp; Question Set Code, Created by, and Creation date are all read-only after creation." ;
+    sd:notes "Comment 24 (Caswell: 'Can detail be added here about the assignment of the question set code?') -> 25 (Groom: 'intended to assign an ID to the question set for easy reference and storage') -> 26 (Caswell: 'Revised to include that note') is a resolved clarification thread, folded in here rather than given its own Annotation — it just confirms the Code is a simple reference identifier, not a load-bearing business key with its own format rules." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_5 a sd:UserStory ;
+    sd:requirementId "4.1.5" ;
+    sd:title "Set Effective/End Date and Active/Inactive status for a Question Set" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to set an Effective Date and an optional End Date for a Question Set so that its period of validity is controlled." ;
+    sd:acceptanceCriteria "Effective Date (start) selectable; optional End Date selectable, including future dates; manual Active/Inactive toggle; system prevents the Question Set from firing in workflows outside its Effective/End Date range." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_6 a sd:UserStory ;
+    sd:requirementId "4.1.6" ;
+    sd:title "Edit question text and error messages without developer changes" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to edit the text of questions and associated error messages so that I can update application requirements without requiring developer changes." ;
+    sd:acceptanceCriteria "Modify the Question text shown to the applicant; add/edit/remove Error Message text shown on validation failure; changes reflected in the application workflow immediately upon the Question Set's effective date/activation; error message fields support alphanumeric characters for specific citations (e.g. credit-hour counts)." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_7 a sd:UserStory ;
+    sd:requirementId "4.1.7" ;
+    sd:title "Version Question Sets with single-active-version enforcement" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to set the version of the Question Set and ensure the system enforces that only one version is active at a time, allowing older versions to be archived, so that it is utilizing the most recent and up to date version." ;
+    sd:acceptanceCriteria "System assigns a version number; activating a new version auto-sets the previous version to Inactive/Archived; system prevents two versions of the same Question Set (same Group/Code) from being Active simultaneously; historical versions and notes remain viewable for audit but are not applied to live data entry." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_8 a sd:UserStory ;
+    sd:requirementId "4.1.8" ;
+    sd:title "Present questions per developer-defined workflow logic and active Question Set text" ;
+    sd:statement "As a User, I want the system to present questions based on the developer-defined workflow logic and the active Question Set text so that I am guided through the correct application path based on my responses." ;
+    sd:acceptanceCriteria "Application workflow dynamically displays questions using text/error messages from the 'Active' version; branching logic (e.g. 'If Yes, jump to Question 3') enforced per the hard-coded/developer-defined workflow structure; a stop-condition answer (e.g. 'No' to a required eligibility question) displays the Admin-configured Error Message for that rule; user input validated against the defined Question Type before proceeding." ;
+    sd:notes "Comment 32 (Groom: 'Should this capture the ability to submit the update after preview? Is there validation here to ensure workflows that require a question set are not left orphaned? Audit details stored upon save?') -> 33 (Caswell: 'Yes, we absolutely need...submit/save after previewing... developers structurally tie workflows and question sets together in code so an admin can't accidentally orphan a workflow... admins restricted from deleting core question sets, only modifying text/options within them... standard audit details will be captured... rewritten the story to better align...please accept the changes and resolve') is a substantive, resolved thread — its answers (orphan-protection is a structural/code-level guarantee, not a UI feature; audit capture confirmed) are folded in here as the best available account of the intended design, since the visible acceptance-criteria text for THIS story doesn't literally restate them. See Question_PreviewStoryAcOrphaned below for why this thread's rewrite likely explains 4.1.9's now-empty Acceptance Criteria section. Wireframe2's own broken 'Jump to Question 4 — Question no longer exists' branch is a concrete illustration of the exact orphaning risk this thread discusses." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_1_9 a sd:UserStory ;
+    sd:requirementId "4.1.9" ;
+    sd:title "Preview Question Set before activation" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to be able to preview the Question Set before activation so that I can validate the intended user experience and logic flow." ;
+    sd:notes "NO Acceptance Criteria text exists under this story's heading in the source document — confirmed by inspecting document.xml directly (the heading 'Acceptance Criteria' is immediately followed by the 'Feature 4.2' section heading, with nothing in between). See Question_PreviewStoryAcOrphaned below: the comment-33 rewrite of 4.1.8 explicitly added submit-after-preview language to THAT story, which is circumstantial evidence the preview-and-submit content originally meant for 4.1.9 was folded into 4.1.8 during revision and 4.1.9's own AC was never backfilled — left here as an open documentation gap rather than guessed at." ;
+    sd:definedIn bre:Fdd04Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "4.1.9 ('Preview the Question Set before activation') has a heading and a user-story statement but a completely empty Acceptance Criteria section in the source document. The comment-32/33 thread on 4.1.8 (Groom asking whether 4.1.8 'should capture the ability to submit the update after preview'; Caswell confirming yes and saying the story was rewritten) is the likely cause: 4.1.9's own intended content (preview-then-submit, orphan-protection guarantees, audit capture) appears to have been absorbed into 4.1.8's rewrite, leaving 4.1.9 an orphaned stub itself — an ironic parallel to the orphaned-workflow risk the thread was discussing. Not resolved here; flagged for whoever owns this FDD next to either backfill 4.1.9's AC or formally merge/retire it." ;
+    oa:hasTarget bre:Req_04_1_8, bre:Req_04_1_9 ; sd:impact "L" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .
+
+#################################################################
+# Requirements — Feature 4.2: Business Logic/Rules
+#################################################################
+
+bre:Req_04_2_1 a sd:UserStory ;
+    sd:requirementId "4.2.1" ;
+    sd:title "Configure available business rules by Functional Area/Collection/Category/Data Element" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to configure available business rules for Functional areas, Collections, Categories, and Data elements so that I can enforce specific validation logic defined for my area of responsibility." ;
+    sd:acceptanceCriteria "Display developer-defined business rules available for the selected hierarchy level; Admin activates/deactivates specific rules for a Collection or Data Element (not creating new logic from scratch); Admin sets rule parameters where applicable (e.g. a credential cost or credit-hour threshold); configuration saved so the rule executes per the Admin's settings in that context." ;
+    sd:notes "Same 'configure existing developer-built logic, don't author new logic' scoping as 4.1.2 — this is consistently how the whole FDD frames 'no developer intervention required.' Wireframe4 (confirmed by viewing) shows this modeled as a large-scale catalog (paginated '6115 items'), which is useful context for why search/filter (this story's own hierarchy-level selection) matters at this scale." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_2 a sd:UserStory ;
+    sd:requirementId "4.2.2" ;
+    sd:title "Turn business rules on/off on-demand or by effective date range" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to be able to turn business rules on or off on-demand or set them using effective date ranges so that I can control when rules are enforced." ;
+    sd:acceptanceCriteria "Manual toggle immediately sets a rule's status Active/Inactive; Admin enters a Start Date (Effective Date) and optional End Date; future-dated rules configurable to auto-activate on their Effective Date; validation engine checks current system date against the rule's date range and does not fire outside it; system prevents a rule remaining active past its End Date." ;
+    sd:notes "Wireframe5 (confirmed by viewing) shows the single-rule Status/Effective Date fields this story describes, plus a read-only Actions list (send email, send notification, add to worklist) that ISN'T described anywhere in this story's own acceptance criteria — a rule apparently does more than gate a validation outcome, it can also directly trigger Communications-style side effects and worklist routing, per the mockup. See the two Annotations below (Question_BackdatingAndSystemLiveDateUnresolved, Question_DateRangeGapValidationClaimedNotVisible) for two distinct, still-open threads on this exact story." ;
+    sd:definedIn bre:Fdd04Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 49 (Groom, 2026-03-27): 'Need to discuss back dating, specifically for the rules that will be implemented at system launch, do we anticipate using a system live date?' Reply 50 (Doherty, relaying 'Yashi', 2026-04-01): confirms the current Acceptance Criteria only cover immediate (on-demand) and future-dated rules, that a rule change applies to NEW transactions going forward and won't affect pending applications, but that the strategy for 'Day 1' baseline rules at system launch is NOT yet defined ('I have added a point for the Standardized System Live Date that is to be defined yet'), and explicitly asks whether the UI needs to support manually back-dating an Effective Date at all, or whether the system should only ever look forward from the current/future date. Genuinely unresolved — no 'Standardized System Live Date' concept appears anywhere in the visible Addendum text, so either the promised addition never made it into this revision or it lives elsewhere undocumented." ;
+    oa:hasTarget bre:Req_04_2_2 ; sd:impact "M" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Comment 51 (Groom, 2026-03-27): 'Need validation to ensure there is not a gap between the end and new effective dates.' Reply 52 (Doherty, relaying 'Yashi', 2026-04-01): 'I have updated the Acceptance Criteria to include a specific validation that checks for gaps (as well as overlaps) when a new effective date is set for an existing rule.' No such gap/overlap-check language appears anywhere in 4.2.2's visible acceptance criteria (confirmed against document.xml directly, not just the .md extraction) — the reply claims an edit that isn't reflected in the document, the same 'reviewer says content was added/removed but the visible text disagrees' pattern the FDD 29 pass found for its own cover-letter story (there, content claimed removed but still present; here, content claimed added but still absent)." ;
+    oa:hasTarget bre:Req_04_2_2 ; sd:impact "M" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_3 a sd:UserStory ;
+    sd:requirementId "4.2.3" ;
+    sd:title "Set validation severity: Error or Warning" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to set the validation severity status to Error or Warning so that the system enforces whether a user must correct the issue or may potentially bypass it." ;
+    sd:acceptanceCriteria "Rule configuration interface includes an Error/Warning severity selector; Error blocks saving/submission until resolved; Warning alerts the user but allows the process/submission to proceed; UI indicator reflects severity (e.g. red for Error, yellow for Warning)." ;
+    sd:notes "Comment 83 (Groom, 2026-03-27) reads simply 'Success, Error and Warnings' — anchored near this story's severity-selector text, likely proposing a third state ('Success') be represented in the UI indicator scheme alongside Error/Warning; no reply or resolution recorded, and the visible AC still only names Error/Warning. Minor, not raised as its own Annotation given how little content the comment itself carries." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_4 a sd:UserStory ;
+    sd:requirementId "4.2.4" ;
+    sd:title "Justification requirement (Required/Optional) for Warning-severity bypass" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to define whether justification options for warnings are Required or Optional so that exceptions can be appropriately documented." ;
+    sd:acceptanceCriteria "Justification configuration setting available specifically when Severity Status is Warning; Admin selects Required (forces a text explanation before bypass) or Optional (allows bypass without comment); justification text stored alongside the submitted data record for audit purposes." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_5 a sd:UserStory ;
+    sd:requirementId "4.2.5" ;
+    sd:title "Connect to external data sources (EEM, Data Warehouse) for validation" ;
+    sd:statement "As a MiEdWorkforce System, I want to connect to external data sources to validate data submissions against required external criteria." ;
+    sd:acceptanceCriteria "Business rule engine connects to the Educational Entity Master (EEM) to validate entity data (e.g. verifying a building code is open/active); connects to the Data Warehouse to validate against historical data records; business rules can reference values from these external sources as criteria (e.g. 'If Building Status in EEM = Closed, trigger Error'); validation fails/triggers the configured error if submitted data doesn't match the external-source criteria." ;
+    sd:notes "SEE Question_ExternalDataSourceStoryContradiction below — the single most important finding of this pass. The full 4-criterion story text above is what's actually in the document today, but a review comment thread on this exact story says it was removed as unneeded." ;
+    sd:definedIn bre:Fdd04Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Comment 67 (Groom, 2026-03-27), anchored directly on 4.2.5's own title/opening sentence: 'Is this story needed? The Interface Integrations should define the connections to these external sources, and the BRE should utilize those integrations to perform the validations.' Reply 68 (Doherty, relaying 'Yashi', 2026-04-01): 'This has been removed as it was not necessarily needed.' 4.2.5 is, in fact, STILL FULLY PRESENT in the document — title, statement, and all 4 acceptance criteria (confirmed against document.xml directly) — exactly the same 'reviewer's stated resolution contradicts the visible document' pattern the FDD 29 pass's Question_CoverLetterStoryContradiction found for its own cover-letter story, and structurally identical to it: a reviewer proposes cutting a story on the grounds that a DIFFERENT FDD/capability (here, Interfaces and Integrations Setup (8) — already an independently-confirmed unconverted dependency per GAPS.md's own FDD 02 entry) should own the underlying connection, the author agrees and reports it removed, and the removal never actually happened in the document. This directly affects how bre:BusinessRuleEngineContext's own future scope should be read: per this unresolved thread, the EEM/Data-Warehouse CONNECTION itself may belong to FDD 8's Interfaces/Integrations capability rather than to Business Rule Engine, with BRE only consuming an already-established integration — but since FDD 8 itself has no mied-v3 conversion either, this can't be confirmed or reassigned here, only flagged." ;
+    oa:hasTarget bre:Req_04_2_5 ; sd:impact "H" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_6 a sd:UserStory ;
+    sd:requirementId "4.2.6" ;
+    sd:title "Apply business rule validations uniformly across online, bulk, and API submission" ;
+    sd:statement "As a MiEdWorkforce System, I want to apply business rule validations to all data submissions regardless of whether the data comes from an online form, a bulk file upload, or an API entry point." ;
+    sd:acceptanceCriteria "Active business rules execute on manual online-form entry/save; the same rule set executes record-by-record during bulk file upload; the same rule set executes on API-received data; consistent error/warning messages returned to the user or API response log regardless of submission method." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_7 a sd:UserStory ;
+    sd:requirementId "4.2.7" ;
+    sd:title "Manage validation messages (Add, Edit, Remove)" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to manage messages (Add, Edit, Remove) so that I can update the specific text and codes presented to users when validation fails." ;
+    sd:acceptanceCriteria "Admin enters/saves custom 'Validation Message' text; Admin associates a validation code with the message for local-system reference; Admin edits existing message text without a code deployment; Admin removes/unlinks a message from a rule; updates reflected immediately upon saving (or upon the rule's effective date)." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_8 a sd:UserStory ;
+    sd:requirementId "4.2.8" ;
+    sd:title "Version rule changes and capture full audit trail with submission notes" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want the system to version all rule creation and modifications and store comprehensive audit data (including user account information and submission notes) so that all changes are traceable." ;
+    sd:acceptanceCriteria "New version number auto-assigned whenever a rule is modified or a new effective-date range is created; User ID/Account Name of the modifying admin captured and stored; admin enters Submission Notes explaining the change before saving a modification; viewable history of previous rule versions including Created By, timestamps, and notes; audit data is read-only once committed." ;
+    sd:notes "The visible acceptance-criteria text for the Submission-Notes bullet is grammatically broken in the source document — 'The  enter \"Submission Notes\" explaining the change before saving a modification' (missing subject/verb, e.g. 'The Admin can/must enter') — consistent with a mid-edit artifact from comment 91 (Groom: 'Need to confirm if the submission notes are required or optional across functional areas') -> 92 (Doherty, relaying 'Yashi': 'This has been changed') never being fully re-typeset. Modeled above with the evident intended meaning ('admin enters Submission Notes...') rather than the broken literal text; flagged here rather than silently corrected." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_9 a sd:UserStory ;
+    sd:requirementId "4.2.9" ;
+    sd:title "Review validation frequency and trigger details" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to review the frequency and details of specific validations being triggered so I can monitor system usage and rule necessity." ;
+    sd:acceptanceCriteria "Dashboard/report view listing active validation rules and trigger-frequency counts; detailed metrics distinguishing Online Form / Bulk File Upload / API-entry triggers; Admin can filter frequency data by functional area, collection, or timeframe; associated trigger details displayed to help assess whether a rule is functioning as intended or causing excessive errors; frequency metrics available as a predefined widget addable to the System Admin Dashboard." ;
+    sd:notes "The 'predefined widget... on the System Admin Dashboard' clause is the same kind of cross-cutting Dashboards-capability dependency the FDD 29 pass's Req_29_1_8 already found for Credentialing's own landing page — dash:DashboardsContext (a stub-only context) is this story's natural second home for that one clause, though the bulk of the story (the frequency-review capability itself) is squarely Business Rule Engine's own, not Dashboards'." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_10 a sd:UserStory ;
+    sd:requirementId "4.2.10" ;
+    sd:title "Dry-run validations against current data before publishing" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to be able to run specified validations against current system data before publishing them to production so that I can validate enforcement." ;
+    sd:acceptanceCriteria "Admin selects specific pending/draft business rules to execute against current system data; the test run identifies potential data violations WITHOUT permanently rejecting or altering live records; results report lists which records would fail the new validation logic, for impact assessment; interface confirms the validation logic enforces the defined conditions correctly against known data scenarios." ;
+    sd:notes "This dry-run/simulation capability is genuinely distinct from anything in the domain model of any of the 11 converted domains — none of them models a non-destructive 'test this rule against live data without applying it' concept anywhere, credentialing's Rule_ManualReviewTriggering and staffing's staff:TP_ValidationRuleEngine included." ;
+    sd:definedIn bre:Fdd04Doc .
+
+bre:Req_04_2_11 a sd:UserStory ;
+    sd:requirementId "4.2.11" ;
+    sd:title "Produce validation rule and file schema extracts for external publication" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to produce extracts of validation rules and file schemas with specific criteria for inclusion so that I can publish documentation for use by external partners and data hubs." ;
+    sd:acceptanceCriteria "Interface configures extract parameters (Data Collection, Type, or specific Data Elements for inclusion); generates a Business Rule Validations extract with validation rule text and error codes for replication in local systems; generates a File Schemas extract with file-upload structural requirements; the File Schema extract automatically includes Sample Files populated with test data for external vendors." ;
+    sd:notes "The main Business Specifications prose section (not the Addendum) cites CEPI's own public MSDS collection-component-matrix and sample-XML-file pages as the real-world precedent this extract capability is meant to replicate for MiEdWorkforce — concrete, checkable examples of the target output format, not just abstract 'produce documentation' language." ;
+    sd:definedIn bre:Fdd04Doc .
+
+#################################################################
+# Coverage-gap Annotations — the central finding of this pass
+#################################################################
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 4.1 (Question Sets): none of the 9 stories' admin-authoring capabilities (search, edit/copy/version, Question Set Details entry, code/provenance auto-assignment, effective-date gating, text/error-message editing, single-active-version enforcement, preview) are implemented anywhere in the 11 converted domains. qset:QuestionSetContext (minted by the proflearning v3 pass) is this content's natural conceptual home — proflearning-domain.ttl's own notes already call it 'the Question Set framework (cross-cutting capability)' — but that stub currently contains only qset:GetQuestionSetsOperation, a bare consumption-side GET for another domain (proflearning) to retrieve already-defined question sets by domain name. That is not evidence any of THIS admin-authoring surface exists; it is a downstream reader of whatever eventually implements it. No satisfiedBy is asserted on any Req_04_1_* for this reason." ;
+    oa:hasTarget bre:Req_04_1_1, bre:Req_04_1_2, bre:Req_04_1_3, bre:Req_04_1_4, bre:Req_04_1_5,
+        bre:Req_04_1_6, bre:Req_04_1_7, bre:Req_04_1_8, bre:Req_04_1_9 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 4.2 (Business Logic/Rules): none of the 11 stories' admin-authoring capabilities (rule activation by hierarchy level, on/off + effective-date scheduling, severity/justification configuration, external-data-source-backed validation, uniform online/bulk/API enforcement, message management, versioning/audit, frequency review, dry-run testing, extract publication) are implemented anywhere in the 11 converted domains, confirmed by grep before writing this entry (see this file's own header note for what was checked and ruled out: staffing's staff:TP_ValidationRuleEngine is domain-scoped to Staffing's own Collection quality-review, not a shared authoring surface; credentialing's CredentialDefinitionAggregate/EndorsementDefinitionAggregate/AssessmentDefinitionAggregate model configurability internally only). Unlike Feature 4.1, this content had NO existing stub anywhere prior to this pass — bre:BusinessRuleEngineContext is minted in this same file specifically to give it one, on the strength of 'Business Rule Engine'/'BRM' already being a named-but-unresolved participant in credentialing-sequences.ttl's and epp-sequences.ttl's own sequence diagrams. No satisfiedBy is asserted on any Req_04_2_* — the new stub carries no Aggregate/ApiOperation/Sequence of its own, deliberately, per this file's header note on why that would be a fabricated target." ;
+    oa:hasTarget bre:Req_04_2_1, bre:Req_04_2_2, bre:Req_04_2_3, bre:Req_04_2_4, bre:Req_04_2_5,
+        bre:Req_04_2_6, bre:Req_04_2_7, bre:Req_04_2_8, bre:Req_04_2_9, bre:Req_04_2_10, bre:Req_04_2_11 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn bre:Fdd04Doc .

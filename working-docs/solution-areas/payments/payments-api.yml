@@ -1,0 +1,1092 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Payments API
+  version: 1.0.0
+  description: |
+    Centralized payment processing for credential application fees, including CEPAS
+    redirect orchestration, refund lifecycle management, and nightly posting-file
+    reconciliation. Primary consumers are the Credentials domain UI, Credentials
+    domain service (bulk initiation), and Financial Admin tooling.
+
+    This API never handles PCI-sensitive payment card data. All card processing
+    occurs on the CEPAS payment gateway. MiEdWorkforce manages payment lifecycle
+    state, CEPAS redirect orchestration, hash validation, and reconciliation.
+
+servers:
+  - url: http://payments-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/payments/api/v1
+    description: External via APIM
+
+paths:
+  # ============================================================================
+  # PAYMENT INITIATION
+  # ============================================================================
+
+  /payments/initiate:
+    post:
+      summary: Initiate payment redirect to CEPAS
+      operationId: initiatePayment
+      tags: [Payments]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.transaction.initiate
+      x-scope-sensitive: false
+      description: |
+        Creates a PaymentTransaction record and returns a CEPAS redirect URL with
+        AES GCM-encrypted payment parameters. The client redirects the user's browser
+        to this URL to complete payment on the CEPAS site.
+
+        Payment amount is calculated from the credential type at initiation and is
+        immutable after transaction creation. Scope is not evaluated here; the calling
+        domain or UI is responsible for ensuring the user may act on the given
+        application before invoking this endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [applicationId]
+              properties:
+                applicationId:
+                  type: string
+                  format: uuid
+                  description: Credential application being paid for
+                returnUrl:
+                  type: string
+                  format: uri
+                  description: Override return URL (defaults to configured value)
+      responses:
+        '200':
+          description: Payment initiation data with CEPAS redirect URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentInitiationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Application already has a completed payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: CEPAS payment system unavailable (circuit breaker open)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/initiate-bulk:
+    post:
+      summary: Initiate bulk payment for multiple applications
+      operationId: initiateBulkPayment
+      tags: [Payments]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.transaction.initiate-bulk
+      x-scope-sensitive: true
+      description: |
+        Creates a BulkPaymentTransaction covering fees for multiple credential
+        applications. Total must equal sum of individual application fees. Payment
+        succeeds or fails atomically — no partial payments.
+
+        Returns only applications within the organization specified by
+        X-Organization-Context. Users with ISD-level authorization will see results
+        for all constituent districts and buildings. If any selected application is
+        outside the caller's scope, the entire request is rejected.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [applicationIds]
+              properties:
+                applicationIds:
+                  type: array
+                  minItems: 2
+                  maxItems: 100
+                  items:
+                    type: string
+                    format: uuid
+                  description: Applications to pay in single transaction
+                returnUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Bulk payment initiation data with CEPAS redirect URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkPaymentInitiationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized for one or more applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: One or more applications already have completed payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: CEPAS payment system unavailable
+
+  /payments/confirm:
+    get:
+      summary: Process CEPAS redirect confirmation
+      operationId: confirmPayment
+      tags: [Payments]
+      x-access: external-public
+      x-permissions-required: []
+      x-scope-sensitive: false
+      description: |
+        Receives payment result from CEPAS redirect. Validates SHA-1 hash before
+        updating transaction status. This endpoint is called by the user's browser
+        after completing (or cancelling) payment on CEPAS. Unauthenticated — CEPAS
+        does not carry a MiLogin token; tamper detection relies solely on SHA-1 hash
+        validation.
+
+        Hash validation: SHA-1(ConfirmationNumber + Amount + SecurityKey)
+
+        On success: Updates transaction to Paid, publishes PaymentCompleted event.
+        On failure: Updates transaction to Failed, publishes PaymentFailed event.
+      parameters:
+        - name: c
+          in: query
+          required: true
+          description: EpayReturnCode (0=success, >0=error)
+          schema:
+            type: integer
+        - name: m
+          in: query
+          required: true
+          description: EpayResultMessage (human-readable status)
+          schema:
+            type: string
+        - name: o
+          in: query
+          description: ConfirmationNumber (CEPAS transaction ID; present on success)
+          schema:
+            type: string
+        - name: t
+          in: query
+          required: true
+          description: TotalAmount confirmed by CEPAS
+          schema:
+            type: number
+            format: double
+        - name: d
+          in: query
+          description: SettlementSubmissionDate (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: z
+          in: query
+          description: AuthorizationCode from payment gateway
+          schema:
+            type: string
+        - name: i
+          in: query
+          required: true
+          description: Original session ID passed at initiation
+          schema:
+            type: string
+        - name: ct
+          in: query
+          description: CardType (VISA, MC, AMEX, DISC, STAR, Pulse, NYCE; omitted for eCheck)
+          schema:
+            type: string
+        - name: hash
+          in: query
+          required: true
+          description: SHA-1 hash for tamper detection
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Confirmation processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentConfirmationResult'
+        '400':
+          description: Hash validation failed or missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/search:
+    get:
+      summary: Search payment transactions
+      operationId: searchPayments
+      tags: [Payments]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.transaction.view
+      x-scope-sensitive: true
+      description: |
+        Returns payment transactions within the organization specified by
+        X-Organization-Context. Users with ISD-level authorization will see
+        transactions for all constituent districts and buildings. System-wide
+        grants full visibility across all transactions.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: applicationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: confirmationNumber
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - name: educatorUniqueId
+          in: query
+          schema:
+            type: string
+        - name: organizationCode
+          in: query
+          schema:
+            type: string
+        - name: paidFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: paidTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Payment transaction search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentTransactionSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============================================================================
+  # REFUNDS
+  # ============================================================================
+
+  /refunds/request:
+    post:
+      summary: Submit refund request
+      operationId: requestRefund
+      tags: [Refunds]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.refund.request
+      x-scope-sensitive: false
+      description: |
+        Submits a refund request for a paid transaction. Requests ≤$500 are
+        auto-approved and processed immediately via CEPAS API. Requests >$500
+        require Financial Admin approval before processing.
+
+        Refund amount must not exceed the original payment amount. Multiple partial
+        refunds are permitted until the full original amount is refunded. Scope is
+        resolved server-side from the transaction's owning organization —
+        X-Organization-Context is not required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentTransactionId, refundAmount, reason]
+              properties:
+                paymentTransactionId:
+                  type: string
+                  format: uuid
+                refundAmount:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                  description: Amount to refund; must be ≤ original payment amount
+                reason:
+                  type: string
+                  maxLength: 1000
+                  description: Business justification for refund
+      responses:
+        '201':
+          description: Refund request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundRequestResponse'
+        '400':
+          description: Invalid refund amount or transaction not eligible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /refunds/bulk-request:
+    post:
+      summary: Submit bulk refund request
+      operationId: requestBulkRefund
+      tags: [Refunds]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.refund.request-bulk
+      x-scope-sensitive: false
+      description: |
+        Submits refund requests for multiple transactions. Each refund is processed
+        independently — partial success is possible. Threshold calculation uses the
+        total amount across all refunds to determine approval requirements. Scope is
+        resolved server-side from each transaction's owning organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refunds, reason]
+              properties:
+                refunds:
+                  type: array
+                  minItems: 2
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [paymentTransactionId, refundAmount]
+                    properties:
+                      paymentTransactionId:
+                        type: string
+                        format: uuid
+                      refundAmount:
+                        type: number
+                        format: decimal
+                        minimum: 0.01
+                reason:
+                  type: string
+                  maxLength: 1000
+                  description: Common reason applied to all refund requests in batch
+      responses:
+        '202':
+          description: Bulk refund request accepted for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bulkRefundId:
+                    type: string
+                    format: uuid
+                  totalAmount:
+                    type: number
+                    format: decimal
+                  requiresApproval:
+                    type: boolean
+                    description: True if total exceeds $500 approval threshold
+                  refundRequests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RefundRequestSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /refunds/{refundRequestId}/approve:
+    post:
+      summary: Approve refund request (Financial Admin)
+      operationId: approveRefund
+      tags: [Refunds]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.refund.approve
+      x-scope-sensitive: false
+      description: |
+        Approves a pending refund request. Only required for refunds exceeding the
+        $500 threshold. Approval triggers immediate CEPAS API processing. Scope is
+        resolved server-side from the transaction's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/RefundRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approverNotes:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Refund approved and processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundRequestResponse'
+        '400':
+          description: Refund not in approvable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /refunds/pending-approval:
+    get:
+      summary: List refund requests pending Financial Admin approval
+      operationId: listPendingRefundApprovals
+      tags: [Refunds]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.refund.approve
+      x-scope-sensitive: false
+      description: |
+        Returns all refund requests in Requested status that require Financial Admin
+        approval (i.e., amount exceeds $500 threshold). System-wide permission —
+        X-Organization-Context is not required.
+      parameters:
+        - name: requestedFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Pending refund approval list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RefundRequestSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============================================================================
+  # RECONCILIATION
+  # ============================================================================
+
+  /reconciliation/discrepancies:
+    get:
+      summary: List reconciliation discrepancies
+      operationId: listReconciliationDiscrepancies
+      tags: [Reconciliation]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.reconciliation.discrepancy-view
+      x-scope-sensitive: false
+      description: |
+        Returns unresolved or recently resolved posting file discrepancies. Discrepancies
+        are created during nightly batch processing when CEPAS posting file records cannot
+        be automatically matched. System-wide permission — X-Organization-Context is not
+        required.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Unresolved, Resolved]
+            default: Unresolved
+        - name: discrepancyType
+          in: query
+          schema:
+            $ref: '#/components/schemas/DiscrepancyType'
+        - name: detectedFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: detectedTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Discrepancy list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReconciliationDiscrepancySummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reconciliation/discrepancies/{discrepancyId}/resolve:
+    post:
+      summary: Manually resolve reconciliation discrepancy
+      operationId: resolveDiscrepancy
+      tags: [Reconciliation]
+      x-access: internal-user
+      x-permissions-required:
+        - payments.reconciliation.discrepancy-resolve
+      x-scope-sensitive: false
+      description: |
+        Manually resolves a posting file discrepancy that could not be auto-matched
+        during nightly batch processing. Requires resolution notes. All resolutions
+        are audit logged. System-wide permission — X-Organization-Context is not
+        required.
+      parameters:
+        - name: discrepancyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionAction, resolutionNotes]
+              properties:
+                resolutionAction:
+                  type: string
+                  enum:
+                    - AcceptCepasAmount
+                    - RejectCepasRecord
+                    - CreateAdjustment
+                    - ContactApplicant
+                  description: How the discrepancy is being resolved
+                resolutionNotes:
+                  type: string
+                  maxLength: 2000
+                  description: Required explanation of resolution
+                correctedAmount:
+                  type: number
+                  format: decimal
+                  description: Required when resolutionAction=AcceptCepasAmount
+      responses:
+        '200':
+          description: Discrepancy resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  discrepancyId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [Resolved]
+                  resolvedAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Discrepancy already resolved or invalid action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+  parameters:
+    RefundRequestId:
+      name: refundRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: district-10
+
+  schemas:
+    # --------------------------------------------------------------------------
+    # Enumerations
+    # --------------------------------------------------------------------------
+
+    PaymentStatus:
+      type: string
+      enum:
+        - Pending
+        - Paid
+        - Failed
+        - Refunded
+        - PartiallyRefunded
+        - Reconciled
+        - Discrepancy
+      description: |
+        - Pending: Awaiting payment completion
+        - Paid: Successfully confirmed via CEPAS redirect or posting file
+        - Failed: Payment attempt declined or errored
+        - Refunded: Full refund processed via CEPAS
+        - PartiallyRefunded: Partial refund processed
+        - Reconciled: Matched against CEPAS posting file (sub-state of Paid)
+        - Discrepancy: Posting file mismatch requiring manual review
+
+    RefundStatus:
+      type: string
+      enum:
+        - Requested
+        - Approved
+        - Rejected
+        - Processing
+        - Completed
+        - Failed
+
+    ReconciliationBatchStatus:
+      type: string
+      enum:
+        - Processing
+        - Completed
+        - Failed
+        - PartiallyCompleted
+
+    DiscrepancyType:
+      type: string
+      enum:
+        - AmountMismatch
+        - OrphanPayment
+        - DuplicatePayment
+        - MissingTransaction
+        - UnexpectedStatus
+
+    # --------------------------------------------------------------------------
+    # Payment Initiation
+    # --------------------------------------------------------------------------
+
+    PaymentInitiationResponse:
+      type: object
+      properties:
+        paymentTransactionId:
+          type: string
+          format: uuid
+        cepasRedirectUrl:
+          type: string
+          format: uri
+          description: Encrypted CEPAS payment URL; redirect user's browser to this URL
+        sessionId:
+          type: string
+          description: Session token used to correlate CEPAS confirmation on return
+        amount:
+          type: number
+          format: decimal
+          description: Fee amount that will be charged; immutable after creation
+        expiresAt:
+          type: string
+          format: date-time
+          description: When this redirect URL expires (typically 30 minutes)
+
+    BulkPaymentInitiationResponse:
+      type: object
+      properties:
+        bulkPaymentTransactionId:
+          type: string
+          format: uuid
+        cepasRedirectUrl:
+          type: string
+          format: uri
+        sessionId:
+          type: string
+        totalAmount:
+          type: number
+          format: decimal
+        applicationCount:
+          type: integer
+        lineItems:
+          type: array
+          items:
+            type: object
+            properties:
+              applicationId:
+                type: string
+                format: uuid
+              amount:
+                type: number
+                format: decimal
+
+    PaymentConfirmationResult:
+      type: object
+      properties:
+        paymentTransactionId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        confirmationNumber:
+          type: string
+          nullable: true
+          description: CEPAS confirmation number; null on failure
+        amount:
+          type: number
+          format: decimal
+        paidDate:
+          type: string
+          format: date
+          nullable: true
+        returnCode:
+          type: integer
+          description: CEPAS return code (0=success)
+        returnMessage:
+          type: string
+          description: Human-readable result from CEPAS
+        hashValidationPassed:
+          type: boolean
+          description: Whether SHA-1 hash validation succeeded
+
+    # --------------------------------------------------------------------------
+    # Payment Transactions
+    # --------------------------------------------------------------------------
+
+    PaymentTransactionSummary:
+      type: object
+      properties:
+        paymentTransactionId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        bulkPaymentTransactionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent bulk payment ID if part of a bulk payment
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        amount:
+          type: number
+          format: decimal
+        confirmationNumber:
+          type: string
+          nullable: true
+        cardType:
+          type: string
+          nullable: true
+          description: VISA, MC, AMEX, DISC, STAR, Pulse, NYCE; null for eCheck
+        paidDate:
+          type: string
+          format: date
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        returnCode:
+          type: integer
+          nullable: true
+        returnMessage:
+          type: string
+          nullable: true
+
+    PaymentTransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/PaymentTransactionSummary'
+        - type: object
+          properties:
+            authorizationCode:
+              type: string
+              nullable: true
+            settlementSubmissionDate:
+              type: string
+              format: date
+              nullable: true
+            refunds:
+              type: array
+              items:
+                $ref: '#/components/schemas/RefundRequestSummary'
+            reconciliationStatus:
+              type: string
+              nullable: true
+              description: Posting file reconciliation outcome if applicable
+
+    # --------------------------------------------------------------------------
+    # Refunds
+    # --------------------------------------------------------------------------
+
+    RefundRequestSummary:
+      type: object
+      properties:
+        refundRequestId:
+          type: string
+          format: uuid
+        paymentTransactionId:
+          type: string
+          format: uuid
+        refundAmount:
+          type: number
+          format: decimal
+        status:
+          $ref: '#/components/schemas/RefundStatus'
+        refundConfirmationNumber:
+          type: string
+          nullable: true
+          description: CEPAS refund confirmation number; present when Completed
+        requestedBy:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        processedDate:
+          type: string
+          format: date
+          nullable: true
+        requiresApproval:
+          type: boolean
+
+    RefundRequestResponse:
+      allOf:
+        - $ref: '#/components/schemas/RefundRequestSummary'
+        - type: object
+          properties:
+            approvedBy:
+              type: string
+              nullable: true
+            approvedAt:
+              type: string
+              format: date-time
+              nullable: true
+            reason:
+              type: string
+            approverNotes:
+              type: string
+              nullable: true
+
+    # --------------------------------------------------------------------------
+    # Reconciliation
+    # --------------------------------------------------------------------------
+
+    ReconciliationDiscrepancySummary:
+      type: object
+      properties:
+        discrepancyId:
+          type: string
+          format: uuid
+        reconciliationBatchId:
+          type: string
+          format: uuid
+        discrepancyType:
+          $ref: '#/components/schemas/DiscrepancyType'
+        applicationId:
+          type: string
+          nullable: true
+        confirmationNumber:
+          type: string
+          nullable: true
+        expectedAmount:
+          type: number
+          format: decimal
+          nullable: true
+        actualAmount:
+          type: number
+          format: decimal
+          nullable: true
+        status:
+          type: string
+          enum: [Unresolved, Resolved]
+        detectedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedBy:
+          type: string
+          nullable: true
+        resolutionNotes:
+          type: string
+          nullable: true
+
+    ReconciliationBatchSummary:
+      type: object
+      properties:
+        reconciliationBatchId:
+          type: string
+          format: uuid
+        fileDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ReconciliationBatchStatus'
+        totalRecords:
+          type: integer
+        matchedCount:
+          type: integer
+        missingPaymentCount:
+          type: integer
+          description: Payments found in posting file but not in MiEdWorkforce (auto-recovered)
+        discrepancyCount:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --------------------------------------------------------------------------
+    # Shared
+    # --------------------------------------------------------------------------
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        validationErrors:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            payments:read: Read payment transaction data
+            payments:write: Initiate payments and submit refund requests
+            payments:admin: Approve refunds and resolve discrepancies
+            payments:reconciliation: Access reconciliation data and reports
+
+security:
+  - MiLogin: [payments:read]

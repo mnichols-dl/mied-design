@@ -1,0 +1,634 @@
+# FDD 15 review — "15 - User Management - Identity Management Integration" — ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 IAM graph (iam-domain.ttl /
+# iam-permissions.ttl / iam-api.ttl / iam-sequences.ttl / iam-technical-design.ttl, all
+# loaded together), and cross-checked against the just-completed FDD 01 pass
+# (fdd-review/01-user-management/01-user-management.ttl) on the same `iam` domain.
+#
+# RELATIONSHIP TO FDD 01 (read first, same domain): FDD 01 covers MiLogin authentication
+# routing, User Group/Role administration, admin User Search (searching MiEdWorkforce
+# *user accounts*), and impersonation. FDD 15 covers an almost entirely different feature
+# area within the same iam:IamContext bounded context: the Mi-Key identity-resolution
+# integration itself (Citizen/Business identity matching, Near Match resolution,
+# Link/Split/Retire ID, cross-domain Person/identity search, bulk file/API identity
+# processing, the Identity Administrator worklist, and identity-specific email/comms
+# configuration). No numbered item in this FDD duplicates a Requirement already modeled
+# in 01-user-management.ttl. The one genuine overlap point is at the SEQUENCE level, not
+# the Requirement level: FDD 01's Req_01_1_1 (citizen auto-directed to account creation or
+# dashboard) already cites iam:Seq_CitizenInitialSignIn/iam:Rule_CitizenAutoApproval as
+# satisfying the *routing* decision; this FDD's Feature 15.8 is the fuller functional spec
+# for the *account-creation form and Mi-Key matching mechanics* that sit behind that same
+# routing decision — genuinely complementary detail at a different grain, not a redundant
+# restatement, so both files keep their own Requirement nodes citing the same underlying
+# Sequence rather than this file re-deriving or duplicating FDD 01's Req_01_1_1. This is
+# in fact the dominant pattern for the whole FDD: iam-domain.ttl's own
+# IdentityResolutionRequestAggregate sd:notes cites this FDD BY NUMBER four times ("FDD
+# 15.6/15.11", "per FDD 15.3", "per FDD 15.9") — i.e. FDD 15 was very likely the primary
+# client-facing source specification the IAM domain conversion's identity-resolution
+# model was built from, not an independent document being reconciled after the fact. This
+# produces an unusually high satisfaction rate (see STATUS.md-style summary in the final
+# report) — closer to FDD 07/Payments' pattern than FDD 01's.
+#
+# Source material read (11 numbered sub-documents in one folder, per CONVENTIONS.md's
+# "Cross-document FDD groups" guidance — kept as ONE ingestion, Requirements numbered per
+# the FDD's own 15.x sub-numbering):
+# - 15.1 Business User Update Demographics Record Requirements (.md fast pass + .docx;
+#   no comments.xml, no media). 3 numbered stories (15.1.1-15.1.3).
+# - 15.2 Business User Request for ID Requirements (.md + .docx comments.xml — 1 short
+#   comment cross-referencing FDD 24 "Data Collection & Compliance - Request for ID" for
+#   duplicate-effort risk, folded into this file's own header/gap notes below). 3 stories.
+# - 15.3 Business User - Near Match Resolution AND 15.3 Citizen User - Near Match
+#   Resolution — two separate .docx files sharing the SAME "15.3" number. Read together.
+#   The "Business User" file's own Addendum (15.3.1-15.3.4) is, despite its filename,
+#   entirely about CITIZEN-perspective near-match notifications and Identity
+#   Administrator resolution actions — an evident source-document mislabeling, not a
+#   modeling choice made here; flagged rather than silently corrected. The "Citizen User"
+#   file carries no numbered Addendum at all, only an unnumbered "User Stories" list (8
+#   items) that substantially restates the same Identity-Administrator-resolves-Near-Match
+#   content as the other file's 15.3.3/15.3.4, plus two genuinely new asks (admin
+#   field-level "data precedence" selection when confirming a true match, and displaying
+#   Mi-Key's match score to the admin) that its own Gap Analysis section already flags as
+#   missing from the FDD relative to the BRD. Rather than mint 8 near-duplicate nodes for
+#   the largely-restated content, one additional synthetic requirement (Req_15_3_5) is
+#   minted for the two genuinely distinct asks; the restated admin-approve/create-new/deny
+#   actions are treated as already covered by Req_15_3_3/Req_15_3_4.
+# - 15.4 Person Search (.md + .docx comments.xml — 2 short clarifying comments, both
+#   confirming visible text rather than changing it). 5 stories.
+# - 15.5 Bulk File and API Requirements (.md + .docx comments.xml — 1 comment: a reviewer
+#   flags that the doc's "one common file-upload page across MiEdWorkforce" framing is
+#   "no longer accurate," each domain will have its own upload area; confirmed by a second
+#   commenter. Folded into Req_15_5_1's own notes as a live, acknowledged source-text/
+#   actual-design mismatch rather than silently using the stale "common page" framing).
+#   4 stories.
+# - 15.6; 15.11; 15.12 - Link, Split and Retire ID Requirements (.md + .docx comments.xml
+#   — 1 comment confirming Retire ID is receive-only/callback-driven, matching the visible
+#   text exactly). 6 stories across three features (Link IDs, Split IDs, Retire IDs).
+# - 15.7; 15.14; 15.15 - Identity Management Integration (.md only; a one-page pointer doc,
+#   no comments/media) — all three features are the FDD's OWN explicit "no longer
+#   necessary" deferrals (Historical Records, ID Migration & Conversion, Citizen File
+#   Upload), not numbered Addendum stories. Modeled as three plain sd:Requirement
+#   out-of-scope items, matching FDD 01's Req_01_7 pattern for a whole-feature deferral
+#   paragraph with no "As a..." stem.
+# - 15.8 Citizen User Request for ID Requirements = "Citizen User: Account Creation" (.md
+#   + .docx comments.xml — 1 comment confirming only Name/Email/Phone come from MiLogin,
+#   already reflected in the visible AC text). 5 stories. Also carries an unusually
+#   extensive self-authored Gap Analysis section (BRD-vs-FDD comparison) naming several
+#   NFR/security/accessibility gaps and two "Technical Story" NFR stub stories — these are
+#   platform-wide NFR concerns (performance, TLS, WCAG, RBAC, audit logging) rather than
+#   IAM-domain-specific functional gaps; noted in this file's own gap summary rather than
+#   minted as Requirement nodes, consistent with how NFR-line-item content is meant to be
+#   handled (sd:NonFunctionalRequirement only for individually-citable items; these read as
+#   project-wide constraints better suited to sd:Solution's nonFunctionalRequirement or a
+#   later cross-FDD NFR sweep than to per-story nodes here).
+# - 15.9 Admin Identity Requirements (.md + .docx comments.xml — 3 comments, all either
+#   process notes or confirmations already reflected in the visible text). 7 stories
+#   (15.9.1-15.9.6, plus one unnumbered "15.9." item modeled as 15.9.7).
+# - 15.10 Citizen User Update Record Requirements = "Citizen User: Account Update" (.md +
+#   .docx comments.xml — 1 comment clarifying that only Primary/Secondary Identity fields
+#   lock during Near Match, not Contact fields; already reflected in and matches the
+#   visible AC text and iam-sequences.ttl's own Seq_CitizenUpdateAccountDemographics
+#   keyDecisions verbatim). 5 stories.
+# - 15.13 Email Comms Requirements (.md only, no comments/media) — a single feature-level
+#   scope statement, no numbered Addendum stories: identity-specific email/comms
+#   *configuration* built entirely on top of Business Specification #6 (Alerts, Emails and
+#   Communications, i.e. the `communications` domain) and Business Specification #4
+#   (Business Rule Management, an unmapped stub area per GAPS.md). Modeled as one plain
+#   sd:Requirement out-of-scope item, same pattern as 15.7/15.14/15.15 and FDD 01's 1.7.
+# - "Interface Design document - Mi-Key Interface.docx/.md" — technical interface spec
+#   (REST/HTTP, OpenAPI-pending, per-environment endpoints: Search/GetIdentifierTypes,
+#   Search/GetPersonTypes, Update/GetPersonIdentificationSystemCodes, Update/UpdatePerson,
+#   etc.). No numbered user stories; read for context only, corroborating
+#   ext:MiKeySystem's existing sd:integrationNotes in iam-domain.ttl. Not separately
+#   modeled as an sd:SourceDocument — nothing here is load-bearing beyond what
+#   iam-domain.ttl already states, same treatment FDD 01 gave the MiLogin IDDs.
+# - "Link, Split IDs_ Decision Sheet for Researching Options.docx/.md" — a still-open
+#   decision-sheet stub (Options 1-4 table entirely blank, no Decision Made section filled
+#   in) on how Link/Split-affected historical data reconciles across MiEdWorkforce/Mi-Key/
+#   the SLDS Warehouse. Read for context; corroborates that this area is genuinely
+#   unresolved rather than an oversight in the domain conversion. Not separately modeled.
+# - "Identity Validations.xlsx/.md" — referenced by nearly every sub-document as the
+#   authoritative source for field-level validation rules ("as defined within Identity
+#   Validations.xlsx"). Read for awareness; its rules are exactly the kind of content
+#   iam-domain.ttl's business-rule layer would encode but doesn't individually enumerate
+#   (a reasonable Phase 1 scope decision — this is a large field-by-field rules workbook,
+#   not a source of distinct numbered Requirements). Not separately modeled as Requirements.
+# - Skipped per CONVENTIONS.md (Visio/diagram files, not load-bearing beyond what their
+#   sibling .docx narrative already states): "Business User Request ID Workflows.vsdx",
+#   "Business User Update ID Workflow.vsdx", "Citizen Identity Workflows_All.vsdx",
+#   "Workforce Identity Matching and Processing.pdf" (a legacy PIC-process background
+#   document, cited once by the Decision Sheet above; the MiEdWorkforce-specific process it
+#   describes is superseded by this FDD's own Mi-Key-based requirements).
+#
+# Wireframes: two representative wireframes were extracted and viewed (out of ~15 images
+# across the folder's docx files) — enough to confirm the Admin worklist and Link-review
+# screens described in prose are genuinely wireframed, not just narrative text, per
+# CONVENTIONS.md's depth-calibration guidance. Both directly corroborate 15.9's Addendum
+# without contradiction (no FDD 11/16-style caption/image mismatch found in the two
+# checked): wireframe-01 (from 15.6/15.11/15.12's docx) shows the admin Link-request review
+# screen (side-by-side demographic comparison, Approve/Deny with reviewer notes) matching
+# Req_15_6_2 closely; wireframe-02 (from 15.9's docx) shows the "Identity Management
+# Requests" worklist (tabbed, filterable, Unique ID/Name/Requested By/Status columns)
+# matching Req_15_9_1 closely.
+#
+# Every numbered/synthetic item below (47 total: 44 real "As a..." stories or system
+# stories + 3 synthetic out-of-scope-paragraph items) is accounted for as Satisfied,
+# Out-of-scope, or a genuine coverage-gap.
+
+@prefix sd:      <urn:solutiondesign:ontology:> .
+@prefix oa:      <http://www.w3.org/ns/oa#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix iam:     <urn:solutiondesign:instance:iam:> .
+@prefix staff:   <urn:solutiondesign:instance:staffing:> .
+@prefix comm:    <urn:solutiondesign:instance:communications:> .
+@prefix ext:     <urn:solutiondesign:instance:external:> .
+
+#################################################################
+# Source document
+#################################################################
+
+iam:Fdd15Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/15 - User Management - Identity Management Integration/" ;
+    sd:notes "One folder, 11 numbered sub-documents (15.1-15.13, several sharing a combined document per feature grouping: 15.6/15.11/15.12, 15.7/15.14/15.15), covering the Mi-Key identity-resolution integration end to end: Business/Citizen identity request and update flows, Near Match resolution, Link/Split/Retire ID, Person Search, Bulk/API identity processing, the Identity Administrator worklist, and identity-specific email/comms configuration. Authored primarily by Caitlin Groom, Molly Chapman, Lindsey McCann, Liz Breckel, Vidhya Punniyamoorthy, Beth Dontje across 8/2024-8/2025; several sub-docs (15.3, 15.8, 15.10) carry unusually extensive self-authored Gap Analysis sections comparing the FDD against an underlying BRD, already naming several of the gaps this pass independently confirms." .
+
+#################################################################
+# Feature 15.1: Business User Update Demographics Record
+#################################################################
+
+iam:Req_15_1_1 a sd:UserStory ;
+    sd:requirementId "15.1.1" ;
+    sd:title "Business user unlocks an employee record for demographic editing" ;
+    sd:statement "As a Business User with an Identity Management Role, I want to access an employee's record from the Employee Roster and unlock it for editing so that I can correct inaccurate data or update changed information based on verified documentation." ;
+    sd:acceptanceCriteria "Record displays read-only initially; 'Edit Account Information' unlocks all demographic fields except Unique ID (always read-only); SSN pre-populated masked (last 4 digits) with ability to clear and re-enter; 'No SSN' checkbox shown only when no SSN exists on record; Submit disabled until at least one field changed and Attestation checked." ;
+    sd:satisfiedBy iam:Op_SubmitBusinessUserIdentityRequest, iam:Entity_IdentityRequest, iam:VO_NoSSNStatus ;
+    sd:notes "Satisfied at the aggregate/API level: iam-api.ttl's Op_SubmitBusinessUserIdentityRequest is generic across RequestType (NewId/DemographicUpdate/LinkId), and iam-domain.ttl's IdentityResolutionRequestAggregate notes explicitly lists 'BusinessUserStaffing+DemographicUpdate' as a covered combination. However, unlike NewId (which has its own named iam:Seq_BusinessUserRequestNewId diagram), no dedicated Sequence diagram exists for the DemographicUpdate variant of this same flow — a minor documentation-completeness gap, not a functional one, since the API/aggregate genuinely supports it end to end. The specific UI mechanics (read-only-until-Edit-clicked, masked SSN re-entry, conditional No-SSN checkbox) are presentation-layer detail this domain's API-level model doesn't individually capture, same class of gap as FDD 01's UI-only findings." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_1_2 a sd:UserStory ;
+    sd:requirementId "15.1.2" ;
+    sd:title "Validate demographic updates against business rules before transmitting to Mi-Key" ;
+    sd:statement "As a MiEdWorkforce System, I want to validate submitted demographic updates against defined business rules before transmitting to Mi-Key so that only valid and properly formatted data is processed for identity matching." ;
+    sd:acceptanceCriteria "Trigger Business Rule Engine validation on submit; on failure, stop, show errors, do not send to Mi-Key or persist; on pass, temporarily store and parse the Mi-Key-relevant subset; send via the Mi-Key synchronous Assignment service." ;
+    sd:satisfiedBy iam:Entity_IdentityRequest, iam:VO_SubmittedDemographics ;
+    sd:notes "Direct match to the aggregate's own invariant-driven lifecycle (PendingMiKeyMatch state, VO_SubmittedDemographics as 'temporarily stored; not permanently retained if validation fails'). The specific field-by-field validation ruleset itself lives only in Identity Validations.xlsx (read for context, not separately modeled per this file's header note) — the RULE CONTENT is an honest gap in the graph (no per-field business-rule catalog), but the validate-then-gate-Mi-Key-submission BEHAVIOR is fully modeled." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_1_3 a sd:UserStory ;
+    sd:requirementId "15.1.3" ;
+    sd:title "Process Mi-Key match/near-match results for a demographic update" ;
+    sd:statement "As a MiEdWorkforce System, I want to process the matching results returned from Mi-Key so that the individual's Master Record is updated or flagged for resolution if the match is ambiguous." ;
+    sd:acceptanceCriteria "On Match, update non-matching fields on the Master Record, finalize temporary storage, notify submitting user (no field-level detail) and any associated citizen account. On Near Match, do not update; set status to Requires Resolution." ;
+    sd:satisfiedBy iam:Entity_IdentityRequest, iam:PersonRecordUpdatedEvent, iam:IdentityResolutionRequiresReviewEvent, iam:Rule_BusinessUserNearMatchSelfResolution ;
+    sd:notes "Strong match: PersonRecordUpdatedEvent's own trigger ('AccountUpdate or DemographicUpdate request resolves to Match') and payload are exactly this; near-match handling routes to the same self-resolve/escalate machinery iam:Rule_BusinessUserNearMatchSelfResolution already documents." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.2: Business User Request for ID
+#################################################################
+
+iam:Req_15_2_1 a sd:UserStory ;
+    sd:requirementId "15.2.1" ;
+    sd:title "Search for an individual before creating a duplicate record" ;
+    sd:statement "As a Staffing Authorized User, I want to search for an individual using their Unique ID or demographic information so that I can identify if they already have a Unique ID before creating a duplicate record." ;
+    sd:acceptanceCriteria "Person Search interface as first step of Add New Employee; search by Unique ID (exact) or demographic fields (Name/SSN/CLN); results table with pre-populate-on-select; Add New Record option when no match found." ;
+    sd:notes "No satisfiedBy asserted — this is the same Person Search capability targeted by Feature 15.4 below and shares its gap: no dedicated Person/Identity search surface (distinct from iam:Op_SearchUsers, which searches MiEdWorkforce user accounts, not the broader universe of identity records including non-portal individuals) exists anywhere in iam-api.ttl. See Question_PersonSearchNotModeled below. A source-document comment on this story cross-references '24.2.1,' i.e. FDD 24 (Data Collection & Compliance — Request for ID, an FDD not yet reviewed/mapped per GAPS.md), flagging a live duplicate-effort risk between the two FDDs' own Request-for-ID processes — noted for whoever reviews FDD 24." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_2_2 a sd:UserStory ;
+    sd:requirementId "15.2.2" ;
+    sd:title "Submit new-employee demographic details for Unique ID assignment" ;
+    sd:statement "As a Staffing Authorized User, I want to enter and submit the demographic details for a new employee so that a Unique ID can be assigned or created for the individual." ;
+    sd:acceptanceCriteria "Add Employee form (empty or pre-populated); required identity fields validated; 'No SSN' checkbox disables SSN/Confirm SSN when checked; Attestation required before Submit enabled; business-rule validation on submit blocks Mi-Key send on error." ;
+    sd:satisfiedBy iam:Op_SubmitBusinessUserIdentityRequest, iam:Entity_IdentityRequest, iam:VO_NoSSNStatus, iam:Rule_NoSSNCitizenAccounts ;
+    sd:notes "Direct match to Op_SubmitBusinessUserIdentityRequest (type=NewId) and the aggregate's own submission/validation lifecycle. Rule_NoSSNCitizenAccounts is named for citizen accounts in iam-domain.ttl but its 'No SSN' mechanics (VO_NoSSNStatus, Student Intern/Credential Applicant restriction) are the identical mechanism this story asks for on the business-user/employee side — the rule's own statement is citizen-scoped in iam-domain.ttl's prose, a minor naming-scope note rather than a gap, since the VO/behavior itself is origin-agnostic." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_2_3 a sd:UserStory ;
+    sd:requirementId "15.2.3" ;
+    sd:title "Process new-employee submission through Mi-Key Assignment service" ;
+    sd:statement "As a MiEdWorkforce System, I want to process the submitted employee data through the Mi-Key Assignment service so that a Unique ID is either located or created and assigned to the employee roster." ;
+    sd:acceptanceCriteria "Send validated data to Mi-Key Assignment Service; on Match, update non-matching Master Record fields and assign the returned Unique ID to the Employee Roster; on No Match, accept and assign the newly created Unique ID; notify user of outcome." ;
+    sd:satisfiedBy iam:Seq_BusinessUserRequestNewId, iam:IdentityResolutionCompletedEvent ;
+    sd:notes "Direct, strong match: Seq_BusinessUserRequestNewId's Match/No-Match branches are this story almost verbatim, including the 200/201 status distinction and the Staffing-side note that the EmployeeRoster attachment happens 'on IdentityResolutionCompleted.'" ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.3: Near Match Resolution (Business User doc's Addendum — despite the
+# filename, all four items below are written from the CITIZEN/Identity-Administrator
+# perspective; see this file's header note on the apparent source mislabeling)
+#################################################################
+
+iam:Req_15_3_1 a sd:UserStory ;
+    sd:requirementId "15.3.1" ;
+    sd:title "Citizen notified their account creation requires manual review (Near Match)" ;
+    sd:statement "As a Citizen User, I want to be notified if my account creation request requires manual review due to identity matching issues so that I understand why I cannot immediately access the MiEdWorkforce dashboard." ;
+    sd:acceptanceCriteria "On Near Match during citizen account creation: do not display potential matches (PII protection); show a review-pending notification; block dashboard access; auto-create a Requires Resolution task in the Identity Administrator Worklist." ;
+    sd:satisfiedBy iam:Seq_CitizenInitialSignIn, iam:Rule_CitizenNearMatchResolution, iam:IdentityResolutionRequiresReviewEvent ;
+    sd:notes "Direct, strong match — Seq_CitizenInitialSignIn's own Near Match branch and Rule_CitizenNearMatchResolution's statement ('the citizen never sees candidate match data... flagged for Identity Administrator review') are this story verbatim, down to the same 15.8-cross-referenced 'Requires Review' framing." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_3_2 a sd:UserStory ;
+    sd:requirementId "15.3.2" ;
+    sd:title "Citizen notified profile update is pending review (Near Match)" ;
+    sd:statement "As a Citizen User, I want to be notified if my profile updates are pending review due to identity matching conflicts so that I know my changes have been submitted but not yet applied." ;
+    sd:acceptanceCriteria "On Near Match during a citizen profile update: do not apply the update; do not show conflicting match data; display pending-review notification; generate a Requires Resolution task." ;
+    sd:satisfiedBy iam:Seq_CitizenUpdateAccountDemographics, iam:IdentityResolutionRequiresReviewEvent ;
+    sd:notes "Direct match to Seq_CitizenUpdateAccountDemographics's own Near Match branch ('Lock Primary + Secondary fields; Contact fields remain editable... dashboard access NOT blocked')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_3_3 a sd:UserStory ;
+    sd:requirementId "15.3.3" ;
+    sd:title "Identity Administrator reviews Near Match from citizen account creation" ;
+    sd:statement "As an Identity Administrator, I want to review 'Near Match' results generated during citizen account creation so that I can determine whether to link the user to an existing Unique ID or create a new one." ;
+    sd:acceptanceCriteria "Select a Requires Resolution task from account creation; display submitted data alongside Mi-Key candidate(s); actions: Match and Link, Create as New, Deny; notify citizen of the outcome." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:Perm_IdentityAdminResolveRequest ;
+    sd:notes "Direct match to the AccountCreation branch of Seq_IdentityAdministratorResolveRequest (Match/Create New/Deny-Cancel, each with the exact downstream event this story implies)." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_3_4 a sd:UserStory ;
+    sd:requirementId "15.3.4" ;
+    sd:title "Identity Administrator reviews Near Match from citizen profile update" ;
+    sd:statement "As an Identity Administrator, I want to review 'Near Match' results generated by citizen profile updates so that I can approve valid demographic changes or reject incorrect submissions that conflict with existing records." ;
+    sd:acceptanceCriteria "Display submitted updates against Master Record with differing fields highlighted; actions: Approve Update (send Resolve Near Match to Mi-Key), Deny Update (revert temporary data); notify citizen of outcome." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest ;
+    sd:notes "Direct match to the AccountUpdate branch ('Apply the previously-held update to the Person Record... PersonRecordUpdated')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_3_5 a sd:UserStory ;
+    sd:requirementId "15.3 (unnumbered, Citizen User doc's own 'User Stories' section)" ;
+    sd:title "Admin data-precedence selection and match-score display when resolving a true match" ;
+    sd:statement "As an Identity Administrator, when I determine a 'Near Match' is a true match, I want the ability to select which pieces of new information should update the existing master record in MiKey, so that I can ensure the most accurate and up-to-date data is kept." ;
+    sd:acceptanceCriteria "Admin task view shows a matching score to assist review (per the doc's own Gap Analysis citing an underlying BRD requirement); on confirming a true match, admin can select which specific user-submitted data elements should be considered prevalent when updating the Mi-Key master record, rather than an all-or-nothing update." ;
+    sd:notes "No satisfiedBy asserted. This is the ONE genuinely new ask surfaced by the Citizen User doc's unnumbered 'User Stories' section, which otherwise restates content already covered by Req_15_3_3/Req_15_3_4 (the doc's own Gap Analysis independently confirms this: 'Missing Admin Action - Data Precedence Selection' and 'Missing Admin Interface Detail - Matching Score' are both listed as FDD-vs-BRD gaps). iam:VO_ResolutionAction ('Identity Administrator's disposition... Match to existing Unique ID / Create New / Approve Link / Deny / Cancel, with notes') captures the admin's overall decision but not field-level data-precedence selection, and no property anywhere in iam-domain.ttl/iam-api.ttl carries a Mi-Key match score. A real, narrow coverage gap distinct from the broader Near Match workflow, which is otherwise solidly modeled." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Question_NearMatchDataPrecedenceNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "See Req_15_3_5's own sd:notes: the Citizen User Near Match Resolution doc's own Gap Analysis section independently confirms both halves of this gap ('Missing Admin Action - Data Precedence Selection' and 'Missing Admin Interface Detail - Matching Score') as FDD-vs-BRD gaps in the source document itself, not a discrepancy introduced by this conversion. iam:VO_ResolutionAction captures the admin's overall Match/CreateNew/Deny disposition but no field-level data-precedence selection, and no property anywhere in iam-domain.ttl carries a Mi-Key match score for display." ;
+    oa:hasTarget iam:Req_15_3_5 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn iam:Fdd15Doc .
+
+iam:Question_PersonSearchNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 15.4 (Person Search) and Req_15_2_1 both describe a cross-cutting 'Person/Identity Search' capability — search by Unique ID, Name, DOB, SSN, Credential License Number, or Application Number; view an individual's full demographic history, credential information, AND employment collection history in one read-only detail page; select multiple records to compare and request a Link. No API operation anywhere in iam-api.ttl implements this: iam:Op_SearchUsers/Op_GetUser search MiEdWorkforce *user accounts* specifically (and iam-api.ttl's own honest-gap note already says no standalone User entity backs even that), which is a materially narrower and different concept than searching the universe of Mi-Key-known identity records (including individuals with no MiEdWorkforce user account at all — e.g. a PK-12 student later becoming a credential applicant). The credential/employment-history aggregation this search surfaces spans Credentialing and Staffing data that iam-domain.ttl explicitly disclaims owning ('IAM explicitly does NOT own... employee roster membership'). This may be a genuine gap, or may be a capability that rightfully belongs to Staffing, Credentialing, or a dedicated cross-domain search capability not yet reviewed/converted — unconfirmed without reviewing those domains' own files as part of this pass, so left as an open finding rather than guessed at." ;
+    oa:hasTarget iam:Req_15_2_1, iam:Req_15_4_1, iam:Req_15_4_2, iam:Req_15_4_3, iam:Req_15_4_4, iam:Req_15_4_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.4: Person Search
+#################################################################
+
+iam:Req_15_4_1 a sd:UserStory ;
+    sd:requirementId "15.4.1" ;
+    sd:title "Enter search criteria to locate identity records" ;
+    sd:statement "As a Business or Admin User, I want to enter specific search criteria to locate identity records so that I can find individuals using various available identifiers or demographic data." ;
+    sd:acceptanceCriteria "Personnel Search page from dashboard; search by Unique ID/First/Middle/Last Name/DOB/SSN/Application Number/CLN; at least one of Last Name/Unique ID/SSN/Application Number/CLN required; First/Middle/DOB cannot be used alone; Unique ID exact-match only, text fields support partial match." ;
+    sd:notes "See Question_PersonSearchNotModeled above." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_4_2 a sd:UserStory ;
+    sd:requirementId "15.4.2" ;
+    sd:title "View sortable, retired-ID-aware search results" ;
+    sd:statement "As a Business or Admin User, I want to view a sortable list of records that match my search query so that I can distinguish between similar records and identify the correct individual." ;
+    sd:acceptanceCriteria "Sortable results table; partial matches included; Retired IDs shown only when searched explicitly by that Retired ID, displaying Inactive/Retired status and the associated Primary Unique ID, not selectable for active use; 'No results found' when nothing matches." ;
+    sd:satisfiedBy iam:IdentityRecordRetiredEvent, iam:Seq_SplitRetireIdMiKeyDirect ;
+    sd:notes "Partial: the Retired-ID display rule (an ID that's been through Link/Retire is search-visible-but-unusable, paired with its Primary) is a direct, coherent extension of iam:Seq_SplitRetireIdMiKeyDirect's own keyDecision ('A Retired Unique ID must be rejected if submitted anywhere in MiEdWorkforce afterward — staffing's responsibility on consuming these events'), but the search/list mechanism itself is the same unmodeled Person Search gap as Req_15_4_1 — kept Satisfied here (not double-counted under the Annotation) because the retired-ID-specific behavioral rule genuinely has a home, even though the general search surface it's displayed within does not." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_4_3 a sd:UserStory ;
+    sd:requirementId "15.4.3" ;
+    sd:title "View detailed history and status of a selected individual" ;
+    sd:statement "As a Business or Admin User, I want to view the detailed history and current status of a selected individual so that I can verify their demographics, credentials, and employment history before taking action." ;
+    sd:acceptanceCriteria "Read-only Individual Record Details page: Master Record Demographics, Demographic History, Credential Information, Employment Collection History; visibility restricted by role/permission; Back button to results." ;
+    sd:notes "See Question_PersonSearchNotModeled above." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_4_4 a sd:UserStory ;
+    sd:requirementId "15.4.4" ;
+    sd:title "Compare multiple search results and request a Link" ;
+    sd:statement "As a Business or Admin User, I want to select multiple records from the search results to compare them side-by-side so that I can identify duplicate records and request that they be linked." ;
+    sd:acceptanceCriteria "Multi-select via checkboxes; Compare Records view; 'Request to Link IDs' option triggers the Link ID workflow." ;
+    sd:satisfiedBy iam:Seq_BusinessUserRequestLinkId, iam:Rule_LinkIdResolution ;
+    sd:notes "Partial: the downstream Link ID workflow this triggers is fully modeled (see Feature 15.6 below); the compare-records search-results UI itself is the same unmodeled Person Search gap as Req_15_4_1." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_4_5 a sd:UserStory ;
+    sd:requirementId "15.4.5" ;
+    sd:title "Initiate admin actions from the Person Detail view" ;
+    sd:statement "As a Business or Admin User, I want to initiate administrative actions directly from the Person Detail view so that I can efficiently add the person to my roster or correct identity errors." ;
+    sd:acceptanceCriteria "'Add to Employee Roster' button for authorized Business Users; 'Request to Split ID' option when a Unique ID appears shared by multiple individuals." ;
+    sd:notes "See Question_PersonSearchNotModeled above. The downstream Split ID request itself is out of scope for a business-user-facing UI per Feature 15.11 (see Req_15_11_1 below) — this story's 'Request to Split ID' entry point contradicts that decision (Split is explicitly backend-admin/Mi-Key-direct only, no business-user-facing UI at all), a second, narrower discrepancy worth flagging alongside the broader search gap rather than folded silently into it." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.5: Bulk File and API Requirements
+#################################################################
+
+iam:Req_15_5_1 a sd:UserStory ;
+    sd:requirementId "15.5.1" ;
+    sd:title "Upload a bulk file of identity demographic updates" ;
+    sd:statement "As a Business User, I want to upload a bulk file containing identity demographic updates via the common file staging area so that I can update multiple employee records efficiently without manual entry." ;
+    sd:acceptanceCriteria "Upload Roster option supporting defined file formats (XML/CSV); one file per type in the Pending Files queue at a time; immediate schema validation gating business-rule validation." ;
+    sd:notes "No satisfiedBy asserted — see Question_BulkIdentityProcessingNotModeled below. Also worth flagging on its own: a source-document review comment on this story states the FDD's own 'common file staging area across MiEdWorkforce' framing is 'no longer accurate... file uploads will occur in their designated, relevant areas,' confirmed by a second reviewer — i.e. even the FDD's own authors flag this specific piece of the visible requirement text as stale, independent of whatever the eventual technical design does model." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_5_2 a sd:UserStory ;
+    sd:requirementId "15.5.2" ;
+    sd:title "Validate bulk-uploaded identity records against business rules" ;
+    sd:statement "As a MiEdWorkforce System, I want to validate the contents of the uploaded identity file against business rules before processing so that I ensure only valid updates for existing employees are sent to Mi-Key." ;
+    sd:acceptanceCriteria "Every record must carry a Unique ID; verify Unique ID association with the submitting entity (error + redirect to Request ID process if not associated); data-element-level validation per Identity Validations." ;
+    sd:notes "No satisfiedBy asserted — see Question_BulkIdentityProcessingNotModeled below." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_5_3 a sd:UserStory ;
+    sd:requirementId "15.5.3" ;
+    sd:title "Review a sandbox validation summary before committing a bulk upload" ;
+    sd:statement "As a Business User, I want to review a summary of validation results in a 'sandbox' view before permanently committing the data so that I can fix errors or cancel the upload if the data impact is incorrect." ;
+    sd:acceptanceCriteria "File Upload Status page with validation summary; downloadable error details; Commit (save + trigger Mi-Key processing) vs. Cancel (discard, nothing sent)." ;
+    sd:notes "No satisfiedBy asserted — see Question_BulkIdentityProcessingNotModeled below." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_5_4 a sd:UserStory ;
+    sd:requirementId "15.5.4" ;
+    sd:title "Process committed bulk identity records asynchronously through Mi-Key" ;
+    sd:statement "As a MiEdWorkforce System, I want to process committed bulk identity records through the Mi-Key Asynchronous Assignment Service so that master records are updated or flagged for resolution based on probabilistic matching." ;
+    sd:acceptanceCriteria "On Commit, send valid records to the Mi-Key Asynchronous Assignment Service; Match auto-updates; Near Match flags Requires Resolution and adds to the Identity Management Worklist; summary notification on completion." ;
+    sd:notes "No satisfiedBy asserted — see Question_BulkIdentityProcessingNotModeled below. Notable: this story explicitly names an ASYNCHRONOUS Mi-Key Assignment Service, distinct from the synchronous Assignment service iam-sequences.ttl's other citizen/business flows use — a real architectural variant with no counterpart anywhere in iam-sequences.ttl (every existing sequence models a synchronous Mi-Key call)." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Question_BulkIdentityProcessingNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 15.5 describes a complete bulk/file-upload identity-update pathway — file staging queue, schema validation, business-rule validation, a sandbox commit/cancel review step, and asynchronous Mi-Key processing with worklist-routed Near Matches — with no counterpart anywhere in iam-domain.ttl/iam-api.ttl/iam-sequences.ttl. Every identity-resolution pathway iam currently models (Citizen self-service, Business New ID, Business Demographic Update, Link ID) is a single-record, synchronous, online-form submission; nothing resembles a file-upload staging area, a schema-validation gate, a commit/cancel sandbox step, or an asynchronous batch variant of the Mi-Key Assignment service. This is a genuine, structural gap, not a documentation nuance — a whole distinct interaction pattern (batch, not just a bigger single request) that the domain's existing IdentityRequest/IdentityResolutionRequest model doesn't obviously extend to without new design work (e.g. is a bulk file's Near Match one IdentityResolutionRequest per row, or a new aggregate entirely?). Documents domain owns generic file-upload infrastructure elsewhere in the platform (not reviewed as part of this iam-scoped pass), but the identity-specific business rules, staging/commit semantics, and async Mi-Key variant described here have no home in iam regardless." ;
+    oa:hasTarget iam:Req_15_5_1, iam:Req_15_5_2, iam:Req_15_5_3, iam:Req_15_5_4 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.6: Link IDs
+#################################################################
+
+iam:Req_15_6_1 a sd:UserStory ;
+    sd:requirementId "15.6.1" ;
+    sd:title "Business user submits a request to link Unique IDs" ;
+    sd:statement "As a Business User, I want to submit a request to link multiple Unique IDs that belong to the same person, so that their fragmented records can be consolidated." ;
+    sd:acceptanceCriteria "Initiated from Near Match resolution or Personnel Search; user selects the primary ID and provides required justification; user can view status (Needs Review/In Review/Approved/Denied/Canceled) and cancel before Admin review." ;
+    sd:satisfiedBy iam:Seq_BusinessUserRequestLinkId, iam:VO_LinkDetails, iam:Rule_LinkIdResolution ;
+    sd:notes "Direct match: Seq_BusinessUserRequestLinkId's own submission step and VO_LinkDetails ('primary and secondary Unique IDs, and the requester's justification') are this story almost verbatim. The user-visible status list (Needs Review/In Review/Approved/Denied/Canceled) is slightly richer than iam:IdReqState_* (which has RequiresResolution/Resolved/Denied/Cancelled, no explicit 'In Review' distinct from 'RequiresResolution') — a narrow presentation-vs-state-machine granularity gap, not raised separately given how solidly the core flow is covered." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_6_2 a sd:UserStory ;
+    sd:requirementId "15.6.2" ;
+    sd:title "Identity Admin worklist to approve or deny Link ID requests" ;
+    sd:statement "As an Identity Admin, I want to access a worklist to approve or deny requests to link IDs, so that I have final authority over identity data consolidation." ;
+    sd:acceptanceCriteria "Review justification alongside demographic data/history; on approve, can override the user-selected Primary ID with justification back to the user; on deny, IDs not joined, denial reason provided; Identity-Admin-initiated links skip worklist approval and go straight to Mi-Key." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:Perm_IdentityAdminResolveRequest ;
+    sd:notes "Direct match to the LinkId branch of Seq_IdentityAdministratorResolveRequest (Approve Link / Deny). wireframe-01 (viewed, from this same docx) shows exactly this side-by-side demographic comparison plus Approve/Deny-with-notes screen." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_6_3 a sd:UserStory ;
+    sd:requirementId "15.6.3" ;
+    sd:title "System sends approved Link requests to Mi-Key and merges data" ;
+    sd:statement "As the MiEdWorkforce System, I must send approved link requests to Mi-Key and process the response, so that the systems remain in sync and redundant IDs are merged." ;
+    sd:acceptanceCriteria "Send ID to Retire, ID to Merge To (Primary), and Retire Reason to Mi-Key; on success, automatically merge all associated MiEdWorkforce data to the primary ID; multiple IDs are linked one request at a time (Mi-Key limitation)." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:IdentityResolutionCompletedEvent, staff:Perm_EmployeeRosterAddEmployee ;
+    sd:notes "Direct match to the LinkId Approve branch ('Retire secondary Unique ID, merge into primary... StaffingAPI: Merge all associated data')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_6_4 a sd:UserStory ;
+    sd:requirementId "15.6.4" ;
+    sd:title "Log and notify on a completed Link action" ;
+    sd:statement "As the MiEdWorkforce System, I must log all actions and notify relevant parties when an ID is linked, so that stakeholders are aware of changes to their data." ;
+    sd:acceptanceCriteria "Audit log for approvals/denials/cancellations; notify requesting user, Citizen account holder (if applicable), and any school district with the ID on an active roster." ;
+    sd:satisfiedBy iam:Seq_BusinessUserRequestLinkId ;
+    sd:notes "Direct match to the sequence's own notification fan-out ('Notify requesting district, any citizen account, and any other district reporting either ID')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.11: Split IDs
+#################################################################
+
+iam:Req_15_11_1 a sd:UserStory ;
+    sd:requirementId "15.11.1" ;
+    sd:title "Identity Admin executes ID splits directly in Mi-Key, not via a business-user UI" ;
+    sd:statement "As an Identity Admin, I need to execute ID splits directly in the Mi-Key backend rather than through a Business User UI request, so that complex historical data separation is handled securely by administrators." ;
+    sd:acceptanceCriteria "Business Users cannot request a Split from the MiEdWorkforce UI; when an Admin splits an ID directly in Mi-Key, MiEdWorkforce receives the callback with the new ID and updates the person record; Admins/DBAs manually separate associated credential/employment history on the backend." ;
+    sd:satisfiedBy iam:Seq_SplitRetireIdMiKeyDirect, iam:IdentityRecordSplitEvent ;
+    sd:notes "Direct, exact match — iam-domain.ttl's IdentityResolutionRequestAggregate notes already cite this exact FDD feature by number ('Split ID and Retire ID are explicitly NOT modeled as requests here (FDD 15.6/15.11 Addendum) — both are Admin/Mi-Key-direct actions with no business-user-facing submission; MiEdWorkforce only receives the resulting callback/event') — this is the FDD passage that decision was built from." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.12: Retire IDs
+#################################################################
+
+iam:Req_15_12_1 a sd:UserStory ;
+    sd:requirementId "15.12.1" ;
+    sd:title "Prevent use of a Retired Unique ID" ;
+    sd:statement "As the MiEdWorkforce System, I must prevent users from submitting or utilizing a 'Retired' ID, so that inactive records do not accumulate new data." ;
+    sd:acceptanceCriteria "Submitting a Retired ID for data collection/employment throws an error requiring update to the primary ID; a searched Retired ID clearly shows inactive/retired status, its linked Primary ID, and cannot be selected for use." ;
+    sd:satisfiedBy iam:Seq_SplitRetireIdMiKeyDirect, iam:IdentityRecordRetiredEvent ;
+    sd:notes "Direct match to the sequence's own keyDecision ('A Retired Unique ID must be rejected if submitted anywhere in MiEdWorkforce afterward — staffing's responsibility on consuming these events'). Per the FDD's own text, Retire ID's business-user-facing request workflow (worklist, approve/deny, justification) is explicitly marked 'not required for minimal viable product' and may not be built at all — that larger conditional-scope workflow itself is not modeled (correctly matching the domain's own scope decision, not a gap)." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Features 15.7, 15.14, 15.15 — all three explicitly deferred/withdrawn by the FDD's own
+# text (a one-page pointer doc, no numbered Addendum stories for any of the three)
+#################################################################
+
+iam:Req_15_7 a sd:Requirement ;
+    sd:requirementId "15.7" ;
+    sd:title "Historical Records — withdrawn, no longer necessary" ;
+    sd:statement "This feature was created to account for the potential need for MiEdWorkforce to connect to historical 'Person' data. Throughout the project development of Mi-Key and the Data Warehouse it has been determined that MiEdWorkforce will not have a need to store historical 'Person' data, and thus this feature is no longer necessary." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_14 a sd:Requirement ;
+    sd:requirementId "15.14" ;
+    sd:title "ID Migration & Conversion — withdrawn, no longer necessary" ;
+    sd:statement "This feature was created to account for the potential need for MiEdWorkforce to migrate and convert 'Person' data into the system database. It has been determined that MiEdWorkforce will not have additional migration and conversion needs beyond what the Mi-Key and Data Warehouse teams (or full system migration/conversion plans) already handle." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_15 a sd:Requirement ;
+    sd:requirementId "15.15" ;
+    sd:title "Citizen File Upload — withdrawn, no longer necessary" ;
+    sd:statement "This feature was created to allow citizens to upload supporting documentation during account creation to support identity management processes. Through process definition, it was determined that document upload was not a necessary component for processing, and thus this feature is no longer necessary." ;
+    sd:definedIn iam:Fdd15Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Features 15.7 (Historical Records), 15.14 (ID Migration & Conversion), and 15.15 (Citizen File Upload) are each explicitly withdrawn by the FDD's own Business Specifications text — considered during scoping and deliberately dropped once Mi-Key/Data Warehouse ownership and process definition made them unnecessary. Genuine decisions, not gaps: nothing in iam-domain.ttl/iam-sequences.ttl models any of the three, which is the CORRECT outcome given the withdrawal, not a coverage miss." ;
+    oa:hasTarget iam:Req_15_7, iam:Req_15_14, iam:Req_15_15 ; sd:status "resolved" ; sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.8: Citizen User Account Creation
+#################################################################
+
+iam:Req_15_8_1 a sd:UserStory ;
+    sd:requirementId "15.8.1" ;
+    sd:title "Account Creation form pre-populated from MiLogin" ;
+    sd:statement "As a Citizen User navigating from MiLogin, I want to view the Account Creation form pre-populated with available information so that I can verify or update my demographic details to establish my identity in the system." ;
+    sd:acceptanceCriteria "Pre-populate Legal Name and Email from MiLogin claims, both editable; Phone shown empty/editable; optional Preferred Contact Details section." ;
+    sd:satisfiedBy iam:Seq_CitizenInitialSignIn, iam:VO_MiLoginIdentity ;
+    sd:notes "Direct match: VO_MiLoginIdentity ('type, ID, email') is exactly the MiLogin-sourced pre-population data this story describes; Seq_CitizenInitialSignIn's own redirect-to-Account-Creation-Landing-Page branch is the routing context. The specific field-level pre-population/editability rules (Legal Name editable despite being MiLogin-sourced, Phone always blank) are UI detail this domain's API-level model doesn't individually capture — same class of minor gap as other FDD 01/15 UI-only findings, not raised separately." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_8_2 a sd:UserStory ;
+    sd:requirementId "15.8.2" ;
+    sd:title "Citizen optionally supplies a known PIC/Unique ID during account creation" ;
+    sd:statement "As a Citizen User who already possesses a Personnel Identification Code (PIC), I want the option to manually enter this number during account creation so that it can be used as an additional attribute to help locate my existing records." ;
+    sd:acceptanceCriteria "Optional 'I have a PIC/Unique ID' toggle reveals a PIC entry field; entering it does not auto-populate other fields, only aids matching; format validated before submission." ;
+    sd:satisfiedBy iam:Op_SubmitCitizenAccountCreation, iam:VO_SubmittedDemographics ;
+    sd:notes "Op_SubmitCitizenAccountCreation's own projection note ('Request body is shaped by VO_SubmittedDemographics plus VO_NoSSNStatus') is broad enough to cover an optional supplied PIC as part of the submitted demographic payload; the PIC-specific format-validation rule itself lives only in Identity Validations.xlsx (not separately modeled, per this file's header note)." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_8_3 a sd:UserStory ;
+    sd:requirementId "15.8.3" ;
+    sd:title "Validate citizen demographic data before transmitting to Mi-Key" ;
+    sd:statement "As a MiEdWorkforce System, I want to validate the citizen's entered demographic data against defined business rules so that only valid and complete data is transmitted to the Mi-Key identity service." ;
+    sd:acceptanceCriteria "Attestation required before Submit enabled; run Identity Validations on submit; on failure, show errors and do not send to Mi-Key; on pass, temporarily store and transmit (including optional PIC) to the Mi-Key Assignment Service." ;
+    sd:satisfiedBy iam:Op_SubmitCitizenAccountCreation, iam:Entity_IdentityRequest ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_8_4 a sd:UserStory ;
+    sd:requirementId "15.8.4" ;
+    sd:title "Grant immediate dashboard access on Match or No Match" ;
+    sd:statement "As a Citizen User, I want to be granted immediate access to the Educational Staff Dashboard if my identity is successfully verified or a new ID is created so that I can begin my credentialing tasks or view employment details without delay." ;
+    sd:acceptanceCriteria "On Match, assign the returned Unique ID and update non-matching Master Record fields; on No Match, accept and assign the newly created Unique ID; in both cases, immediately navigate to the dashboard and notify the user of success." ;
+    sd:satisfiedBy iam:Seq_CitizenInitialSignIn, iam:NewCitizenUserAuthorizedEvent, iam:Rule_CitizenAutoApproval ;
+    sd:notes "Direct, strong match — this is Seq_CitizenInitialSignIn's Match/No-Match branches (auto-create Individual scope authorization, redirect to dashboard) almost verbatim." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_8_5 a sd:UserStory ;
+    sd:requirementId "15.8.5" ;
+    sd:title "Citizen notified of Near Match hold on account creation" ;
+    sd:statement "As a Citizen User, I want to be notified if my account creation is placed on hold due to a 'Near Match' so that I understand why I cannot immediately access the dashboard while an administrator reviews my identity." ;
+    sd:acceptanceCriteria "On Near Match, do not assign a Unique ID or grant dashboard access; show a 'Requires Review'/'On Hold' notification avoiding the term 'Near Match'; create a Requires Resolution task; send a confirmation email." ;
+    sd:satisfiedBy iam:Seq_CitizenInitialSignIn, iam:Rule_CitizenNearMatchResolution ;
+    sd:notes "Direct match — iam-sequences.ttl's own keyDecision on this exact sequence already cites this exact story by section number: 'Near Match withholds candidate data: per FDD 15.8 Section 15.8.5, the citizen is never shown potential-match details or the term Near Match — only a generic Requires Review/On Hold status.'" ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.9: Admin Identity Requirements
+#################################################################
+
+iam:Req_15_9_1 a sd:UserStory ;
+    sd:requirementId "15.9.1" ;
+    sd:title "Identity Administrator centralized worklist" ;
+    sd:statement "As an Identity Administrator, I want to view a centralized worklist of all identity-related requests requiring manual intervention so that I can efficiently process new identities, link requests, and near match resolutions from a single interface." ;
+    sd:acceptanceCriteria "Worklist with Unresolved/Resolved tabs; populated by New ID, Link ID, and Requires Resolution (Near Match) requests; defaults to In Review/Needs Review; Resolved tab filterable by Approved/Denied/Canceled; key columns (Unique ID, Name, Requested By, Received Date, Type, Status)." ;
+    sd:satisfiedBy iam:Op_ListIdentityResolutionRequests, iam:Perm_IdentityAdminViewPendingRequests ;
+    sd:notes "Good match: Op_ListIdentityResolutionRequests's summary ('List identity resolution requests requiring administrator review') covers the Unresolved-tab default directly. wireframe-02 (viewed, from this same docx) shows exactly this tabbed worklist with the described columns. The explicit Resolved-tab historical filtering (Approved/Denied/Canceled) is not separately called out in the operation's own documented behavior — a narrow gap, not raised separately given how solidly the core worklist concept is covered." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_2 a sd:UserStory ;
+    sd:requirementId "15.9.2" ;
+    sd:title "Admin reviews New ID requests" ;
+    sd:statement "As an Identity Administrator, I want to review requests for 'New IDs' submitted by business users so that I can either approve the creation of a new identity or link the record to an existing potential match to prevent duplicates." ;
+    sd:acceptanceCriteria "Display submitted data with Mi-Key potential matches; Approve New ID sends a create request to Mi-Key; Use Potential Match lets admin choose whether to update the matched master record; Deny requires a Denial Reason sent to the requesting user." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:VO_ResolutionAction ;
+    sd:notes "Direct match to the NewId branch of Seq_IdentityAdministratorResolveRequest and VO_ResolutionAction's own disposition set (Match / Create New / Deny, with notes)." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_3 a sd:UserStory ;
+    sd:requirementId "15.9.3" ;
+    sd:title "Admin reviews Link ID requests" ;
+    sd:statement "As an Identity Administrator, I want to review 'Link ID' requests submitted by business users so that I can merge duplicate records into a single Primary Unique ID and retire the secondary ID." ;
+    sd:acceptanceCriteria "Display the two (or more) IDs and the business user's justification; admin selects Primary/Retired; the request still comes to the admin even if the business entity indicated a desired action, who can approve/deny/change it." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:VO_LinkDetails ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_4 a sd:UserStory ;
+    sd:requirementId "15.9.4" ;
+    sd:title "Admin resolves citizen Requires Resolution tasks" ;
+    sd:statement "As an Identity Administrator, I want to resolve 'Requires Resolution' tasks generated by citizen account creation so that the citizen can be granted access to the system with the correct identity association." ;
+    sd:acceptanceCriteria "Display requests from citizen creation or update where Mi-Key returned Near Match, alongside candidate(s); actions: Match (associate existing ID), Create New; notify citizen of outcome." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_5 a sd:UserStory ;
+    sd:requirementId "15.9.5" ;
+    sd:title "Admin directly updates a person's demographic record" ;
+    sd:statement "As an Identity Administrator, I want to search for and update a specific person's demographic record so that I can correct data errors that business or citizen users are unable to fix themselves (e.g., locked fields)." ;
+    sd:acceptanceCriteria "Use Person Search to locate the record; admin edits demographic fields and submits directly to the Mi-Key Update Service; required Audit Note; notify associated Citizen User and/or employing district." ;
+    sd:satisfiedBy iam:Op_AdminUpdatePersonRecord, iam:Perm_IdentityAdminUpdatePersonRecord ;
+    sd:notes "Direct match to Op_AdminUpdatePersonRecord's own description ('Directly update a person's record... bypassing the normal match workflow'). The 'search to locate' half depends on the same unmodeled Person Search capability as Question_PersonSearchNotModeled — not re-targeted by that Annotation here since the update operation itself, the part this story is really about, is solidly covered." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_6 a sd:UserStory ;
+    sd:requirementId "15.9.6" ;
+    sd:title "Admin manages identity system configuration" ;
+    sd:statement "As an Identity Administrator, I want to manage system configurations for identity processing (e.g., validations, manuals) so that I can maintain the integrity of identity data collection without developer intervention." ;
+    sd:acceptanceCriteria "Manage user support materials/training manuals; manage business-rule validations (severity, error text); view identity-related File and API Queues to monitor Mi-Key batch status." ;
+    sd:satisfiedBy iam:Perm_IdentityAdminManageConfiguration ;
+    sd:notes "Permission exists and describes exactly this scope ('validation rules, data element definitions, training materials, and processing queue monitoring') but iam-permissions.ttl's own notes already flag that NO API operation implements it ('iam-api.yml has no identity-configuration endpoint... an intentional, documented gap') — this story is the direct source of that already-known, pre-existing gap; not a new finding, but confirms it's a real client-facing ask rather than a speculative catalog entry. Also overlaps GAPS.md's already-logged 'Business Rule Management (04)' unmapped area (see this file's own header note on 15.13) — the business-rule-validation-management half of this story may belong there rather than to iam specifically." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_9_7 a sd:UserStory ;
+    sd:requirementId "15.9 (unnumbered sub-item, rendered '15.9.' in source)" ;
+    sd:title "Admin adds a valid SSN to a No-SSN citizen record" ;
+    sd:statement "As an Identity Administrator, I want to update a citizen's record to include a valid SSN when they previously had 'No SSN' so that the individual becomes eligible for employment or credentialing that requires a Social Security Number." ;
+    sd:acceptanceCriteria "Retrieve a No-SSN-flagged record; admin unchecks No SSN, enters SSN and Confirm SSN; on save, update the Mi-Key Master Record and clear the No SSN flag." ;
+    sd:satisfiedBy iam:Op_AdminUpdatePersonRecord, iam:VO_NoSSNStatus, iam:Rule_NoSSNCitizenAccounts ;
+    sd:notes "Direct match: Rule_NoSSNCitizenAccounts's own example ('the citizen can later add their SSN via their own Account Update flow, or a hiring district can require it') explicitly anticipates this exact admin-side variant, and Op_AdminUpdatePersonRecord is the generic direct-update path that carries it out." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.10: Citizen User Account Update
+#################################################################
+
+iam:Req_15_10_1 a sd:UserStory ;
+    sd:requirementId "15.10.1" ;
+    sd:title "Citizen updates their own demographic data" ;
+    sd:statement "As a Citizen User, I want to access and update my demographic data on my personal information page, so that my identity record remains current and accurate." ;
+    sd:acceptanceCriteria "Navigate Account Details > Personal Information > Update personal information; Unique ID always read-only; demographic fields pre-populated, SSN masked to last 4; Attestation required before Submit enabled; business-rule validation on submit blocks Mi-Key send on error." ;
+    sd:satisfiedBy iam:Seq_CitizenUpdateAccountDemographics, iam:Op_SubmitCitizenAccountUpdate ;
+    sd:notes "Direct, near-verbatim match to Seq_CitizenUpdateAccountDemographics's own opening steps." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_10_2 a sd:UserStory ;
+    sd:requirementId "15.10.2" ;
+    sd:title "Primary demographic fields locked for citizens with active employment" ;
+    sd:statement "As a Citizen User with active employment, I need to be restricted from altering my primary demographic data directly, so that my school district maintains accountability for core employment records." ;
+    sd:acceptanceCriteria "When associated with active employment, primary demographic fields (Legal Name, SSN, DOB) are read-only; message directs the user to contact their district." ;
+    sd:satisfiedBy iam:Seq_CitizenUpdateAccountDemographics ;
+    sd:notes "Direct match to the sequence's own 'Active employment gates Primary fields' keyDecision." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_10_3 a sd:UserStory ;
+    sd:requirementId "15.10.3" ;
+    sd:title "Citizen without active employment adds a previously-missing SSN" ;
+    sd:statement "As a Citizen User who initially created an account without an SSN and does not have active employment, I want to add my newly acquired SSN, so that my profile is complete for future credentialing or employment." ;
+    sd:acceptanceCriteria "If No SSN and not actively employed, user can uncheck No SSN and enter SSN/Confirm SSN; if an SSN already exists, the No SSN checkbox does not appear at all." ;
+    sd:satisfiedBy iam:VO_NoSSNStatus, iam:Rule_NoSSNCitizenAccounts ;
+    sd:notes "Direct match — this is the citizen-self-service mirror of Req_15_9_7's admin-side variant, both backed by the same VO/rule." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_10_4 a sd:UserStory ;
+    sd:requirementId "15.10.4" ;
+    sd:title "Citizen notified of Near Match on update, with field-level locking" ;
+    sd:statement "As a Citizen User, I want to be notified if my demographic update requires administrative review (Near Match) and have my profile temporarily locked, so that conflicting updates are prevented while my identity is verified." ;
+    sd:acceptanceCriteria "On Near Match, do not apply the update or show match options; route a Requires Resolution task; notify the user the request is pending; lock Primary/Secondary fields; leave Contact fields unlocked; user can view and cancel the pending request." ;
+    sd:satisfiedBy iam:Seq_CitizenUpdateAccountDemographics, iam:Seq_CitizenCancelPendingUpdate ;
+    sd:notes "Direct, exact match — iam-sequences.ttl's own keyDecision on Seq_CitizenUpdateAccountDemographics states the identical Primary/Secondary-locked-but-Contact-editable rule, and a source-document review comment on this exact story explicitly confirms this same field-level distinction ('Contact fields... will remain unlocked... Primary and Secondary Identity fields will be locked')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+iam:Req_15_10_5 a sd:UserStory ;
+    sd:requirementId "15.10.5" ;
+    sd:title "System processes validated citizen updates through Mi-Key and notifies parties" ;
+    sd:statement "As the MiEdWorkforce System, I must process validated demographic updates through Mi-Key and notify relevant parties, so that the Master Record remains accurate across all state systems." ;
+    sd:acceptanceCriteria "Send to Mi-Key Assignment service; on Match, update non-matching fields; notify citizen (no field-level detail); if active employment and Secondary fields changed, notify the employing district(s) automatically." ;
+    sd:satisfiedBy iam:Seq_CitizenUpdateAccountDemographics, iam:PersonRecordUpdatedEvent ;
+    sd:notes "Direct match, including the conditional district-notification branch ('Active employment AND Secondary fields changed... Notify employing district(s) of update')." ;
+    sd:definedIn iam:Fdd15Doc .
+
+#################################################################
+# Feature 15.13: Email Comms Requirements — a configuration surface built on
+# Communications (Business Specification #6) and the unmapped Business Rule Management
+# stub area (Business Specification #4), not a numbered Addendum feature
+#################################################################
+
+iam:Req_15_13 a sd:Requirement ;
+    sd:requirementId "15.13" ;
+    sd:title "Identity-specific email/comms configuration — out of scope for iam, owned by Communications + Business Rule Management" ;
+    sd:statement "For identity management and processing, the system will use the framework for email communications (Business Specification #6, Alerts, Emails and Communications) to allow the Identity Management Administrator to create/manage email templates, set effective dates, set recipient roles, define triggers, and view historical usage. All underlying logic for sending, tracking, and displaying emails/alerts/notifications is derived from Business Specification #6; Business Specification #4 (Business Rule Management) specifies when and to whom notifications are sent. This feature is strictly limited to configuring those tools for the Identity Management module." ;
+    sd:definedIn iam:Fdd15Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 15.13 explicitly builds on the Communications domain's own alert/email-template framework (Business Specification #6) and the Business Rule Management capability (Business Specification #4) rather than describing IAM-owned build items — not modeled as IAM Requirements here, same pattern as FDD 01's Feature 1.7 deferral to Reporting. Business Rule Management (04) has no corresponding bounded context anywhere in the 11 converted mied-v3 domains per GAPS.md's existing FDD 29/28 findings — this FDD independently confirms the same gap a third time (an Identity-Management-specific admin screen for managing WHAT gets sent and its trigger events has no home either), worth folding into that existing GAPS.md entry rather than opening a new one. Communications itself (the `comm` domain) has not been reviewed as part of THIS iam-scoped pass, so whether its own existing email-template model already covers 'per-module template configuration with role-based recipients and trigger-event binding' is unconfirmed here." ;
+    oa:hasTarget iam:Req_15_13 ; sd:status "resolved" ; sd:definedIn iam:Fdd15Doc .

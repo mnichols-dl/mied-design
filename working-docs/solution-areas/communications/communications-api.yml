@@ -1,0 +1,1405 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Communications API
+  version: 1.0.0
+  description: |
+    Centralized notification and alerting infrastructure providing email delivery,
+    template management, dashboard alerts, and communication audit trails across
+    all MiEdWorkforce functional areas. Primary consumers are internal domain
+    services that publish domain events and administrative users who manage
+    templates, review delivery history, and provide help desk support.
+
+servers:
+  - url: http://communications-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/communications/api/v1
+    description: External via APIM (limited endpoints)
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ----------------------------------------------------------------------------
+  # EMAIL TEMPLATES
+  # ----------------------------------------------------------------------------
+
+  /templates:
+    get:
+      summary: List email templates
+      operationId: listTemplates
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.view
+        - communications.staffing-templates.view
+        - communications.proflearning-templates.view
+        - communications.epp-templates.view
+      x-scope-sensitive: false
+      description: |
+        Returns email templates filtered by functional area. Results are automatically
+        scoped to the functional areas the caller holds a view permission for; callers
+        without a given functional area's view permission will not see templates from
+        that area. Template management is a system-wide administrative function with
+        no organizational hierarchy scoping — X-Organization-Context does not apply.
+      parameters:
+        - name: functionalArea
+          in: query
+          schema:
+            type: string
+            enum: [Credentialing, Staffing, ProfessionalLearning, EPP, PPR, IAM]
+        - name: eventType
+          in: query
+          schema:
+            type: string
+          description: Filter by specific event type
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Draft, Pending, Active, Archived]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of templates scoped to caller's permitted functional areas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TemplateSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create new email template
+      operationId: createTemplate
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.create
+        - communications.staffing-templates.create
+        - communications.proflearning-templates.create
+        - communications.epp-templates.create
+      x-scope-sensitive: false
+      description: |
+        Creates a new email template in Draft status for the specified functional
+        area. Caller must hold the create permission for the target functional area.
+        Template management is a system-wide administrative function —
+        X-Organization-Context does not apply. Activation requires a separate
+        activate action on a version.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreate'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templateId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /templates/{templateId}:
+    get:
+      summary: Get template details
+      operationId: getTemplate
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.view
+        - communications.staffing-templates.view
+        - communications.proflearning-templates.view
+        - communications.epp-templates.view
+      x-scope-sensitive: false
+      description: |
+        Returns full template detail including all versions. Caller must hold
+        the view permission for the template's functional area. Scope is resolved
+        server-side from the template's functional area — X-Organization-Context
+        does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template details with all versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update template metadata
+      operationId: updateTemplate
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.edit
+        - communications.staffing-templates.edit
+        - communications.proflearning-templates.edit
+        - communications.epp-templates.edit
+      x-scope-sensitive: false
+      description: |
+        Updates name and description metadata on the template record. Does not
+        create a new version. Caller must hold the edit permission for the
+        template's functional area. Scope is resolved server-side from the
+        template's functional area — X-Organization-Context does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Template updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Archive template
+      operationId: deleteTemplate
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.delete
+        - communications.staffing-templates.delete
+        - communications.proflearning-templates.delete
+        - communications.epp-templates.delete
+      x-scope-sensitive: false
+      description: |
+        Soft-deletes the template by archiving it. Template and all versions
+        remain in the audit trail. Caller must hold the delete permission for
+        the template's functional area. Scope is resolved server-side from the
+        template's functional area — X-Organization-Context does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Template archived
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /templates/{templateId}/versions:
+    get:
+      summary: List template versions
+      operationId: listTemplateVersions
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.view
+        - communications.staffing-templates.view
+        - communications.proflearning-templates.view
+        - communications.epp-templates.view
+      x-scope-sensitive: false
+      description: |
+        Returns version history for the template. Caller must hold the view
+        permission for the template's functional area. Scope is resolved
+        server-side from the template's functional area — X-Organization-Context
+        does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateVersionSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create new template version
+      operationId: createTemplateVersion
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.edit
+        - communications.staffing-templates.edit
+        - communications.proflearning-templates.edit
+        - communications.epp-templates.edit
+      x-scope-sensitive: false
+      description: |
+        Creates a new Draft version of the template with updated subject and body
+        content. Does not auto-activate. Caller must hold the edit permission for
+        the template's functional area. Scope is resolved server-side from the
+        template's functional area — X-Organization-Context does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateVersionCreate'
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versionId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /templates/{templateId}/versions/{versionId}/activate:
+    post:
+      summary: Activate template version
+      operationId: activateTemplateVersion
+      tags: [Templates]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-templates.activate
+        - communications.staffing-templates.activate
+        - communications.proflearning-templates.activate
+        - communications.epp-templates.activate
+      x-scope-sensitive: false
+      description: |
+        Transitions the specified version from Draft to Active and deactivates
+        the previously active version. Caller must hold the activate permission
+        for the template's functional area. Scope is resolved server-side from
+        the template's functional area — X-Organization-Context does not apply.
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version activated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # EVENT TYPE METADATA
+  # ----------------------------------------------------------------------------
+
+  /event-types/{eventType}/available-variables:
+    get:
+      summary: Get available variables for event type
+      operationId: getAvailableVariables
+      tags: [EventTypes]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.template-variables.view
+      x-scope-sensitive: false
+      description: |
+        Returns variable families and individual variables available for a
+        specific event type. Used by the template editor for autocomplete and
+        variable insertion. Scope is agnostic — variable definitions are
+        system-wide metadata; X-Organization-Context does not apply.
+      parameters:
+        - name: eventType
+          in: path
+          required: true
+          schema:
+            type: string
+          example: CredentialApplicationApproved
+      responses:
+        '200':
+          description: Available variables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTypeVariables'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # MANUAL EMAIL OPERATIONS
+  # ----------------------------------------------------------------------------
+
+  /communications/send-manual:
+    post:
+      summary: Send one-time manual email using template
+      operationId: sendManualEmail
+      tags: [Communications]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.email.send-manual
+        - communications.email.customize
+      x-scope-sensitive: false
+      description: |
+        Sends a one-off email using a template with optional subject/body
+        overrides. The communications.email.send-manual permission is always
+        required. The communications.email.customize permission is additionally
+        required when customSubject or customBody are provided. Typically used
+        by help desk staff sending one-off emails on behalf of users.
+        X-Organization-Context does not apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, context, recipientEmail]
+              properties:
+                templateId:
+                  type: string
+                  format: uuid
+                context:
+                  type: object
+                  additionalProperties: true
+                  description: Context data for variable resolution (e.g., application_id)
+                recipientEmail:
+                  type: string
+                  format: email
+                ccEmails:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+                customSubject:
+                  type: string
+                  description: Override template subject (requires communications.email.customize)
+                customBody:
+                  type: string
+                  description: Override template body in Markdown (requires communications.email.customize)
+      responses:
+        '202':
+          description: Email queued for sending
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instanceId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /communications/preview:
+    post:
+      summary: Preview rendered email before sending
+      operationId: previewEmail
+      tags: [Communications]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.email.send-manual
+      x-scope-sensitive: false
+      description: |
+        Renders a template with the provided context and optional overrides and
+        returns the resulting subject and body for review prior to sending.
+        X-Organization-Context does not apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, context]
+              properties:
+                templateId:
+                  type: string
+                  format: uuid
+                context:
+                  type: object
+                  additionalProperties: true
+                customSubject:
+                  type: string
+                customBody:
+                  type: string
+      responses:
+        '200':
+          description: Rendered preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject:
+                    type: string
+                  bodyHtml:
+                    type: string
+                  bodyText:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ----------------------------------------------------------------------------
+  # EMAIL HISTORY
+  # ----------------------------------------------------------------------------
+
+  /email-history:
+    get:
+      summary: Search email history
+      operationId: searchEmailHistory
+      tags: [EmailHistory]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-emails.view-history
+        - communications.staffing-emails.view-history
+        - communications.proflearning-emails.view-history
+        - communications.epp-emails.view-history
+        - communications.email.view-all-history
+      x-scope-sensitive: false
+      description: |
+        Returns sent email history filtered by functional area, recipient, status,
+        and date range. Results are automatically scoped to the functional areas
+        the caller holds a view-history permission for. Callers with
+        communications.email.view-all-history see all functional areas. Email
+        history is a system-wide administrative function — X-Organization-Context
+        does not apply.
+      parameters:
+        - name: functionalArea
+          in: query
+          schema:
+            type: string
+        - name: recipientEmail
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Queued, Processed, Delivered, Bounced, Deferred, Dropped, Failed]
+        - name: sentAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: sentBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Email history results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmailInstanceSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /email-history/{instanceId}:
+    get:
+      summary: Get email instance details
+      operationId: getEmailInstance
+      tags: [EmailHistory]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.email.view-details
+      x-scope-sensitive: false
+      description: |
+        Returns full detail for a single email instance including rendered content,
+        delivery events, and metadata. Requires communications.email.view-details
+        plus the corresponding functional area view-history permission, both of
+        which are evaluated server-side. X-Organization-Context does not apply.
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Email instance details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInstanceDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /email-history/{instanceId}/resend:
+    post:
+      summary: Resend email with optional recipient override
+      operationId: resendEmail
+      tags: [EmailHistory]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.credentials-emails.resend
+        - communications.staffing-emails.resend
+        - communications.proflearning-emails.resend
+        - communications.epp-emails.resend
+      x-scope-sensitive: false
+      description: |
+        Resends a previously sent email. Caller must hold the resend permission
+        for the email's functional area and the corresponding view-history
+        permission, both evaluated server-side from the email instance's functional
+        area. Only available while content exists in hot storage (typically 90 days).
+        Cannot re-resolve variables; uses originally rendered content. Creates a new
+        EmailInstance referencing the original. X-Organization-Context does not apply.
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientEmail]
+              properties:
+                recipientEmail:
+                  type: string
+                  format: email
+                  description: Recipient address (may override original)
+                ccEmails:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+      responses:
+        '202':
+          description: Email queued for resend
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  newInstanceId:
+                    type: string
+                    format: uuid
+                  originalInstanceId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Email content no longer available (archived)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # ALERTS
+  # ----------------------------------------------------------------------------
+
+  /alerts:
+    get:
+      summary: List dashboard alerts for current user
+      operationId: listAlerts
+      tags: [Alerts]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.alerts.view
+      x-scope-sensitive: false
+      description: |
+        Returns active, resolved, or expired alerts targeted at the calling user.
+        Results are always scoped to the calling user's own alerts — IAM grants
+        access if the user holds the required permission at any scope.
+        X-Organization-Context does not apply.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Active, Resolved, Expired]
+      responses:
+        '200':
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertSummary'
+
+    post:
+      summary: Create dashboard alert
+      operationId: createAlert
+      tags: [Alerts]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.alerts.create
+      x-scope-sensitive: false
+      description: |
+        Creates a new dashboard or on-screen alert targeted at specific users.
+        Alert targeting is by explicit user ID list; X-Organization-Context
+        does not apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertCreate'
+      responses:
+        '201':
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alertId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /alerts/{alertId}/resolve:
+    post:
+      summary: Resolve dashboard alert
+      operationId: resolveAlert
+      tags: [Alerts]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.alerts.view
+      x-scope-sensitive: false
+      description: |
+        Transitions alert from Active to Resolved. User must own the alert or
+        hold administrative alert permissions, both evaluated server-side.
+        X-Organization-Context does not apply.
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionType]
+              properties:
+                resolutionType:
+                  type: string
+                  enum: [Completed, Dismissed, NoActionNeeded]
+      responses:
+        '200':
+          description: Alert resolved
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User does not own alert or lacks permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # COMMENTS
+  # ----------------------------------------------------------------------------
+
+  /comments:
+    get:
+      summary: List comments for process item
+      operationId: listComments
+      tags: [Comments]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.comments.view-internal
+      x-scope-sensitive: true
+      description: |
+        Returns comments for a process item. Internal comments are only returned
+        to callers with communications.comments.view-internal. External comments
+        are visible to all callers with access to the parent process item. Results
+        are scoped to the caller's organizational level (Building, District, ISD)
+        as determined by X-Organization-Context. Users with ISD-level authorization
+        will see comments for all constituent districts and buildings.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: processItemType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [CredentialApplication, StaffingRecord, EPPEnrollment]
+        - name: processItemId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: visibility
+          in: query
+          schema:
+            type: string
+            enum: [Internal, External, All]
+      responses:
+        '200':
+          description: Comment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Add comment to process item
+      operationId: createComment
+      tags: [Comments]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.comments.create-internal
+        - communications.comments.create-external
+      x-scope-sensitive: true
+      description: |
+        Adds a comment to a process item. Internal comments require
+        communications.comments.create-internal; external comments require
+        communications.comments.create-external. The caller's organizational
+        scope is determined by X-Organization-Context; users may only create
+        comments on process items belonging to organizations within their
+        authorized scope (Building, District, or ISD transitively).
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commentId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /comments/{commentId}:
+    put:
+      summary: Update comment text
+      operationId: updateComment
+      tags: [Comments]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.comments.edit
+      x-scope-sensitive: false
+      description: |
+        Updates comment text. Cannot modify a comment that has already been
+        included in a sent email. Visibility cannot be changed after creation.
+        Scope is resolved server-side from the comment's owning process item —
+        X-Organization-Context is not required.
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commentText]
+              properties:
+                commentText:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Comment updated
+        '400':
+          description: Cannot modify — already included in a sent email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete comment (soft delete)
+      operationId: deleteComment
+      tags: [Comments]
+      x-access: internal-user
+      x-permissions-required:
+        - communications.comments.delete
+      x-scope-sensitive: false
+      description: |
+        Soft-deletes the comment. Comment remains in the audit trail. Scope is
+        resolved server-side from the comment's owning process item —
+        X-Organization-Context is not required.
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Comment deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # WEBHOOKS (INTERNAL)
+  # ----------------------------------------------------------------------------
+
+  /webhooks/sendgrid:
+    post:
+      summary: Receive SendGrid delivery status webhook
+      operationId: receiveSendGridWebhook
+      tags: [Webhooks]
+      x-access: internal-service
+      x-permissions-required: []
+      x-scope-sensitive: false
+      description: |
+        Called by SendGrid to report email delivery status events. Not exposed
+        via APIM. Requires HMAC signature validation on the incoming request.
+        Authenticated via HMAC; no MiLogin token is present.
+        X-Organization-Context does not apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/SendGridWebhookEvent'
+      responses:
+        '200':
+          description: Webhook processed
+        '401':
+          description: Invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: district-10
+
+  schemas:
+
+    # Templates
+    TemplateSummary:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        functionalArea:
+          type: string
+        eventType:
+          type: string
+        status:
+          type: string
+          enum: [Draft, Pending, Active, Archived]
+        currentVersionNumber:
+          type: integer
+        lastModifiedAt:
+          type: string
+          format: date-time
+
+    TemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/TemplateSummary'
+        - type: object
+          properties:
+            description:
+              type: string
+            versions:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateVersionSummary'
+
+    TemplateCreate:
+      type: object
+      required: [name, functionalArea, eventType]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        functionalArea:
+          type: string
+          enum: [Credentialing, Staffing, ProfessionalLearning, EPP, PPR, IAM]
+        eventType:
+          type: string
+          description: Domain event type that triggers this template
+          example: CredentialApplicationApproved
+
+    TemplateVersionSummary:
+      type: object
+      properties:
+        versionId:
+          type: string
+          format: uuid
+        versionNumber:
+          type: integer
+        status:
+          type: string
+          enum: [Draft, Active, Inactive]
+        subject:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    TemplateVersionCreate:
+      type: object
+      required: [subject, bodyContent]
+      properties:
+        subject:
+          type: string
+          description: Subject line with variable placeholders
+        bodyContent:
+          type: string
+          description: Markdown content with variable placeholders (<<VariableName>>)
+
+    # Event Type Variables
+    EventTypeVariables:
+      type: object
+      properties:
+        eventType:
+          type: string
+        functionalArea:
+          type: string
+        variableFamilies:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceEntity:
+                type: string
+                example: Applicant
+              requiredContext:
+                type: array
+                items:
+                  type: string
+                example: [application_id]
+              availableVariables:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: ApplicantName
+                    displayName:
+                      type: string
+                      example: Applicant Full Name
+                    description:
+                      type: string
+                    exampleValue:
+                      type: string
+                      example: Jane Doe
+                    isMandatory:
+                      type: boolean
+                    dataType:
+                      type: string
+
+    # Email History
+    EmailInstanceSummary:
+      type: object
+      properties:
+        instanceId:
+          type: string
+          format: uuid
+        recipientEmail:
+          type: string
+          format: email
+        subject:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        deliveryStatus:
+          type: string
+          enum: [Queued, Processed, Delivered, Bounced, Deferred, Dropped, Failed]
+        functionalArea:
+          type: string
+        contentStatus:
+          type: string
+          enum: [Active, Purged]
+
+    EmailInstanceDetail:
+      allOf:
+        - $ref: '#/components/schemas/EmailInstanceSummary'
+        - type: object
+          properties:
+            bodyHtml:
+              type: string
+              nullable: true
+              description: Null if content purged
+            bodyText:
+              type: string
+              nullable: true
+            templateVersionId:
+              type: string
+              format: uuid
+            eventType:
+              type: string
+            deliveryEvents:
+              type: array
+              items:
+                type: object
+                properties:
+                  eventType:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  substatus:
+                    type: string
+                    nullable: true
+            sentByUserId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Populated if manually sent
+            resentFromInstanceId:
+              type: string
+              format: uuid
+              nullable: true
+
+    # Alerts
+    AlertSummary:
+      type: object
+      properties:
+        alertId:
+          type: string
+          format: uuid
+        alertType:
+          type: string
+          enum: [Dashboard, OnScreen]
+        severity:
+          type: string
+          enum: [Info, Warning, Error, Critical]
+        message:
+          type: string
+        actionLink:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          type: string
+          enum: [Active, Resolved, Expired]
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AlertCreate:
+      type: object
+      required: [alertType, severity, message, targetUserIds]
+      properties:
+        alertType:
+          type: string
+          enum: [Dashboard, OnScreen]
+        severity:
+          type: string
+          enum: [Info, Warning, Error, Critical]
+        message:
+          type: string
+        actionLink:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+        targetUserIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    # Comments
+    CommentSummary:
+      type: object
+      properties:
+        commentId:
+          type: string
+          format: uuid
+        commentText:
+          type: string
+        visibility:
+          type: string
+          enum: [Internal, External]
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        modifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        sentInEmailInstanceIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Email instances that included this comment
+
+    CommentCreate:
+      type: object
+      required: [processItemType, processItemId, commentText, visibility]
+      properties:
+        processItemType:
+          type: string
+          enum: [CredentialApplication, StaffingRecord, EPPEnrollment]
+        processItemId:
+          type: string
+          format: uuid
+        commentText:
+          type: string
+          maxLength: 2000
+        visibility:
+          type: string
+          enum: [Internal, External]
+
+    # SendGrid Webhook
+    SendGridWebhookEvent:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        timestamp:
+          type: integer
+          format: int64
+        event:
+          type: string
+          enum: [processed, delivered, bounce, deferred, dropped]
+        sg_message_id:
+          type: string
+        sg_event_id:
+          type: string
+        instance_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+
+    # Common
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or business rule violation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              validationErrors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Conflict:
+      description: Optimistic concurrency conflict or duplicate creation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            communications:read: Read communication data
+            communications:write: Send emails and manage alerts
+            communications:admin: Administrative operations
+
+security:
+  - MiLogin: [communications:read]

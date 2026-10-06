@@ -1,0 +1,21 @@
+Rough notes:
+- Configurability is a design tenet applied across this solution. We want intentional, bounded configuration that improves maintainability and operations without turning the system into an untestable rules soup. We want to be able to configure what changes independently of code.
+  - Strong schemas / validation at startup (and/or deploy-time) for required keys, ranges, formats
+  - Clear ownership boundaries (who can change what), and deployment gates for high-risk settings
+- Configuration is divided into:
+  - Operational configuration: environment and runtime values managed through App Config, Key Vault, and Terraform.
+    - E.g. values needed to run the software (service URLs, connection strings, certificates, secrets)
+  - Domain configuration: business-managed data such as credential definition attributes, templates, and other process parameters.
+    - E.g. business parameters that vary by credential or process (e.g., issued duration) managed as first-class data with validation, lifecycle, and audit
+- Good candidates for configuration:
+  - Environment-specific differences (dev/qa/prod endpoints, feature flags, resource identifiers)
+  - Sensitive values (secrets/credentials) stored in Key Vault
+  - Non-secret application settings stored in App Configuration
+  - Runtime-operational toggles that change behavior at a coarse level (e.g., turn on/off an integration, adjust polling interval), with guardrails and safe defaults
+- Poor candidates for configuration:
+  - Anything that effectively becomes business logic encoded as settings (hard to reason about, hard to validate, hard to test, easy to misconfigure)
+  - Anything where configuration would create a combinatorial matrix of behavior that can't be covered by automated tests
+- Configuration management approach:
+  - Prefer automation-derived configuration (e.g., Terraform writes App Config values using outputs from other resources) to reduce manual drift.
+  - Allow human-entered values only where necessary, ideally through controlled processes (runbooks, change tracking, approvals).
+- A useful heuristic: if changing a value should be handled like editing a record (auditable business change), it belongs in the domain model; if it should be handled like deploying a system change (ops/infra concern), it belongs in system configuration.

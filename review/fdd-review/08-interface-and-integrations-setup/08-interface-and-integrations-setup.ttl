@@ -1,0 +1,651 @@
+# FDD 08 review — "08 - Interface and Integrations Setup". Ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md. This folder is NOT one FDD with one Addendum —
+# it is 11 separate "Interface Design Document" (IDD) sub-documents, each describing one
+# named external-system integration, plus a stray "TO BE DELETED 8.3, 8.9 - Data
+# Warehouse" folder (an old, superseded "8.3 - Data Warehouse IDD.docx" with NO Addendum
+# at all — genuinely replaced by the current "8.9 - CEPI Data Warehouse" doc; read in full,
+# confirmed superseded, not converted). Each real sub-document DOES carry its own numbered
+# "## Addendum" user-story section in "As the MiEdWorkforce System, I want..." form (all
+# system-actor stories, no citizen-facing ones anywhere in this folder) — that Addendum,
+# not the free-text interface-spec prose/JSON schemas/field-mapping tables above it, is
+# the Requirement unit used below, consistent with every other FDD pass in this project.
+#
+# THE KEY QUESTION THIS PASS ANSWERS (per this review's own brief — FDD 02 and FDD 29 are
+# both waiting on it): "Interface and Integrations Setup (8)" is NOT a missing bounded
+# context and does NOT need a GAPS.md "whole area has no home" entry. It decomposes
+# cleanly into external-system integrations that belong to FIVE different EXISTING
+# bounded contexts, three of which already have real, load-bearing coverage for their
+# piece of it:
+#   - 8.1 EEM Interface + 8.1 Entity Directory Data Population -> organizations
+#     (ext:EEMSystem + orgs:BatchJob_CepiNightlySync already exist and substantially
+#     satisfy this — see Feature 8.1 below for a real mechanism-vs-mechanism discrepancy
+#     found while checking the citation).
+#   - 8.2 NASDTEC Ed ID Clearinghouse -> profpractice (ext:NASDTECSystem,
+#     profp:Seq_ProcessNasdtecNightlyBatch, profp:Rule_NASDTECNightlyBatchProcessing
+#     already exist and substantially satisfy this).
+#   - 8.3 STARR Interface -> proflearning for the course-data half (starr:StarrSystem
+#     already exists there); credentialing for the post-secondary-award-data half
+#     (genuinely unmodeled — see Question_StarrAwardDataGapInCredentialing).
+#   - 11.8 MTTC EdReports (Pearson) -> credentialing (asp:AssessmentProviderSystem,
+#     cred:Op_ImportAssessmentResults, cred:Seq_ImportAssessmentResults already exist and
+#     substantially satisfy the manual-upload half).
+#   - 8.4 Data Hub, 8.5 CTEIS, 8.6 NexSys, 8.7 MSDS-TSDL, 8.8 Secure Site -> staffing
+#     (the natural owner — every one of these moves staff/assignment/employment data by
+#     Unique ID). NONE of the five has ANY corresponding Dependency, Sequence, or
+#     ExternalSystem node anywhere in staffing-domain.ttl/staffing-sequences.ttl today —
+#     this is a genuine, real coverage gap within an existing domain (not a "no home"
+#     situation), so per CONVENTIONS.md new sd:ExternalSystem stubs for these five systems
+#     are minted below, in THIS file (not staffing's own files, which this pass doesn't
+#     own) so the Requirement/Annotation/Dependency machinery has something concrete to
+#     point at; a future staffing-domain pass should fold them into
+#     staffing-domain.ttl/staffing-sequences.ttl proper.
+#   - 8.9 CEPI Data Warehouse: the one piece that turned out to be neither satisfied nor a
+#     coverage gap at all — see the out-of-scope Annotation below. This is this pass's
+#     single most important finding and the concrete resolution of what FDD 02 and FDD 29
+#     were both pointing at.
+#
+# Skipped per CONVENTIONS.md: the free-text interface-spec fields (transmission protocol,
+# environments, field-layout tables, sample JSON, generated C#/OpenAPI model dumps) above
+# each Addendum — these are the IDD template's own boilerplate, not requirements, and are
+# folded into sd:notes/sd:integrationNotes only where a specific field materially confirms
+# or contradicts something. The "MORE Integrations.xlsx"/"MORE Integrations.md" workbook
+# (a master list of ALL integrations across the whole solution, most already covered by
+# other FDDs/domains) and "MORE Interfaces with other systems.msg" (an email) were read for
+# context/cross-checking only, per this project's "skip non-docx unless load-bearing"
+# rule — neither introduced a numbered requirement of its own. "Public Services_Teacher
+# Information User Guide.docx" and "Interface Design document- Template.docx" (the blank
+# template) were also read; the User Guide is REP/CTEIS/NexSys/MSDS's shared underlying
+# API reference (corroborates the "same set of service endpoints... based on existing REP
+# services" note found independently in 8.5's own IDD) and contributed no new requirements
+# of its own. "11.8 MTTC" is numbered under Business Specification 11 (System Admin -
+# Credentialing), not 8, but its source docx lives physically inside this FDD 8 folder —
+# converted here rather than left out, per this project's practice of following where the
+# source material actually sits.
+#
+# Review comments (word/comments.xml, extracted via unzip + a small node regex script,
+# not python — python3 wasn't available in this environment): most across all 11
+# sub-documents are pure "field is TBD, please fill in" editorial nagging from one
+# reviewer (Caswell) with no requirement-level content — not transcribed individually.
+# Two threads are substantial and modeled as standalone Annotations below: the CEPI Data
+# Warehouse "is this story needed... not needed, suggesting to remove" rejection thread
+# (Question_DataWarehouseOutOfScope — the headline finding) and the Data Hub
+# direction-dispute thread (Question_DataHubFlowDirectionDisputed). The NASDTEC comment
+# "we have to define this retention policy" independently corroborates
+# profp:Question_NASDTECDataLifecycle (already on record from the profpractice domain
+# pass) rather than raising new ground — not re-modeled as a duplicate Annotation.
+#
+# Embedded images: two sub-documents (8.1 EEM Interface IDD, 8.6 NexSys IDD) contain a
+# couple of .emf (Enhanced Metafile) images each — checked via `unzip -l`. These IDDs are
+# technical interface specs (protocol/schema/field-mapping documents), not UI-flow FDDs;
+# .emf in this document type is almost always a pasted Office chart/table/logo fragment,
+# not a wireframe, and the Read tool cannot render .emf directly. No wireframes/ subfolder
+# is created for this file — there is no UI in scope anywhere in this FDD folder to
+# wireframe; every story here is a system-to-system integration behavior.
+#
+# Numbering note: 8.9's own Addendum starts at 8.9.2 (no 8.9.1 exists anywhere in the
+# document) — preserved as-is, not renumbered, consistent with this project's practice of
+# keeping a source FDD's own literal numbering even when it's got a gap or collision.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix orgs:  <urn:solutiondesign:instance:organizations:> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+@prefix starr: <urn:solutiondesign:instance:starr:> .
+@prefix asp:   <urn:solutiondesign:instance:assessmentprovider:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd08_1EemDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.1 - EEM Interface/8.1 - EEM Interface IDD.docx" ;
+    sd:notes "REST API (Bearer Token) integration spec against CEPI.PublicServices/api/EntityInformation/{method}. 6 review comments, all editorial TBD-field nagging plus one dead-link fix — no requirement-level content." .
+orgs:Fdd08_1EntityDirDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.1 - EEM Interface/8.1 - Entity Directory Data Population IDD.docx" ;
+    sd:notes "A DIFFERENT, separately-specified mechanism for the same underlying goal (EEM entity data into MiEdWorkforce): a Synapse ETL pipeline reading EEM's SQL tables directly (Managed Identity auth, no REST layer) and populating CEDS IDS tables, explicitly built to 'remove the dependency on the CEPI Public Service EEM Entity Information services' that the sibling 8.1 EEM Interface IDD describes. See Question_EemIntegrationMechanismDiscrepancy below — three different described mechanisms exist across this folder plus the real organizations-domain build. 9 review comments, all editorial TBD-field nagging." .
+profp:Fdd08_2NasdtecDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.2 - NASDTEC - Ed ID Clearinghouse/8.2 - NASDTEC IDD.docx" ;
+    sd:notes "13 review comments: mostly dead-link fix and volume/scheduling TBDs. One substantive: 'we have to define this retention policy' (Punniyamoorthy) — independently corroborates profp:Question_NASDTECDataLifecycle, already on record from the profpractice domain pass; not re-modeled here as a duplicate. Another: 'Removing reference to NASDTEC, as this should be for all API calls' — confirms 8.2.4's audit-logging story was generalized from a NASDTEC-specific draft, i.e. it documents a cross-cutting logging expectation, not a NASDTEC peculiarity." .
+plrn:Fdd08_3StarrDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.3 - STARR Interface/8.3 - STARR Interface IDD.docx" ;
+    sd:notes "8 review comments, editorial (TBD fields, scheduling, a suggestion to note STARR's annual collection cadence) — no requirement-level content beyond what the Addendum itself states." .
+staff:Fdd08_4DataHubDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.4 - Data Hub/8.4 - Data Hub IDD.docx" ;
+    sd:notes "33 review comments (by far the most of any sub-document in this folder) — most are 'reasonable use case for the API'/'values provided'/'endpoint added' resolution notes on the HIGH LEVEL SCENARIOS table's 20 Ed-Fi Identities API use cases (skipped per CONVENTIONS.md as duplicative of the Addendum, same as every other FDD's HLS table). Two threads are substantive and modeled as standalone Annotations below: a live data-flow-direction dispute (Question_DataHubFlowDirectionDisputed) and an unresolved Mi-Key-vs-MiEdWorkforce ownership question (Question_DataHubMiKeyOwnershipUnconfirmed). A third comment ('Potential to source from CTEIS in the future, but not initial use case') confirms the Career-Cluster/CIP-Code fields in the HLS table are explicitly future/deferred, not part of the current 8.4.1-8.4.5 Addendum scope." .
+staff:Fdd08_5CteisDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.5 - CTEIS Interface/8.5 - CTEIS Interface IDD.docx" ;
+    sd:notes "8 review comments, editorial (scheduling/volume TBDs, one confirmed at '1000 to 2000 requests a day in prod'). Explicitly states its own three methods (GetPersonnelByDistrict/PIC/CoreFields) 'are the same set of service endpoints that will be used by many of the other integrations including MSDS/TSDL, MEGS+, NexSys and potentially others... based on the existing set of REP services' — see the consolidated coverage-gap Annotation below, which treats CTEIS/NexSys/MSDS-TSDL's personnel-lookup stories as ONE missing capability rather than three independent gaps, per this self-declared overlap." .
+staff:Fdd08_6NexSysDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.6 - NexSys/8.6 - NexSys IDD.docx" ;
+    sd:notes "0 review comments." .
+staff:Fdd08_7MsdsTsdlDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.7 - MSDS-TSDL Interface/8.7 - MSDS(TSDL) IDD.docx" ;
+    sd:notes "4 review comments, editorial TBD-field nagging only." .
+staff:Fdd08_8SecureSiteDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.8 - Secure Site/8.8 - Secure Site IDD.docx" ;
+    sd:notes "0 review comments. Shortest, most self-aware doc in the folder: it explicitly states the historical REP-Secure Site connection is deprecated/no-longer-used, and that no active outbound interface is being built now — only that MiEdWorkforce's data model should not preclude one later." .
+rpt:Fdd08_9DataWarehouseDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/8.9 - CEPI Data Warehouse/8.9 - Data Warehouse IDD.docx" ;
+    sd:notes "8 review comments — see Question_DataWarehouseOutOfScope below; this thread is the single most important finding of this pass. A sibling, superseded '8.3 - Data Warehouse IDD.docx' also exists (in 'TO BE DELETED 8.3, 8.9 - Data Warehouse/'), read in full and confirmed to have NO Addendum/numbered stories at all and near-identical prose to this current doc — genuinely replaced, not converted separately, consistent with its own folder name." .
+cred:Fdd11_8MttcDoc a sd:SourceDocument ; sd:docType "fdd" ;
+    sd:section "functional-design-docs/08 - Interface and Integrations Setup/11.8 MTTC/Interface Design document - MTTC EdReports (Pearson).docx" ;
+    sd:notes "0 review comments. Fixed-width incoming-file layout (Last Name/First Name/SSN/Test Code/Test Date/Pass-Fail/Scaled Score) for the CURRENT manual/monthly process; Addendum stories 11.8.1i-11.8.3i number the current-state manual upload, a still-future API integration, and identity-matching/exception-queue behavior respectively (the 'i' suffix on these three IDs, unique in this whole file, is the source document's own — not altered here)." .
+
+#################################################################
+# New sd:ExternalSystem stubs (minted here, not in staffing's own files, since this pass
+# doesn't own staffing-domain.ttl/staffing-sequences.ttl — see header note). NASDTEC,
+# EEM, STARR, and the assessment-provider stub already exist elsewhere and are reused
+# directly by IRI, not redeclared: ext:NASDTECSystem (profpractice), ext:EEMSystem
+# (organizations), starr:StarrSystem (proflearning), asp:AssessmentProviderSystem
+# (credentialing).
+#################################################################
+
+ext:MiDataHubSystem a sd:ExternalSystem ;
+    sd:hasApi true ;
+    sd:integrationNotes "Michigan DataHub (MiDH, midatahub.org) — a state-level ecosystem exchanging Ed-Fi-standard data between district SIS/HR systems and state systems, for state/federal reporting. MiEdWorkforce sends staffing data outbound via the existing CEPI Public Services 'SendToHub' endpoint (JSON, opt-in per district); no inbound 'ReceiveFromHub' endpoint exists yet on either side. Ed-Fi Data Standard, not CEDS — requires mapping. See Question_DataHubFlowDirectionDisputed for a live, unresolved dispute over whether the outbound direction is even needed as framed." .
+
+ext:CTEISSystem a sd:ExternalSystem ;
+    sd:hasApi true ;
+    sd:integrationNotes "Career Technical Education Information System (CTEIS, MDE-OCTE) — state system for CTE student course enrollment/outcomes. Currently uses PIC-validation REP services (GetPersonnelByDistrict/GetPersonnelByPIC/GetPersonnelByCoreFields/GetCompleteAssignmentCodeList); the FDD's own text confirms these are 'the same set of service endpoints that will be used by many of the other integrations including MSDS/TSDL, MEGS+, NexSys' — see the consolidated coverage-gap Annotation below, not three/four independent ones." .
+
+ext:NexSysSystem a sd:ExternalSystem ;
+    sd:hasApi true ;
+    sd:integrationNotes "MDE MEGS+/NexSys — consumes MiEdWorkforce staff-by-district data (TeacherInformation API) for Title I Part A Comparability reporting. One-way send only; no inbound requirement. Same underlying REP-derived personnel-lookup shape as ext:CTEISSystem/ext:MSDSTSDLSystem." .
+
+ext:MSDSTSDLSystem a sd:ExternalSystem ;
+    sd:hasApi true ;
+    sd:integrationNotes "Michigan School Data System (MSDS) Teacher Student Data Link (TSDL) — connects student courses to the teacher of record via PIC/Unique ID validation (GetPersonnelByUniqueId, based on the existing REP TeacherInformation/GetPersonnelByPIC API). MSDS itself queries the underlying database directly today rather than calling REP APIs; the FDD notes future data-model changes may remove the PIC/Identity dependency in favor of Local Course/Section IDs, not yet defined." .
+
+#################################################################
+# Requirements -- Feature 8.1: EEM Interface + Entity Directory Data Population
+# (bounded context: organizations)
+#################################################################
+
+orgs:Req_08_1_1 a sd:UserStory ;
+    sd:requirementId "8.1.1" ;
+    sd:title "Receive EEM entity data into MiEdWorkforce" ;
+    sd:statement "As the MiEdWorkforce System, I want to receive entity data from EEM so that organization and address records can be maintained accurately." ;
+    sd:acceptanceCriteria "Receives the entity data payload from EEM via the established integration; validates data format, required fields, and record structure before processing; parses and loads new/updated organization information into the MiEdWorkforce data store; logs any invalid/missing data with a description; logs every transmission with instance name, date, and record count." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync, orgs:OrganizationAggregate, ext:EEMSystem ;
+    sd:notes "Functionally satisfied by orgs:BatchJob_CepiNightlySync (validates each record, skips/warns on failure, upserts into the local Organization replica) — but see Question_EemIntegrationMechanismDiscrepancy: the TRANSPORT this story and its sibling 8.1 EEM Interface IDD describe (bearer-token REST against CEPI.PublicServices/api/EntityInformation/{method}) does not match what organizations-domain.ttl's own BatchJob actually calls (OAuth2 against a 'CEPI CEDS JSON-LD API' GET /organizations endpoint), nor what the sibling Entity Directory Data Population IDD describes (a Synapse pipeline reading EEM's SQL tables directly). All three describe the same end goal by three different, mutually inconsistent mechanisms." ;
+    sd:definedIn staff:Fdd08_1EemDoc .
+
+orgs:Req_08_1_2 a sd:UserStory ;
+    sd:requirementId "8.1.2" ;
+    sd:title "Audit and log EEM data transfers" ;
+    sd:statement "As the MiEdWorkforce System, I want to record audit and logging details for all EEM data transfers so that each transaction can be tracked and reviewed." ;
+    sd:acceptanceCriteria "Logs transmission start/end times, record counts, and processing outcomes; captures specific error issues; audit logs stored securely and reviewable by authorized personnel; log retention complies with MiEdWorkforce's defined retention policy." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync ;
+    sd:notes "The BatchJob's own sync-log record (status, counts) and errorScenarios (Failed/PartialSuccess with alerting) cover the transaction-tracking half well. 'Log retention complies with MiEdWorkforce's defined retention policy' is not itself a modeled concept anywhere (same open-ended retention-policy gap the NASDTEC comment thread flags for 8.2 below) — not raised as a separate Annotation given how minor/generic it is." ;
+    sd:definedIn staff:Fdd08_1EemDoc .
+
+orgs:Req_08_1_3 a sd:UserStory ;
+    sd:requirementId "8.1.3" ;
+    sd:title "Perform scheduled full loads of EEM data" ;
+    sd:statement "As the MiEdWorkforce System, I want to perform scheduled full loads of EEM data periodically so that baseline data integrity is ensured." ;
+    sd:acceptanceCriteria "Retrieves the entire dataset from EEM on a scheduled full load; replaces existing organization data with the current EEM version; includes validation to prevent duplication/data loss; logs execution time, record count, and completion status." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync ;
+    sd:notes "Direct match: BatchJob_CepiNightlySync's own keyDecisions state it 'is currently implemented as a full snapshot upsert' nightly, exactly this story's shape." ;
+    sd:definedIn staff:Fdd08_1EemDoc .
+
+orgs:Req_08_1_4 a sd:UserStory ;
+    sd:requirementId "8.1.4" ;
+    sd:title "Keep MiEdWorkforce and EEM organization data synchronized" ;
+    sd:statement "As the MiEdWorkforce System, I want to ensure data synchronization between EEM and MiEdWorkforce so that all organization information remains aligned." ;
+    sd:acceptanceCriteria "Synchronizes organization details to match the authoritative EEM source on update; alignment covers entity identifiers, hierarchy, and operational status; confirms successful updates and logs results; discrepancies found during sync are reported for manual review." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync ;
+    sd:notes "Identifier/hierarchy/operational-status alignment matches the BatchJob's hierarchy-rebuild and OrganizationDeactivated/LeadAdministratorChanged event logic well. 'Discrepancies... reported for manual review' has no exact counterpart — the BatchJob's own error handling is Failed/PartialSuccess alerting to platform operations, not a discrepancy-specific manual-review queue; a minor gap, not raised separately." ;
+    sd:definedIn staff:Fdd08_1EemDoc .
+
+orgs:Req_08_1_5 a sd:UserStory ;
+    sd:requirementId "8.1.5" ;
+    sd:title "Process EEM entity data through ETL" ;
+    sd:statement "As the MiEdWorkforce System, I want to process EEM entity data through ETL so that hierarchical and operational details are accurately reflected in MiEdWorkforce." ;
+    sd:acceptanceCriteria "ETL extracts and transforms EEM entity data into the MiEdWorkforce organizational format; each record includes entity identifiers, names, hierarchy relationships, and operational status; organization identifiers are consistent across environments; successful loads and rejected records (with error details) are logged." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync, orgs:OrganizationAggregate ;
+    sd:notes "Same underlying goal and the same mechanism-discrepancy caveat as Req_08_1_1 above — this story is the Entity Directory Data Population IDD's own restatement of essentially the same ETL/hierarchy/status requirement, via yet a third described transport (direct-SQL Synapse read) that also doesn't match the built BatchJob's actual CEPI-API-based approach." ;
+    sd:definedIn orgs:Fdd08_1EntityDirDoc .
+
+orgs:Req_08_1_6 a sd:UserStory ;
+    sd:requirementId "8.1.6" ;
+    sd:title "Validate EEM entity data during ingestion" ;
+    sd:statement "As the MiEdWorkforce System, I want to validate EEM entity data during ingestion so that only accurate and complete records are stored." ;
+    sd:acceptanceCriteria "Validates required attributes (entity type, name, identifier) are populated; flags and excludes records with missing/invalid attributes; logs validation results with error details and record counts; only validated records proceed to transform/load." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync ;
+    sd:notes "Direct match to the BatchJob's per-record validation/skip-and-warn error scenario." ;
+    sd:definedIn orgs:Fdd08_1EntityDirDoc .
+
+orgs:Req_08_1_7 a sd:UserStory ;
+    sd:requirementId "8.1.7" ;
+    sd:title "Update organization records incrementally based on EEM changes" ;
+    sd:statement "As the MiEdWorkforce System, I want to update organization records incrementally based on EEM changes so that the system maintains current and accurate data." ;
+    sd:acceptanceCriteria "Processes only new/changed records when incremental updates are available; identifies added/modified/deactivated records since the previous load; updated records replace or deactivate existing entries; each incremental load is logged with totals and errors." ;
+    sd:satisfiedBy orgs:BatchJob_CepiNightlySync ;
+    sd:notes "DISCREPANCY, not just a partial match: this story assumes true incremental (delta) processing already exists. orgs:BatchJob_CepiNightlySync's own keyDecisions explicitly say the opposite — 'the pipeline supports both, but is currently implemented as a full snapshot upsert until CEPI confirms delta feed availability.' See Question_EemIncrementalLoadNotYetBuilt below." ;
+    sd:definedIn orgs:Fdd08_1EntityDirDoc .
+
+orgs:Question_EemIntegrationMechanismDiscrepancy a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Three different, mutually inconsistent mechanisms are described/built for the single goal of 'get EEM entity data into MiEdWorkforce': (1) the 8.1 EEM Interface IDD describes a bearer-token REST API against CEPI.PublicServices/api/EntityInformation/{method}; (2) the sibling 8.1 Entity Directory Data Population IDD describes a Managed-Identity Synapse pipeline reading EEM's own SQL tables directly (explicitly built to REMOVE dependency on mechanism (1)) and populating CEDS IDS tables with a totally different field-mapping shape; (3) organizations-domain.ttl's actually-built orgs:BatchJob_CepiNightlySync does neither — it's a Synapse-triggered OAuth2 REST pull against a 'CEPI CEDS JSON-LD API' GET /organizations endpoint that matches organizations-capability.ttl's own architecture note ('CEPI is building a CEDS JSON-LD API on top of EEM specifically for MiEdWorkforce'). Functionally the built BatchJob satisfies the STORIES (validate/load/sync/audit), so this is not scored as a coverage gap — but it means neither of this FDD's own two IDDs is an accurate description of what was actually built, which matters if either is ever used as an integration reference." ;
+    oa:hasTarget orgs:Req_08_1_1, orgs:Req_08_1_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd08_1EemDoc .
+
+orgs:Question_EemIncrementalLoadNotYetBuilt a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "8.1.7 (Entity Directory Data Population Addendum) describes true incremental/delta EEM updates as a built capability ('the ETL identifies records that have been added, modified, or deactivated since the previous load'). orgs:BatchJob_CepiNightlySync's own sd:keyDecisions explicitly state the opposite: full-snapshot upsert only, delta support pending CEPI confirming feed availability. The story is not wrong about the DESIRED end state, just about the CURRENT one — worth tracking as a real, not-yet-closed gap between this FDD's Addendum and organizations' own domain documentation, independent of the transport-mechanism discrepancy above." ;
+    oa:hasTarget orgs:Req_08_1_7 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn orgs:Fdd08_1EntityDirDoc .
+
+#################################################################
+# Requirements -- Feature 8.2: NASDTEC Ed ID Clearinghouse
+# (bounded context: profpractices)
+#################################################################
+
+profp:Req_08_2_1 a sd:UserStory ;
+    sd:requirementId "8.2.1" ;
+    sd:title "Authenticate to NASDTEC via API key" ;
+    sd:statement "As the MiEdWorkforce System, I want to authenticate to the NASDTEC Ed ID Clearinghouse using an API key so that only authorized requests are processed." ;
+    sd:acceptanceCriteria "Includes a valid API key in the HTTPS request header for all calls; does not transmit and logs the failure if the key is invalid/expired; securely stores/retrieves the key via approved credential management; logs each authentication attempt with timestamp and result." ;
+    sd:satisfiedBy profp:Seq_ProcessNasdtecNightlyBatch, ext:NASDTECSystem ;
+    sd:notes "profpractice's own Dependency to ext:NASDTECSystem and Seq_ProcessNasdtecNightlyBatch cover the authenticated-call shape; neither profpractice-domain.ttl nor this FDD's own errorScenarios detail credential-storage mechanics specifically (a generic security-infrastructure concern, not modeled at this level anywhere in the project) — not raised as a separate gap." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_2 a sd:UserStory ;
+    sd:requirementId "8.2.2" ;
+    sd:title "Send queries to the NASDTEC Clearinghouse API" ;
+    sd:statement "As the MiEdWorkforce System, I want to send queries to the NASDTEC Clearinghouse API so that educator records can be retrieved for review within the credential process." ;
+    sd:acceptanceCriteria "Issues a GET request to the NASDTEC endpoint with required parameters (format, StartDate, apiKey) when credentials are available; transmits over HTTPS; logs endpoint URL, timestamp, and query type; failed/timed-out requests generate error log entries." ;
+    sd:satisfiedBy profp:Seq_ProcessNasdtecNightlyBatch, profp:Op_ProcessNasdtecBatch ;
+    sd:notes "Direct match: the sequence's own content shows exactly this GET /v1/clearinghouse/people?currmonth=YYYYMM call with retry-with-backoff on failure." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_3 a sd:UserStory ;
+    sd:requirementId "8.2.3" ;
+    sd:title "Receive and store NASDTEC responses" ;
+    sd:statement "As the MiEdWorkforce System, I want to receive and store responses from the NASDTEC Clearinghouse API so that retrieved data can be validated and processed." ;
+    sd:acceptanceCriteria "Captures a valid response as a JSON array of educator records; validates all expected data elements are present/correctly formatted; logs malformed/incomplete responses as validation errors; retains the original response for audit/troubleshooting." ;
+    sd:satisfiedBy profp:Seq_ProcessNasdtecNightlyBatch, profp:ExternalBackgroundCheckAggregate ;
+    sd:notes "Direct match: ExternalBackgroundCheckAggregate's own invariants state external-check data is retained for audit purposes even after review." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_4 a sd:UserStory ;
+    sd:requirementId "8.2.4" ;
+    sd:title "Log all NASDTEC API transactions" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all API transactions so that data exchange activity can be tracked and reviewed for audit purposes." ;
+    sd:acceptanceCriteria "Records timestamp, request parameters, endpoint, and response code per transaction; logs error messages/status codes for failed transactions; identifies scheduled vs. manual execution per log entry; retains logs per MiEdWorkforce's integration retention policy." ;
+    sd:satisfiedBy profp:Seq_ProcessNasdtecNightlyBatch ;
+    sd:notes "Per a review comment on this exact story ('Removing reference to NASDTEC, as this should be for all API calls'), the reviewer themselves generalized this from a NASDTEC-specific ask to a cross-cutting logging expectation — i.e. this story's real scope is broader than one integration. profpractice's own batch job satisfies the NASDTEC-specific slice of it; the cross-cutting 'all API calls' framing is a platform-wide NFR with no single owning domain, consistent with how this kind of ask is usually handled elsewhere in this project (sd:nonFunctionalRequirement at the Solution root) — not modeled as a per-domain gap here." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_5 a sd:UserStory ;
+    sd:requirementId "8.2.5" ;
+    sd:title "Handle NASDTEC PII securely" ;
+    sd:statement "As the MiEdWorkforce System, I want to ensure that personally identifiable information from NASDTEC is handled securely so that privacy requirements are maintained." ;
+    sd:acceptanceCriteria "Encrypts/masks PII during storage and transmission; log entries omit full PII values; all requests/responses occur over HTTPS; detected security violations are reported per incident-management procedures." ;
+    sd:satisfiedBy profp:ExternalBackgroundCheckAggregate, ext:NASDTECSystem ;
+    sd:notes "HTTPS-only transport is confirmed by ext:NASDTECSystem's own integrationNotes. Field-level encryption/masking of the stored CertificationID (SSN) and log-redaction specifically are not called out anywhere in profpractice-domain.ttl beyond its general 'PII' data-classification awareness — a minor, generic gap (the same class of gap most PII-handling stories in this project carry, e.g. NASDTEC's own SSN field), not raised as its own Annotation." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_6 a sd:UserStory ;
+    sd:requirementId "8.2.6" ;
+    sd:title "Verify NASDTEC endpoint availability before transmission" ;
+    sd:statement "As the MiEdWorkforce System, I want to verify NASDTEC endpoint availability before transmission so that failed requests can be avoided." ;
+    sd:acceptanceCriteria "Performs a connectivity check before a scheduled query; skips and logs an error if the check fails; retries failed transmissions per configured retry settings." ;
+    sd:satisfiedBy profp:Seq_ProcessNasdtecNightlyBatch ;
+    sd:notes "Direct match: errorScenarios explicitly states 'NASDTEC API unavailable > Retry with exponential backoff, alert admin if persistent failure.'" ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+profp:Req_08_2_7 a sd:UserStory ;
+    sd:requirementId "8.2.7" ;
+    sd:title "Restrict NASDTEC API usage to defined environments" ;
+    sd:statement "As the MiEdWorkforce System, I want to restrict NASDTEC API usage to defined environments so that data integrity is maintained." ;
+    sd:acceptanceCriteria "Verifies the correct endpoint for its environment per query; test queries run only against NASDTEC's testing endpoint; each transaction log includes environment name; cross-environment queries are blocked and logged as configuration errors." ;
+    sd:satisfiedBy ext:NASDTECSystem ;
+    sd:notes "profpractice-domain.ttl/sequences.ttl do not describe per-environment endpoint configuration or cross-environment-query blocking for NASDTEC specifically — a minor, generic environment-configuration gap shared with several other interfaces in this same FDD folder (see the consolidated Annotation on 8.4-8.7 below for the pattern; not repeated as its own Annotation here since profpractice otherwise has real, substantial NASDTEC coverage)." ;
+    sd:definedIn profp:Fdd08_2NasdtecDoc .
+
+#################################################################
+# Requirements -- Feature 8.3: STARR Interface
+# (bounded context: proflearning for course data; credentialing for award data -- split,
+# see Question_StarrAwardDataGapInCredentialing)
+#################################################################
+
+plrn:Req_08_3_1 a sd:UserStory ;
+    sd:requirementId "8.3.1" ;
+    sd:title "Receive STARR post-secondary award and course data" ;
+    sd:statement "As the MiEdWorkforce System, I want to receive STARR post-secondary award and course data so that it can be used in educator credential and professional learning processes." ;
+    sd:acceptanceCriteria "Successfully receives the STARR payload via REST/Parquet over HTTPS; validates payload format and required award/course elements; rejects and logs records failing validation; logs each transmission with date/time, source, and record counts." ;
+    sd:satisfiedBy plrn:STARRCourseRecord, starr:StarrSystem ;
+    sd:notes "The COURSE-data half is well covered by proflearning's existing Synapse-Pipeline sync of STARR data into plrn:STARRCourseRecord. The AWARD-data half (post-secondary awards used as evidence in credential applications) has NO counterpart anywhere in credentialing-domain.ttl — see Question_StarrAwardDataGapInCredentialing below, which also covers 8.3.3." ;
+    sd:definedIn plrn:Fdd08_3StarrDoc .
+
+plrn:Req_08_3_2 a sd:UserStory ;
+    sd:requirementId "8.3.2" ;
+    sd:title "Associate STARR records to individuals via Unique ID" ;
+    sd:statement "As the MiEdWorkforce System, I want to associate STARR records to individuals using the Unique ID so that awards and course completions are correctly linked to citizen accounts." ;
+    sd:acceptanceCriteria "Uses the Unique ID in both STARR and MiEdWorkforce to associate records; logs and excludes records with missing/non-matching Unique IDs; persists linked records referenceable by credentialing/proflearning; captures association outcomes in an audit log." ;
+    sd:satisfiedBy plrn:STARRCourseRecord ;
+    sd:notes "proflearning's own architecture note (proflearning-domain.ttl) confirms STARR data is 'synced into MiEdWorkforce via an automated Synapse Pipeline, populating STARR_COURSE_RECORDS' — consistent with a Unique-ID-keyed sync, though the specific 'exclude and log on non-matching ID' branch isn't independently called out." ;
+    sd:definedIn plrn:Fdd08_3StarrDoc .
+
+plrn:Req_08_3_3 a sd:UserStory ;
+    sd:requirementId "8.3.3" ;
+    sd:title "Make STARR award data available to credential workflows" ;
+    sd:statement "As the MiEdWorkforce System, I want STARR award data to be available to credential workflows so that qualifying awards can be used as evidence in applications." ;
+    sd:acceptanceCriteria "Surfaces linked STARR award data to credentialing processes as read-only reference data; only successfully-associated records are displayed; credential workflow continues without error when no award data exists." ;
+    sd:definedIn plrn:Fdd08_3StarrDoc .
+
+plrn:Req_08_3_4 a sd:UserStory ;
+    sd:requirementId "8.3.4" ;
+    sd:title "Make STARR course data available for professional learning evaluation" ;
+    sd:statement "As the MiEdWorkforce System, I want STARR course data to be available for professional learning evaluation so that applicable courses can count toward requirements where allowed." ;
+    sd:acceptanceCriteria "Exposes STARR course records for use in professional-learning rules where configured; only evaluates courses successfully associated to the individual's Unique ID; excludes and logs misaligned/invalid course records." ;
+    sd:satisfiedBy plrn:STARRCourseRecord, plrn:CourseEligibility, plrn:SCECHConversion, starr:StarrSystem ;
+    sd:notes "Strong, direct match — this is exactly what proflearning's college-course-credit-toward-SCECH feature (plrn:CourseEligibility/plrn:SCECHConversion) already models." ;
+    sd:definedIn plrn:Fdd08_3StarrDoc .
+
+plrn:Req_08_3_5 a sd:UserStory ;
+    sd:requirementId "8.3.5" ;
+    sd:title "Support environment-specific STARR configuration" ;
+    sd:statement "As the MiEdWorkforce System, I want to support environment-specific configuration for STARR so that testing and production data do not conflict." ;
+    sd:acceptanceCriteria "Configurable with distinct endpoints/settings for DEV, UAT, PROD; each execution logged with environment identifier; configuration prevents STARR test data from loading into production." ;
+    sd:definedIn plrn:Fdd08_3StarrDoc .
+
+plrn:Question_StarrAwardDataGapInCredentialing a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "STARR post-secondary AWARD data (distinct from the course data proflearning already syncs) is referenced repeatedly by this FDD (8.3.1's own text, and credentialing-domain.ttl/staffing-domain.ttl's own citations of 'CEPI Data Warehouse/STARR-NSC interfaces' for HighestEducation) as evidence usable in credential applications, but no Dependency, Aggregate field, or Sequence anywhere in credentialing-domain.ttl models STARR as a data source at all — credentialing has zero STARR presence today, unlike proflearning's real starr:StarrSystem Dependency for course data. 8.3.5's environment-configuration story is a minor, generic gap shared with several other interfaces in this folder (see the consolidated 8.4-8.7 Annotation) and is grouped here rather than given its own Annotation." ;
+    oa:hasTarget plrn:Req_08_3_3, plrn:Req_08_3_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd08_3StarrDoc .
+
+#################################################################
+# Requirements -- Features 8.4 (Data Hub), 8.5 (CTEIS), 8.6 (NexSys), 8.7 (MSDS-TSDL)
+# (bounded context: staffing -- NONE of these four systems has any Dependency, Sequence,
+# or ExternalSystem node anywhere in staffing-domain.ttl/staffing-sequences.ttl today;
+# every Requirement below is a genuine coverage gap on an existing, real domain, not a
+# "no bounded context" situation)
+#################################################################
+
+staff:Req_08_4_1 a sd:UserStory ;
+    sd:requirementId "8.4.1" ;
+    sd:title "Send staffing data to the Michigan DataHub" ;
+    sd:statement "As the MiEdWorkforce System, I want to send staffing-related data to the Michigan DataHub via CEPI Public Services so that opted-in districts can consume it." ;
+    sd:acceptanceCriteria "Constructs a SendToHub request (BatchId, FeedSystem, DistrictId, DataType, JsonData) for opted-in districts; sends via HTTP/HTTPS POST; excludes non-opted-in districts; logs each send with batch id, district, and outcome." ;
+    sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Req_08_4_2 a sd:UserStory ;
+    sd:requirementId "8.4.2" ;
+    sd:title "Handle Michigan DataHub SendToHub responses" ;
+    sd:statement "As the MiEdWorkforce System, I want to handle SendToHub responses so that success and failure are clearly tracked." ;
+    sd:acceptanceCriteria "Records HTTP 200 as sent successfully; flags HTTP 422 as invalid and logs the error; logs HTTP 500/unexpected errors and identifies the impacted batch; no partial/failed batch is silently treated as successful." ;
+    sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Req_08_4_3 a sd:UserStory ;
+    sd:requirementId "8.4.3" ;
+    sd:title "Log all Michigan DataHub interactions" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all Michigan DataHub interactions so that data sharing activity is auditable." ;
+    sd:acceptanceCriteria "Logs date/time, environment, district, DataType, and response status per SendToHub call; captures error details; follows MiEdWorkforce integration logging standards." ;
+    sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Req_08_4_4 a sd:UserStory ;
+    sd:requirementId "8.4.4" ;
+    sd:title "Secure authentication to Michigan DataHub services" ;
+    sd:statement "As the MiEdWorkforce System, I want to support secure authentication to the DataHub-related services so that only authorized traffic is processed." ;
+    sd:acceptanceCriteria "Supports bearer token or agreed authentication for CEPI Public Services/MiDH; credentials never exposed in logs or UI; all calls use the configured security mechanism." ;
+    sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Req_08_4_5 a sd:UserStory ;
+    sd:requirementId "8.4.5" ;
+    sd:title "Receive data from the Michigan DataHub in a compatible JSON format" ;
+    sd:statement "As the MiEdWorkforce System, I want to be able to receive data from the Michigan DataHub (via CEPI Public Services) in a compatible JSON format so that future inbound use cases can be supported." ;
+    sd:acceptanceCriteria "Accepts a JSON payload structurally consistent with the documented SendToHub format, for a future ReceiveFromHub implementation; validates and logs inbound messages; logs processing failures with troubleshooting detail; no hard-coded assumption blocks a similar inbound structure." ;
+    sd:notes "The FDD's own text says this endpoint 'does not exist currently.' A review comment thread on this exact interface (Dailey, responding to Punniyamoorthy's challenge that the outbound-only framing might make 8.4.1 unnecessary) confirms the INBOUND direction is real and wanted: 'There is a desire by the Michigan Data Hub to receive staff credential data for their employees from MiEdWorkforce. They don't always have that data in the data hub, because it usually isn't in their SIS.' See Question_DataHubFlowDirectionDisputed below." ;
+    sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Req_08_5_1 a sd:UserStory ;
+    sd:requirementId "8.5.1" ;
+    sd:title "Provide CTEIS with district-specific staffing roster data" ;
+    sd:statement "As the MiEdWorkforce System, I want to provide CTEIS with district-specific staffing roster data so that CTEIS can identify staff associated with CTE assignments." ;
+    sd:acceptanceCriteria "Makes staffing data available via the defined REST endpoints on request/schedule; includes required staff identity/assignment details per the IDD; only internal/authorized integrations can access the endpoints; logs each outbound interaction with district and outcome." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_5_2 a sd:UserStory ;
+    sd:requirementId "8.5.2" ;
+    sd:title "Support retrieval of personnel by district for CTEIS" ;
+    sd:statement "As the MiEdWorkforce System, I want to support retrieval of personnel by district so that CTEIS can obtain full staff rosters." ;
+    sd:acceptanceCriteria "Returns personnel records for a valid district identifier via GetPersonnelByDistrict; returns an appropriate indication and logs the event if the district is invalid/not found; response structure matches the IDD's defined/sample format." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_5_3 a sd:UserStory ;
+    sd:requirementId "8.5.3" ;
+    sd:title "Support retrieval of personnel by PIC for CTEIS" ;
+    sd:statement "As the MiEdWorkforce System, I want to support retrieval of personnel by PIC so that CTEIS can validate specific individuals." ;
+    sd:acceptanceCriteria "Returns the corresponding personnel record for a valid PIC (or successor identifier) via GetPersonnelByPIC; indicates no-record-found without exposing unrelated individuals when no match exists; logs all such requests/responses for audit." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_5_4 a sd:UserStory ;
+    sd:requirementId "8.5.4" ;
+    sd:title "Support retrieval of personnel by core fields for CTEIS" ;
+    sd:statement "As the MiEdWorkforce System, I want to support retrieval of personnel by core fields so that CTEIS can perform flexible identity validation." ;
+    sd:acceptanceCriteria "Attempts to locate matching personnel for supported GetPersonnelByCoreFields fields; follows defined service rules when multiple matches are found; logs invalid/incomplete requests with reasons." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_5_5 a sd:UserStory ;
+    sd:requirementId "8.5.5" ;
+    sd:title "Secure and environment-aware CTEIS interface calls" ;
+    sd:statement "As the MiEdWorkforce System, I want CTEIS interface calls to be secured and environment-aware so that data integrity is maintained." ;
+    sd:acceptanceCriteria "Exposes methods only over HTTPS with authenticated access; endpoints configurable per environment (DEV/TEST/PROD); logs record which environment handled each request." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_5_6 a sd:UserStory ;
+    sd:requirementId "8.5.6" ;
+    sd:title "Provide a complete list of assignment codes to CTEIS" ;
+    sd:statement "As the MiEdWorkforce System, I want to provide a complete list of available assignment codes via the GetCompleteAssignmentCodeList method so that consuming systems such as CTEIS can reliably reference valid assignment codes." ;
+    sd:acceptanceCriteria "Returns Result.AssignmentCodes on an authorized GET; each item includes Code, Description, ClosedDate (where applicable), and IsEdEffectivenessRequired; response includes a ReturnCode object; errors return an appropriate indication and are logged; all calls logged with timestamp, calling-system identifier, and response status." ;
+    sd:definedIn staff:Fdd08_5CteisDoc .
+
+staff:Req_08_6_1 a sd:UserStory ;
+    sd:requirementId "8.6.1" ;
+    sd:title "Expose a NexSys-facing staff/assignment API" ;
+    sd:statement "As the MiEdWorkforce System, I want to expose a NexSys-facing API that returns staff and assignment data by district so that Title I Part A Comparability reporting requirements can be met." ;
+    sd:acceptanceCriteria "Returns staff with assignment details by entity for a valid DistrictCode via the documented TeacherInformation method; indicates no-data and logs the event for an invalid/not-found DistrictCode; only authorized NexSys calls are processed." ;
+    sd:definedIn staff:Fdd08_6NexSysDoc .
+
+staff:Req_08_6_2 a sd:UserStory ;
+    sd:requirementId "8.6.2" ;
+    sd:title "Include key personnel/assignment attributes in NexSys responses" ;
+    sd:statement "As the MiEdWorkforce System, I want the NexSys response to include key personnel and assignment attributes so that comparability calculations can be performed." ;
+    sd:acceptanceCriteria "Response includes the identity/assignment attributes documented in the NexSys IDD; values derived from current MiEdWorkforce data at request time; missing/inconsistent internal data does not break the API (affected records excluded/flagged)." ;
+    sd:definedIn staff:Fdd08_6NexSysDoc .
+
+staff:Req_08_6_3 a sd:UserStory ;
+    sd:requirementId "8.6.3" ;
+    sd:title "Authenticate and log NexSys API traffic" ;
+    sd:statement "As the MiEdWorkforce System, I want NexSys API traffic to be authenticated and logged so that usage and failures are traceable." ;
+    sd:acceptanceCriteria "Requires a valid API token (or equivalent) as specified; logs each call with timestamp, district, and response status; logs authentication failures with reason, without exposing credentials." ;
+    sd:definedIn staff:Fdd08_6NexSysDoc .
+
+staff:Req_08_6_4 a sd:UserStory ;
+    sd:requirementId "8.6.4" ;
+    sd:title "Support separate NexSys endpoints per environment" ;
+    sd:statement "As the MiEdWorkforce System, I want to support separate endpoints per environment so that NexSys testing does not affect production data." ;
+    sd:acceptanceCriteria "Endpoints configurable for QA, Staging, and Production; environment identifiable in logs; cross-environment misconfiguration attempts are detected and logged." ;
+    sd:definedIn staff:Fdd08_6NexSysDoc .
+
+staff:Req_08_7_1 a sd:UserStory ;
+    sd:requirementId "8.7.1" ;
+    sd:title "Expose a personnel-by-Unique-ID API for MSDS/TSDL" ;
+    sd:statement "As the MiEdWorkforce System, I want to expose an API to retrieve personnel information by Unique ID so that MSDS/TSDL and other applications can validate educator identities." ;
+    sd:acceptanceCriteria "Returns personnel information for a valid UniqueId via GetPersonnelByUniqueId; indicates no-record-found for an invalid/not-found UniqueId; logs all requests and responses." ;
+    sd:definedIn staff:Fdd08_7MsdsTsdlDoc .
+
+staff:Req_08_7_2 a sd:UserStory ;
+    sd:requirementId "8.7.2" ;
+    sd:title "Reflect updated data-model rules in the TSDL integration" ;
+    sd:statement "As the MiEdWorkforce System, I want the TSDL integration to reflect updated MiEdWorkforce data model rules so that teacher-student linkages no longer depend solely on legacy PIC." ;
+    sd:acceptanceCriteria "Supports use of Unique ID and aligned data elements; behavior remains documented/consistent where PIC remains in use during transition; identifier-usage changes do not break consuming applications without documented change control." ;
+    sd:definedIn staff:Fdd08_7MsdsTsdlDoc .
+
+staff:Req_08_7_3 a sd:UserStory ;
+    sd:requirementId "8.7.3" ;
+    sd:title "Secure and environment-aware TSDL API calls" ;
+    sd:statement "As the MiEdWorkforce System, I want TSDL-related API calls to be secure and environment-aware so that internal data is protected." ;
+    sd:acceptanceCriteria "All calls made over HTTPS with defined authentication; endpoints distinguish environments and logs include environment; unauthorized requests are rejected and logged." ;
+    sd:definedIn staff:Fdd08_7MsdsTsdlDoc .
+
+staff:Req_08_7_4 a sd:UserStory ;
+    sd:requirementId "8.7.4" ;
+    sd:title "Support frequent TSDL queries" ;
+    sd:statement "As the MiEdWorkforce System, I want to support frequent TSDL queries so that data remains current for reporting." ;
+    sd:acceptanceCriteria "Service can be invoked multiple times per day; performance for expected volume is monitored; sustained failures generate error logs." ;
+    sd:definedIn staff:Fdd08_7MsdsTsdlDoc .
+
+staff:Question_StaffingExternalIntegrationsCoverageGap a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Data Hub, CTEIS, NexSys, and MSDS-TSDL are four real, named external-system integrations that all move staff/assignment/employment data by Unique ID or PIC, and staffing is their natural owning bounded context (staffing-domain.ttl already owns Position/Assignment/Employment) — but NONE of the four has any Dependency, Sequence, or ExternalSystem node anywhere in staffing-domain.ttl or staffing-sequences.ttl today. This is a real, substantive coverage gap on an EXISTING domain, not a 'no bounded context' situation, so ext:MiDataHubSystem/ext:CTEISSystem/ext:NexSysSystem/ext:MSDSTSDLSystem are minted in this fdd-review file (see the top of this file) for traceability, pending a future staffing-domain pass folding them in properly. Per 8.5's own IDD text ('these are the same set of service endpoint that will be used by many of the other integrations including MSDS/TSDL, MEGS+, NexSys and potentially others... based on the existing set of REP services'), the personnel-lookup capability CTEIS (8.5.2/8.5.3/8.5.4), NexSys (8.6.1/8.6.2), and MSDS-TSDL (8.7.1) each separately ask for is really ONE missing capability — a shared staff/personnel-directory read API exposed to multiple external consumers by district/PIC/Unique-ID/core-fields — not three or four independent gaps. Similarly, the repeated 'log all calls' / 'secure and environment-aware' boilerplate present in nearly every one of these stories (8.4.2-8.4.4, 8.5.5, 8.6.3-8.6.4, 8.7.3) is one recurring cross-cutting integration-hygiene pattern repeated per interface, not four/five independent findings. 8.4's own Michigan DataHub half additionally needs its own Dependency/Sequence for the SendToHub outbound flow and the not-yet-existing ReceiveFromHub inbound flow (see Question_DataHubFlowDirectionDisputed for a live dispute over whether/how the outbound half is even needed as currently framed) and CTEIS's own assignment-code reference-data method (8.5.6)." ;
+    oa:hasTarget staff:Req_08_4_1, staff:Req_08_4_2, staff:Req_08_4_3, staff:Req_08_4_4, staff:Req_08_4_5,
+        staff:Req_08_5_1, staff:Req_08_5_2, staff:Req_08_5_3, staff:Req_08_5_4, staff:Req_08_5_5, staff:Req_08_5_6,
+        staff:Req_08_6_1, staff:Req_08_6_2, staff:Req_08_6_3, staff:Req_08_6_4,
+        staff:Req_08_7_1, staff:Req_08_7_2, staff:Req_08_7_3, staff:Req_08_7_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Question_DataHubFlowDirectionDisputed a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "Live, unresolved reviewer disagreement on 8.4.1's own framing: Punniyamoorthy (2025-11-21) questioned the story entirely -- 'Isn't the flow of data... School District -> to send staffing data via CEPI Public Service to MiDH -> then MiDH to MiEd? if so this story is not needed' -- i.e. challenging whether MiEdWorkforce sending TO the DataHub is even the right direction, versus receiving FROM it. Dailey (2025-11-24) replied that MiDataHub actually wants BOTH: 'There is a desire by the Michigan Data Hub to receive staff credential data for their employees from MiEdWorkforce. They don't always have that data in the data hub, because it usually isn't in their SIS' -- then (2025-11-25) suggested a call to narrow down 'specific use cases for the data exchange in both directions,' which per this document's own text never happened (no further resolution recorded, and 8.4.5's own not-yet-existing ReceiveFromHub method is still explicitly TBD). Whether 8.4.1 (outbound SendToHub) is even the correct primary use case, versus 8.4.5 (inbound, not yet built) being the actual priority, is unresolved as of this pass." ;
+    oa:hasTarget staff:Req_08_4_1, staff:Req_08_4_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd08_4DataHubDoc .
+
+staff:Question_DataHubMiKeyOwnershipUnconfirmed a sd:Annotation ;
+    oa:motivatedBy oa:questioning ;
+    rdfs:comment "The Data Hub IDD's own HIGH LEVEL SCENARIOS table (use case 1 -- Ed-Fi Identities API staff-unique-ID lookup) carries a still-open reviewer comment: 'Need to identify if this is in Mi-Key or in MiEdWorkforce as a passthru - per Michael Nichols' (Dailey, 2026-01-13). This is an unresolved architectural boundary question -- whether the person-matching step for this integration is Mi-Key's own responsibility (ext:MiKeySystem, already canonically declared in iam-domain.ttl) or a MiEdWorkforce-side passthrough -- left unanswered anywhere in this document or in iam-domain.ttl/staffing-domain.ttl." ;
+    oa:hasTarget staff:Req_08_4_1 ;
+    sd:status "open" ; sd:definedIn staff:Fdd08_4DataHubDoc .
+
+#################################################################
+# Requirements -- Feature 8.8: Secure Site
+# (bounded context: staffing -- but see the out-of-scope Annotation: this FDD's own text
+# says no active build is happening now)
+#################################################################
+
+staff:Req_08_8_1 a sd:UserStory ;
+    sd:requirementId "8.8.1" ;
+    sd:title "Maintain staff/assignment data shareable with Secure Site in the future" ;
+    sd:statement "As the MiEdWorkforce System, I want to maintain staff and assignment data in a structure that can be shared with Secure Site in the future so that required assessment-related data can be provided with minimal additional development." ;
+    sd:acceptanceCriteria "Core staff/assignment attributes historically required by Secure Site are available within MiEdWorkforce from existing data collections; no hard-coded constraint prevents building a future outbound interface using existing data; design documentation notes MiEdWorkforce can support a future Secure Site integration without major redesign." ;
+    sd:definedIn staff:Fdd08_8SecureSiteDoc .
+
+staff:Req_08_8_2 a sd:UserStory ;
+    sd:requirementId "8.8.2" ;
+    sd:title "Avoid maintaining the obsolete REP-Secure Site connection" ;
+    sd:statement "As the MiEdWorkforce System, I want to avoid maintaining obsolete dependencies on the prior REP-Secure Site connection so that the solution reflects current assessment processes." ;
+    sd:acceptanceCriteria "Does not implement or rely on the deprecated Online Sessions/REP connection; any new Secure Site capability is implemented only under future-approved specifications." ;
+    sd:definedIn staff:Fdd08_8SecureSiteDoc .
+
+staff:Req_08_8_3 a sd:UserStory ;
+    sd:requirementId "8.8.3" ;
+    sd:title "Document the potential to share Secure Site-required data" ;
+    sd:statement "As the MiEdWorkforce System, I want to document the potential to share Secure Site-required data so that stakeholders understand this is an intentional future-ready design." ;
+    sd:acceptanceCriteria "Interface documentation notes Secure Site-required staffing data can be sourced from MiEdWorkforce; no operational interface is claimed as active until formally defined." ;
+    sd:definedIn staff:Fdd08_8SecureSiteDoc .
+
+staff:Question_SecureSiteDeliberatelyDeferred a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "All three Secure Site stories are explicitly self-scoped by the FDD's own text as NOT an active build: 8.8.2's own AC says the system 'does not implement or rely on' anything here, and 8.8.3's own AC says 'no operational interface is claimed as active until formally defined.' The whole sub-document is a deliberate placeholder confirming a design intent (don't build anything that would block a future Secure Site interface) rather than a specification of a system to build now. Treated as out-of-scope for this pass rather than a coverage gap -- there is nothing here to satisfy or to flag as missing; staffing's existing staff/assignment data model already carries no obvious blocker to a future interface, which is the only substantive claim any of these three stories makes." ;
+    oa:hasTarget staff:Req_08_8_1, staff:Req_08_8_2, staff:Req_08_8_3 ;
+    sd:status "resolved" ; sd:definedIn staff:Fdd08_8SecureSiteDoc .
+
+#################################################################
+# Requirements -- Feature 8.9: CEPI Data Warehouse
+# (bounded context: reporting -- but see the out-of-scope Annotation: this is the
+# headline finding of this pass)
+#################################################################
+
+rpt:Req_08_9_2 a sd:UserStory ;
+    sd:requirementId "8.9.2" ;
+    sd:title "Avoid duplicating historical migration into the CEPI Data Warehouse" ;
+    sd:statement "As the MiEdWorkforce System, I want to avoid duplicating historical migration work already performed into the CEPI Data Warehouse so that data remains consistent." ;
+    sd:acceptanceCriteria "MiEdWorkforce does not re-migrate REP/MOECS data already moved into the Warehouse; overlap is handled through agreed integration rules rather than independent migrations." ;
+    sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+rpt:Req_08_9_3 a sd:UserStory ;
+    sd:requirementId "8.9.3" ;
+    sd:title "Support bidirectional integration with the CEPI Data Warehouse" ;
+    sd:statement "As the MiEdWorkforce System, I want bidirectional integration capabilities with the CEPI Data Warehouse where appropriate so that MiEdWorkforce can consume historical or aggregated data, if required." ;
+    sd:acceptanceCriteria "Design allows pulling/calling Warehouse data when needed using agreed secure mechanisms (no payload yet defined); inbound data, if implemented, is validated and logged; no assumption is coded that prevents a future receive capability." ;
+    sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+rpt:Req_08_9_4 a sd:UserStory ;
+    sd:requirementId "8.9.4" ;
+    sd:title "Secure, environment-specific CEPI Data Warehouse integration" ;
+    sd:statement "As the MiEdWorkforce System, I want Data Warehouse integrations to be secured and environment-specific so that internal data is protected." ;
+    sd:acceptanceCriteria "Connections use HTTPS and authenticated access as defined (TBD in IDD); configuration separates DEV/UAT/PROD Warehouse endpoints; logs include environment identifiers per transaction." ;
+    sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+rpt:Req_08_9_5 a sd:UserStory ;
+    sd:requirementId "8.9.5" ;
+    sd:title "Support scheduled data exchanges with the CEPI Data Warehouse" ;
+    sd:statement "As the MiEdWorkforce System, I want to support scheduled data exchanges with the CEPI Data Warehouse so that it receives updated data at agreed intervals." ;
+    sd:acceptanceCriteria "Executes scheduled exports at a CEPI-agreed frequency (TBD, not hard-coded); failed schedules logged with error details; successful runs record counts sent." ;
+    sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+rpt:Req_08_9_6 a sd:UserStory ;
+    sd:requirementId "8.9.6" ;
+    sd:title "Log all CEPI Data Warehouse transfers" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all Warehouse-related data transfers so that integration activity is auditable." ;
+    sd:acceptanceCriteria "All send/receive operations logged with timestamp, dataset, environment, and status; error conditions capture response codes/failure reasons; log retention follows MiEdWorkforce integration policy." ;
+    sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+rpt:Question_DataWarehouseOutOfScope a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "THE KEY FINDING OF THIS PASS. FDD 02 (Reporting) and FDD 29 (Educator Credentialing - Certificates) both independently named 'Interfaces and Integrations Setup (8)' as an unconverted dependency, on the assumption it was a build gap waiting for someone to model it. This document's own review-comment thread shows the opposite: MDE/CEPI reviewers explicitly REJECTED these stories as MiEdWorkforce's responsibility. Groom (CEPI), 2025-11-21: 'Is this story needed? SLDS Warehouse is part of the overall MiEd system architecture plan.' Handley (CEPI), same day, twice: 'Since MiEdW is only responsible for populating data into the appropriate CEDS based cosmos data store, the CEDS SLDS Project Team will handle movement from cosmos to DW and beyond' and 'The data transfers from the CEDS based cosmos data store to the DW and beyond are responsibility of the CEDS SLDS Project Team.' Caswell (DTMB-Contractor), the most recent comment on this document (2026-03-09, i.e. after every other comment in this whole FDD 08 folder): 'Not needed, as the work is being under the Data Migration/Conversion work. Suggesting to remove.' In other words: the actual, current, most-recent-on-record decision is that CEPI Data Warehouse integration is NOT part of MiEdWorkforce's own solution design at all -- it belongs to a separate CEDS SLDS/Data Migration-Conversion project team, with MiEdWorkforce's only real responsibility being to correctly populate its own CEDS-based Cosmos datastore (a responsibility that belongs to the Data Migration/Conversion effort, not to this FDD or to Reporting). This resolves FDD 02's and FDD 29's dependency claims: 'Interfaces and Integrations Setup (8)', insofar as it means CEPI Data Warehouse specifically, is not a coverage gap for mied-v3 to close -- it is explicitly out of scope for this solution design. It does NOT resolve the separate, narrower question of what actually feeds reporting's own Power BI semantic layer (rpt:Dependency to ext:PowerBISystem already exists in reporting-capability.ttl) -- that remains genuinely unmodeled, but per this same comment thread it is now understood to be the CEDS SLDS Project Team's concern, not a MiEdWorkforce-side gap to close." ;
+    oa:hasTarget rpt:Req_08_9_2, rpt:Req_08_9_3, rpt:Req_08_9_4, rpt:Req_08_9_5, rpt:Req_08_9_6 ;
+    sd:impact "H" ; sd:status "resolved" ; sd:definedIn rpt:Fdd08_9DataWarehouseDoc .
+
+#################################################################
+# Requirements -- Feature 11.8: MTTC EdReports (Pearson)
+# (bounded context: credentialing; numbered under Business Specification 11 but the
+# source docx physically lives in this FDD 8 folder -- see header note)
+#################################################################
+
+cred:Req_11_8_1i a sd:UserStory ;
+    sd:requirementId "11.8.1i" ;
+    sd:title "Manual bulk file upload of MTTC scores" ;
+    sd:statement "As an OEE Administrator (MTTC Specialist), I want to manually upload the monthly MTTC EdReports bulk data file into MiEdWorkforce, so that educators' test scores are updated in the system while we wait for Pearson's API to become fully available." ;
+    sd:acceptanceCriteria "Provides a secure file-upload interface for the MTTC EdReports file; parses the standard Pearson fixed-width file layout (Last Name, First Name, Middle Initial, SSN, Test Code, Test Date, Pass/Fail status, Numeric Score); provides upload status (success/failure) and logs the date/time of the batch upload." ;
+    sd:satisfiedBy cred:Op_ImportAssessmentResults, cred:Seq_ImportAssessmentResults, asp:AssessmentProviderSystem ;
+    sd:notes "Strong, direct match: cred:Op_ImportAssessmentResults/cred:Seq_ImportAssessmentResults is exactly this workflow (admin selects provider, uploads CSV/XLSX, system parses provider-specific schema, keeps highest score on retake, publishes AssessmentResultImported per row) — asp:AssessmentProviderSystem's own integrationNotes independently confirm this current-state manual-upload framing ('Pearson-MTTC, ETS-Praxis... do not integrate via API today. Educators/admins manually upload score reports... credentialing.assessment-result.import lets an admin bulk-import a provider's CSV/XLSX export'). The FDD's incoming layout is fixed-width, not CSV/XLSX as asp:AssessmentProviderSystem's note assumes — a minor format-detail mismatch, not a functional gap (the existing Op/Seq's own escape-hatch request-body modeling doesn't care about field-delimiter specifics)." ;
+    sd:definedIn cred:Fdd11_8MttcDoc .
+
+cred:Req_11_8_2i a sd:UserStory ;
+    sd:requirementId "11.8.2i" ;
+    sd:title "Automated MTTC EdReports API integration" ;
+    sd:statement "As the MiEdWorkforce System, I need to automatically retrieve MTTC test scores from Pearson via an API connection, so that educator records can be updated in near real-time without relying on manual monthly file uploads in the future." ;
+    sd:acceptanceCriteria "Establishes an interface to connect with Pearson's system via API to receive MTTC scores; maps incoming Pearson data to CEDS data elements; processes the integration on a scheduled interval (e.g. daily or monthly)." ;
+    sd:notes "Explicitly a FUTURE capability per this story's own text ('...in the future'), and asp:AssessmentProviderSystem's own integrationNotes in credentialing-domain.ttl already say the same thing independently ('May transition to API integration in the future'). Not a new finding — this pass corroborates an already-documented, already-deferred future item rather than surfacing it for the first time." ;
+    sd:definedIn cred:Fdd11_8MttcDoc .
+
+cred:Question_MttcApiIntegrationNotYetBuilt a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No API-based Pearson MTTC integration exists anywhere in credentialing-domain.ttl/credentialing-sequences.ttl today — only the manual CSV/XLSX import path (cred:Seq_ImportAssessmentResults) is built. This is not a newly-discovered gap: asp:AssessmentProviderSystem's own integrationNotes already say the same thing ('may transition to API integration in the future'), and this story independently confirms it from the FDD side. Logged as its own coverage-gap Annotation (rather than folded into a satisfiedBy note) since this Requirement has no partial satisfaction at all to note against — it is a pure future item." ;
+    oa:hasTarget cred:Req_11_8_2i ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn cred:Fdd11_8MttcDoc .
+
+cred:Req_11_8_3i a sd:UserStory ;
+    sd:requirementId "11.8.3i" ;
+    sd:title "MTTC data parsing and educator identity matching" ;
+    sd:statement "As the MiEdWorkforce System, I must parse the ingested MTTC EdReports data (whether via bulk upload or API) and match the test scores to the appropriate educator profiles, so that credential processors can accurately verify endorsement eligibility." ;
+    sd:acceptanceCriteria "Attempts to match incoming scores to an existing educator profile using demographic data (SSN, Name, DOB, with a long-term transition toward Unique ID); on a confident match, automatically applies Test Code, Date, and Pass/Fail status; on an unconfident/failed match (e.g. name mismatch or missing profile), flags the record and routes it to a manual resolution queue for the MTTC Specialist." ;
+    sd:satisfiedBy cred:Seq_ImportAssessmentResults ;
+    sd:notes "Parsing itself matches cred:Seq_ImportAssessmentResults well. The MATCHING logic does not: the existing sequence validates that an educator ID ALREADY exists and simply skips-and-logs the row if not ('Invalid educator ID > Skip row, log error') — it has no fuzzy demographic matching (SSN/Name/DOB) and no manual-resolution-queue concept at all. This story asks for meaningfully more sophisticated identity-resolution behavior than what's built. See Question_MttcIdentityMatchingNotBuilt below." ;
+    sd:definedIn cred:Fdd11_8MttcDoc .
+
+cred:Question_MttcIdentityMatchingNotBuilt a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "11.8.3i's demographic (SSN/Name/DOB) fuzzy-matching-with-manual-resolution-queue behavior for unmatched MTTC records has no counterpart in cred:Seq_ImportAssessmentResults, which only checks whether an educator ID already exists and skips-and-logs on failure -- no matching algorithm, no confidence threshold, no queue for an MTTC Specialist to work. Given the FDD's own text frames long-term transition toward Unique-ID-based matching (implying SSN/Name/DOB fuzzy-matching is understood as an interim need, not a permanent one), this may be intentionally deferred rather than overlooked -- but nothing in credentialing-domain.ttl/technical-design.ttl says so explicitly, so it is logged as an open gap rather than assumed resolved." ;
+    oa:hasTarget cred:Req_11_8_3i ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn cred:Fdd11_8MttcDoc .

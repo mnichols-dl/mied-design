@@ -1,0 +1,927 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Reporting API
+  version: 1.0.0
+  description: |
+    Provides report catalog browsing and Power BI embed token generation for the
+    MiEdWorkforce Portal. The primary consumer is the MiEdWorkforce Portal (internal).
+    Admin endpoints support catalog management by system administrators.
+
+servers:
+  - url: http://reporting-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/reporting/api/v1
+    description: External via APIM (not expected to be used; all consumers are internal)
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ============================================================================
+  # REPORT CATALOG
+  # ============================================================================
+
+  /reports:
+    get:
+      summary: List available reports
+      operationId: listReports
+      tags: [Reports]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.view
+      x-scope-sensitive: false
+      description: |
+        Returns the report catalog filtered to only reports the requesting user is
+        authorized to access. Authorization is determined by checking the `permissionKey`
+        declared on each report definition against the user's active authorizations.
+        Reports the user cannot access are omitted entirely from the response (not
+        returned as forbidden entries) to avoid leaking catalog information.
+
+        Results are grouped by domain association and ordered by `sortOrder` within
+        each group.
+
+        Scope is agnostic at the catalog level — the user's org scope is evaluated
+        per-report at embed token generation time, not at catalog browse time.
+      parameters:
+        - name: domain
+          in: query
+          description: Filter results to a specific domain association
+          required: false
+          schema:
+            $ref: '#/components/schemas/DomainAssociation'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Filtered, paginated report catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /reports/{reportDefinitionId}:
+    get:
+      summary: Get report details
+      operationId: getReport
+      tags: [Reports]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.view
+      x-scope-sensitive: false
+      description: |
+        Returns metadata for a single report. Authorization check against the report's
+        declared `permissionKey` is enforced. Returns 404 rather than 403 if the user
+        is not authorized, to avoid confirming the existence of reports the user cannot
+        access. Scope is resolved server-side from the report's owning domain —
+        X-Organization-Context is not required.
+      parameters:
+        - $ref: '#/components/parameters/ReportDefinitionId'
+      responses:
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # EMBED TOKEN GENERATION
+  # ============================================================================
+
+  /reports/{reportDefinitionId}/embed-token:
+    post:
+      summary: Generate embed token for a report
+      operationId: generateEmbedToken
+      tags: [Embed]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.embed-token.generate
+      x-scope-sensitive: true
+      description: |
+        Validates the requesting user's authorization against the report's declared
+        `permissionKey`, resolves embed parameters from the user's organizational
+        context, and calls the Power BI API to generate a short-lived embed token.
+
+        The token is returned to the client for use with the Power BI JavaScript SDK.
+        Tokens are never stored server-side; only audit metadata is persisted.
+
+        An optional `orgContext` override may be supplied for users who hold permissions
+        at multiple organizational scopes (e.g., a state admin choosing to view a
+        district-scoped report). If omitted, the user's primary authorization scope
+        is used. The supplied `orgContext` is validated against the user's actual
+        authorizations — it cannot be used to escalate scope.
+
+        `reporting.embed-token.generate` is not directly role-assignable. The actual
+        authorization decision is whether the user holds the `permissionKey` declared
+        on the target report definition, as evaluated by IAM.
+      parameters:
+        - $ref: '#/components/parameters/ReportDefinitionId'
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbedTokenRequest'
+      responses:
+        '200':
+          description: Embed token successfully generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbedTokenResponse'
+        '400':
+          description: |
+            Required embed parameters could not be resolved from the user's context,
+            or the supplied `orgContext` is invalid for this report's parameter contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParameterResolutionError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # ============================================================================
+  # ADMIN — CATALOG MANAGEMENT
+  # ============================================================================
+
+  /admin/reports:
+    get:
+      summary: List all reports (admin)
+      operationId: adminListReports
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.manage
+      x-scope-sensitive: false
+      description: |
+        Returns the full report catalog including inactive reports. Unlike the
+        user-facing `/reports` endpoint, no permission filtering is applied — all
+        registered reports are returned regardless of the caller's domain permissions.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportStatus'
+        - name: domain
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DomainAssociation'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Full paginated catalog including inactive reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportAdminSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Register a report in the catalog (admin)
+      operationId: adminCreateReport
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.manage
+      x-scope-sensitive: false
+      description: |
+        Registers a new Power BI report in the application catalog. The report must
+        already be published to the Power BI Service workspace. The API validates
+        that the `workspaceId` and `reportId` resolve to a real report before
+        creating the catalog entry.
+
+        New reports are created with `status: Inactive`. Activate separately via
+        `PATCH /admin/reports/{reportDefinitionId}/status`.
+
+        All parameter names in `parameterContract` must belong to the standard
+        parameter set. Non-standard parameter names are rejected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreate'
+      responses:
+        '201':
+          description: Report registered successfully with status Inactive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reportDefinitionId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ReportStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: |
+            Power BI report not found in the specified workspace. Verify
+            `workspaceId` and `reportId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/reports/{reportDefinitionId}:
+    get:
+      summary: Get report details (admin)
+      operationId: adminGetReport
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.manage
+      x-scope-sensitive: false
+      description: |
+        Returns full report metadata including parameter contract details and
+        Power BI workspace/report identifiers. Available for both Active and
+        Inactive reports. Scope is resolved server-side from the report definition —
+        X-Organization-Context is not required.
+      parameters:
+        - $ref: '#/components/parameters/ReportDefinitionId'
+      responses:
+        '200':
+          description: Full report detail including admin fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportAdminDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update report catalog metadata (admin)
+      operationId: adminUpdateReport
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.manage
+      x-scope-sensitive: false
+      description: |
+        Updates catalog metadata for an existing report definition. Does not affect
+        the underlying Power BI report definition. If `workspaceId` or `reportId`
+        are changed, the API re-validates that the new reference resolves to a real
+        Power BI report.
+
+        Note: Updating the `parameterContract` of an Active report takes effect
+        immediately. Ensure the Power BI report definition has been updated to match
+        before saving contract changes.
+      parameters:
+        - $ref: '#/components/parameters/ReportDefinitionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportUpdate'
+      responses:
+        '200':
+          description: Report metadata updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reportDefinitionId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Updated Power BI workspaceId/reportId reference not found in Power BI Service.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/reports/{reportDefinitionId}/status:
+    patch:
+      summary: Activate or deactivate a report (admin)
+      operationId: adminUpdateReportStatus
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.catalog.manage
+      x-scope-sensitive: false
+      description: |
+        Sets the status of a report to `Active` (portal-visible) or `Inactive`
+        (hidden from all users). Deactivating a report does not invalidate embed
+        tokens already issued; those remain valid until natural expiry.
+      parameters:
+        - $ref: '#/components/parameters/ReportDefinitionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/ReportStatus'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reportDefinitionId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ReportStatus'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ============================================================================
+  # ADMIN — AUDIT LOG
+  # ============================================================================
+
+  /admin/embed-audit:
+    get:
+      summary: View embed token request audit log (admin)
+      operationId: adminListEmbedAudit
+      tags: [Admin]
+      x-access: internal-user
+      x-permissions-required:
+        - reporting.embed-audit.view
+      x-scope-sensitive: false
+      description: |
+        Returns a paginated audit log of all embed token requests, both granted
+        and denied. Supports filtering by user, report, outcome, and date range.
+      parameters:
+        - name: reportDefinitionId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: requestingUserUniqueId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EmbedOutcome'
+        - name: from
+          in: query
+          required: false
+          description: Filter to requests on or after this datetime (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Filter to requests on or before this datetime (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated audit log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmbedAuditEntry'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    ReportDefinitionId:
+      name: reportDefinitionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: district-10
+
+  schemas:
+
+    # --------------------------------------------------------------------------
+    # ENUMS
+    # --------------------------------------------------------------------------
+
+    ReportStatus:
+      type: string
+      enum:
+        - Active
+        - Inactive
+
+    DomainAssociation:
+      type: string
+      description: The functional domain this report belongs to
+      enum:
+        - iam
+        - credentialing
+        - profpractice
+        - staffing
+        - proflearning
+        - epp
+        - reporting
+
+    EmbedOutcome:
+      type: string
+      enum:
+        - Granted
+        - Denied
+
+    DenialReason:
+      type: string
+      enum:
+        - InsufficientPermission
+        - ParameterResolutionFailure
+        - ReportInactive
+        - PowerBIError
+
+    StandardParameterName:
+      type: string
+      description: |
+        Canonical parameter names supported by the embed parameter contract.
+        Report authors must use these exact names when configuring RLS in their
+        Power BI report definitions.
+      enum:
+        - UserUniqueId
+        - OrgType
+        - OrgCode
+        - OrgAncestorCodes
+        - UserRole
+
+    ParameterResolutionSource:
+      type: string
+      enum:
+        - UserContext
+        - OrgContext
+
+    # --------------------------------------------------------------------------
+    # VALUE OBJECTS
+    # --------------------------------------------------------------------------
+
+    ParameterContractEntry:
+      type: object
+      required: [parameterName, isRequired, resolutionSource]
+      properties:
+        parameterName:
+          $ref: '#/components/schemas/StandardParameterName'
+        isRequired:
+          type: boolean
+          description: If true, token generation will fail if this parameter cannot be resolved
+        resolutionSource:
+          $ref: '#/components/schemas/ParameterResolutionSource'
+        description:
+          type: string
+          description: |
+            Human-readable note on how this parameter maps to RLS configuration
+            inside the Power BI report definition. Intended for report authors and
+            catalog administrators.
+          maxLength: 500
+
+    OrgContextOverride:
+      type: object
+      description: |
+        Optional organizational context override for users who hold permissions at
+        multiple scopes. Validated against the user's actual authorizations before use.
+      required: [orgCode]
+      properties:
+        orgCode:
+          type: string
+          description: The organization code to use as the scoping context for this token request
+
+    # --------------------------------------------------------------------------
+    # REPORT SCHEMAS
+    # --------------------------------------------------------------------------
+
+    ReportSummary:
+      type: object
+      description: Lightweight representation for the user-facing report catalog
+      properties:
+        reportDefinitionId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        domainAssociation:
+          $ref: '#/components/schemas/DomainAssociation'
+        sortOrder:
+          type: integer
+
+    ReportDetail:
+      allOf:
+        - $ref: '#/components/schemas/ReportSummary'
+        - type: object
+          description: Full user-facing report detail (excludes Power BI internal identifiers)
+          properties:
+            parameterContract:
+              type: array
+              items:
+                $ref: '#/components/schemas/ParameterContractEntry'
+
+    ReportAdminSummary:
+      allOf:
+        - $ref: '#/components/schemas/ReportSummary'
+        - type: object
+          description: Admin list view including status and Power BI references
+          properties:
+            status:
+              $ref: '#/components/schemas/ReportStatus'
+            powerbiWorkspaceId:
+              type: string
+              format: uuid
+            powerbiReportId:
+              type: string
+              format: uuid
+            permissionKey:
+              type: string
+              description: e.g. profpractice.reports.view
+            updatedAt:
+              type: string
+              format: date-time
+
+    ReportAdminDetail:
+      allOf:
+        - $ref: '#/components/schemas/ReportAdminSummary'
+        - type: object
+          properties:
+            parameterContract:
+              type: array
+              items:
+                $ref: '#/components/schemas/ParameterContractEntry'
+            createdAt:
+              type: string
+              format: date-time
+
+    ReportCreate:
+      type: object
+      required:
+        - displayName
+        - domainAssociation
+        - permissionKey
+        - powerbiWorkspaceId
+        - powerbiReportId
+        - parameterContract
+      properties:
+        displayName:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        domainAssociation:
+          $ref: '#/components/schemas/DomainAssociation'
+        permissionKey:
+          type: string
+          description: |
+            The domain permission required to view this report.
+            Must match a permission defined in the relevant domain's permissions catalog
+            (e.g., `profpractice.reports.view`).
+          example: profpractice.reports.view
+        powerbiWorkspaceId:
+          type: string
+          format: uuid
+          description: The Power BI Service workspace (group) GUID
+        powerbiReportId:
+          type: string
+          format: uuid
+          description: The Power BI Service report GUID
+        parameterContract:
+          type: array
+          description: |
+            Declared set of embed parameters this report uses. All parameterName
+            values must be from the StandardParameterName enum.
+          items:
+            $ref: '#/components/schemas/ParameterContractEntry'
+        sortOrder:
+          type: integer
+          default: 0
+          description: Display order within the domain group in the portal catalog
+
+    ReportUpdate:
+      type: object
+      description: |
+        All fields are optional. Only supplied fields are updated.
+        At least one field must be provided.
+      properties:
+        displayName:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        permissionKey:
+          type: string
+        powerbiWorkspaceId:
+          type: string
+          format: uuid
+        powerbiReportId:
+          type: string
+          format: uuid
+        parameterContract:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParameterContractEntry'
+        sortOrder:
+          type: integer
+
+    # --------------------------------------------------------------------------
+    # EMBED TOKEN SCHEMAS
+    # --------------------------------------------------------------------------
+
+    EmbedTokenRequest:
+      type: object
+      description: |
+        Optional request body for embed token generation. All parameter values are
+        resolved server-side from the user's session context. The only client-supplied
+        input is an optional org context override for users with multi-scope access.
+      properties:
+        orgContext:
+          $ref: '#/components/schemas/OrgContextOverride'
+
+    EmbedTokenResponse:
+      type: object
+      properties:
+        embedToken:
+          type: string
+          description: |
+            The Power BI embed token. Pass directly to the Power BI JavaScript SDK.
+            Not stored server-side; treat as a secret for its lifetime.
+        embedUrl:
+          type: string
+          format: uri
+          description: The Power BI embed URL to initialize the report iframe
+        expiresAt:
+          type: string
+          format: date-time
+          description: |
+            UTC datetime when the token expires. The client should proactively
+            refresh the token before this time (recommended: refresh at expiresAt minus 10 minutes).
+        reportDefinitionId:
+          type: string
+          format: uuid
+
+    ParameterResolutionError:
+      type: object
+      description: Returned when required embed parameters cannot be resolved from the user's context
+      properties:
+        error:
+          type: string
+          example: Required embed parameters could not be resolved
+        unresolvedParameters:
+          type: array
+          description: List of parameter names that could not be resolved
+          items:
+            $ref: '#/components/schemas/StandardParameterName'
+        hint:
+          type: string
+          nullable: true
+          description: |
+            User-actionable guidance where applicable.
+            Example: "This report requires a district or ISD organizational context.
+            Please select an organization and try again."
+
+    # --------------------------------------------------------------------------
+    # AUDIT SCHEMAS
+    # --------------------------------------------------------------------------
+
+    EmbedAuditEntry:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        reportDefinitionId:
+          type: string
+          format: uuid
+        reportDisplayName:
+          type: string
+        requestingUserUniqueId:
+          type: string
+        outcome:
+          $ref: '#/components/schemas/EmbedOutcome'
+        denialReason:
+          $ref: '#/components/schemas/DenialReason'
+          nullable: true
+        resolvedParameters:
+          type: object
+          description: |
+            Snapshot of parameters sent to the Power BI API (Granted requests only).
+            Null for Denied requests.
+          nullable: true
+          additionalProperties:
+            type: string
+        tokenExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null for Denied requests
+        requestedAt:
+          type: string
+          format: date-time
+
+    # --------------------------------------------------------------------------
+    # SHARED
+    # --------------------------------------------------------------------------
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or validation failure
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              validationErrors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+
+    Forbidden:
+      description: Insufficient permissions for this operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource is already in the requested state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ServiceUnavailable:
+      description: Upstream dependency (IAM or Power BI Service) temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    BadGateway:
+      description: Power BI API call failed. Report temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            reporting:read: Read report catalog and generate embed tokens
+            reporting:admin: Manage report catalog and view audit log
+
+security:
+  - MiLogin:
+      - reporting:read

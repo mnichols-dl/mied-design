@@ -1,0 +1,635 @@
+# FDD 31 — Public Search. UNUSUAL SPLIT: this single FDD folder contains FOUR
+# sub-numbered .docx files that genuinely span THREE different bounded contexts, not
+# one — per fdd-review/CONVENTIONS.md's explicit call-out that FDD 31 (like FDD 17) may
+# need splitting across domains. Kept as ONE file (not three/four separate files) since
+# it's one FDD ingestion pass and the cross-references between the sub-documents (all
+# three public-facing search features share one MiEdWorkforce landing page, confirmed by
+# the same wireframe image appearing verbatim in the 31.1/31.2 docx) are worth keeping
+# visible in one place. Sectioned clearly below by sub-document/domain:
+#   - 31.1, 31.2 - Public Search - Educator Credential.docx -> credentialing (cred:)
+#   - 31.3 - Public Search - Legacy Reports.docx            -> credentialing (cred:)
+#   - 31.4 - Public Search - Pro Prep.docx                  -> epp (epp:)
+#   - 31.5 - Professional Learning Search.docx              -> proflearning (plrn:)
+#
+# UNUSUAL IRI CONVENTION (noted per fdd-review/CONVENTIONS.md's instruction to flag
+# deviations): Requirement IRIs here use each story's OWN domain's prefix
+# (cred:Req_31_1_1, epp:Req_31_4_1, plrn:Req_31_5_1) rather than living uniformly under
+# one FDD-review prefix — normally Requirements stay under the reviewing folder
+# regardless of which domain satisfies them, but this folder genuinely spans three
+# domains and giving each story its true domain's prefix keeps `grep`/SPARQL-by-prefix
+# queries honest about which bounded context actually owns the work.
+#
+# Source material used: the .md sibling for each sub-doc (fast pass), then each .docx
+# unzipped for comments.xml and word/media/*.png. 31.1/31.2 has 37 comments and 15
+# embedded images; 31.4 has 33 comments and 5 images; 31.5 has 12 comments and 13 images;
+# 31.3 has NO comments and NO embedded images (a one-paragraph "this doesn't exist"
+# feature, confirmed by actually opening the docx, not just trusting the short .md).
+# Nearly all comment threads across all three commented docs are already-resolved
+# clarifications/corrections from the vendor-team/product-owner back-and-forth (Caswell,
+# Ross, Groom, Dontje, Punniyamoorthy) — none surfaced a still-OPEN disputed point the way
+# credentialing-fdd-11-16.ttl's "Define role" thread did; where a comment thread changed
+# the acceptance-criteria text mid-review (e.g. cred 31.1/31.2 comments #34-47 on the
+# search/minimum-input/pagination behavior), that's noted on the relevant Requirement
+# rather than transcribed comment-by-comment.
+#
+# Granularity: each sub-document's own Addendum "Feature X.Y" numbered user stories are
+# used as the Requirement unit (31.1.1-31.1.6, 31.2.1-31.2.9, 31.4.1-31.4.10,
+# 31.5.1-31.5.13 = 44 stories across three docs), skipping each doc's separate "HIGH
+# LEVEL SCENARIOS" paraphrase table (same content, coarser use-case numbering, no added
+# traceability value — identical reasoning to the FDD 11/16 pilot). 31.3 has neither an
+# Addendum story nor a scenarios table — its Business Specifications section is short
+# prose, modeled as a single feature-level Requirement.
+#
+# Wireframes: 18 of the 15+5+13=33 total embedded images were extracted and viewed
+# (not all — see the credentialing-fdd-11-16.ttl precedent for why full 1:1 cataloguing
+# of every embedded image isn't always worth it). 31.4's and 31.5's first 5 images each
+# map cleanly 1:1 to their doc's own explicitly-captioned "Wireframe N" list, confirmed
+# by direct viewing — no offset issues like the FDD 11/16 pilot found. 31.1/31.2's first
+# 5 images are a mix: image1/2/3/4 match "Wireframe 1-4" captions directly; image5 is
+# uncaptioned but turned out to be the single most useful image in the whole FDD 31
+# folder — the actual MiEdWorkforce landing page mockup showing all three public search
+# entry points ("Educator Credential Search", "Professional Learning Opportunities",
+# "Educator Prep Providers") side by side, which is direct visual confirmation that
+# 31.1.1/31.4.1/31.5.1's landing-page-hyperlink stories describe one shared landing page,
+# not three independent ones. images 6-15 in the 31.1/31.2 doc are a distinct, higher-
+# fidelity revision pass (real MiEdWorkforce chrome/nav, not the rough boxed sketches of
+# 1-4) depicting the same basic-search/no-results/credential-history screens with review
+# annotations (red highlight boxes) burned in — 3 of these 10 were viewed (image6, 7, 15)
+# to confirm the later revision didn't change any story's substance; the other 7
+# (image8-14, minus the ones viewed) are further near-duplicate states of the same few
+# screens (one, image8, is actually a stray Pro Prep filter-panel screenshot that leaked
+# into the wrong doc) and were not individually catalogued.
+#
+# Validation: see this project's standard oxigraph load (ontology + full abox/mied-v3
+# tree + this file) — zero parse failures, zero untyped satisfiedBy/oa:hasTarget targets,
+# zero Requirements without a satisfiedBy or an Annotation, confirmed at the end of this
+# ingestion pass.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix epp:   <urn:solutiondesign:instance:epp:> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix pub:   <urn:solutiondesign:instance:publicportal:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+cred:Fdd31_1_2Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/31 - Public Search/31.1, 31.2 - Public Search - Educator Credential.docx" ;
+    sd:notes "Covers FDD Features 31.1 (Search Function) and 31.2 (Public Search - Results Detail). Directly cited by credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch." .
+
+cred:Fdd31_3Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/31 - Public Search/31.3 - Public Search - Legacy Reports.docx" ;
+    sd:notes "One-page doc: 'There are no user stories defined for implementation.' Also cited by credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch (as the thing deliberately NOT modeled)." .
+
+epp:Fdd31_4Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/31 - Public Search/31.4 - Public Search - Pro Prep.docx" ;
+    sd:notes "Covers FDD Feature 31.4 (Public Search - Pro Prep / Educator Preparation Provider search). Belongs to epp:, not credentialing, despite living in the same numbered FDD folder as 31.1-31.3." .
+
+plrn:Fdd31_5Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/31 - Public Search/31.5 - Professional Learning Search.docx" ;
+    sd:notes "Covers FDD Feature 31.5 (Public Search - Professional Learning / SCECH Sponsor & Program search). Belongs to plrn:, not credentialing, despite living in the same numbered FDD folder as 31.1-31.3." .
+
+cred:WireframeLandingPageThreeSearches a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-landing-page-three-public-search-hyperlinks.png" ;
+    sd:notes "Confirmed by direct viewing: the shared MiEdWorkforce landing page with all three public-search entry points (Educator Credential Search / Professional Learning Opportunities / Educator Prep Providers) as tiles below the banner. Direct evidence for cred:Req_31_1_1, epp:Req_31_4_1, and plrn:Req_31_5_1 all describing the SAME landing page, not three independent ones." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Wireframe31_1_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.1-wireframe1-basic-search.png" ;
+    sd:notes "Doc caption 'Wireframe 1 - Public Search - Michigan Educator Credential Status'. Confirmed by viewing: basic search bar plus Advanced Search button." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:Wireframe31_1_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.1-wireframe2-advanced-search.png" ;
+    sd:notes "Doc caption 'Wireframe 2 - Advanced Search'. Confirmed by viewing: modal with Credential number free-text field and Credential type dropdown, Reset/Search buttons." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:Wireframe31_2_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.2-wireframe3-initial-results.png" ;
+    sd:notes "Doc caption 'Wireframe 3 - Educator Credential Search - Initial Results'. Confirmed by viewing: Name + Credential type results table with pagination, matching cred:Op_SearchPublicEducatorCredentials's projection." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:Wireframe31_2_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.2-wireframe4-credential-history-early-draft.png" ;
+    sd:notes "Doc caption 'Wireframe 4 - Educator Credential Search - Credential History'. Early rough draft: a single flat Credential History table (not yet split into Active/Inactive sections) with expand(+)/collapse icons per credential name. Superseded in substance (not in caption) by the higher-fidelity image15 (see cred:WireframeCredentialHistoryHifi below), which shows the Active/Active-Temporary/Inactive 3-way split actually described in the acceptance criteria." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:WireframeBasicSearchHifi a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.1-basic-search-hifi.png" ;
+    sd:notes "Uncaptioned, later-revision-pass image (real MiEdWorkforce chrome, not the rough boxed sketch style of images 1-4): Educator Credential Search basic-search screen with search-by-name-or-credential-number placeholder text." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:WireframeNoResultsHifi a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.1-no-results-found-hifi.png" ;
+    sd:notes "Confirmed by viewing: 'No Results Found' empty state with a 'Clear Search' link, matching cred:Req_31_1_6's acceptance criteria almost verbatim." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+cred:WireframeCredentialHistoryHifi a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/cred-31.2-credential-history-hifi-annotated.png" ;
+    sd:notes "Confirmed by viewing: the definitive Credential History screen — a red-boxed adverse-action banner, then three separate tables: 'Active Credentials', 'Active Temporary Credentials' (with a District column), and 'Inactive Credentials' (with a Suspended status badge). This is the strongest evidence for cred:Req_31_2_3's actual shape and directly informs the Active/Active-Temporary/Inactive discrepancy Annotation below." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+epp:Wireframe31_4_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/epp-31.4-wireframe1-landing.png" ;
+    sd:notes "Doc caption 'Wireframe 1 - Educator Preparation Providers landing page'. Confirmed by viewing: Providers/Programs tab landing with 'Office of Educator Excellence' framing." ;
+    sd:definedIn epp:Fdd31_4Doc .
+epp:Wireframe31_4_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/epp-31.4-wireframe2-provider-search.png" ;
+    sd:notes "Doc caption 'Wireframe 2 - Provider search'. Confirmed by viewing: Program Type/Name/Sort filters plus a Provider/Program Type/Pathway/EPP Type/City/Website results table — matches epp:Op_SearchProPrepProviders's projection closely except City/Website (see epp:Question_ProPrepPublicCatalogFieldGaps)." ;
+    sd:definedIn epp:Fdd31_4Doc .
+epp:Wireframe31_4_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/epp-31.4-wireframe3-provider-detail.png" ;
+    sd:notes "Doc caption 'Wireframe 3 - Provider search-Provider Detail'. Confirmed by viewing: provider contact block plus an Available Programs table (Program/Code/Grade Band/Availability) — matches epp:Op_GetProPrepProviderDetail well." ;
+    sd:definedIn epp:Fdd31_4Doc .
+epp:Wireframe31_4_4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/epp-31.4-wireframe4-program-search.png" ;
+    sd:notes "Doc caption 'Wireframe 4 - Program search'. Confirmed by viewing: a Program-Type/Name-filtered results table (Program Name/Code/Program Type/Classification) — this is a DIFFERENT results shape than the Provider search (Wireframe 2), reinforcing that Program search is conceived as its own first-class catalog view, not just provider data reshaped. No corresponding ApiOperation exists for this view (see coverage-gap Annotation below)." ;
+    sd:definedIn epp:Fdd31_4Doc .
+epp:Wireframe31_4_5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/epp-31.4-wireframe5-available-providers.png" ;
+    sd:notes "Doc caption 'Wireframe 5 - Program search - Available Providers'. Confirmed by viewing: reverse-lookup list of Providers (Provider Name/Pathway/Website) offering a given program." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+plrn:Wireframe31_5_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/plrn-31.5-wireframe1-basic-search.png" ;
+    sd:notes "Doc caption 'Wireframe 1 - Professional Learning sponsor search'. Confirmed by viewing: basic search bar plus Advanced Search/Reset buttons under a three-tab nav (Public Credential Search / Education Preparation Providers / Professional Learning Resources) — same shared-tab-bar pattern seen in the credentialing doc's images, further corroborating one shared public-search shell across all three domains." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+plrn:Wireframe31_5_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/plrn-31.5-wireframe2-advanced-search.png" ;
+    sd:notes "Doc caption 'Wireframe 2 - Generic example of Advanced Search' (doc itself says wireframes here are generic functionality sketches, not exact content/fields per comment #12/#16). Confirmed by viewing: Sponsor Name/ID, Program Name, City, Zip, County, Category, Program Formats, #SCECHs, and a date-range picker — matches the 31.5.7 acceptance criteria field-for-field." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+plrn:Wireframe31_5_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/plrn-31.5-results-grid.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Learning resources search results' grid with Program Name/Sponsor Name/County/Category/Program Format/Max SCECH hrs/Begin Date/End Date columns and pagination — matches plrn:Op_SearchCatalog's responseSchema field-for-field." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+plrn:Wireframe31_5_4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/plrn-31.5-program-detail.png" ;
+    sd:notes "Confirmed by viewing: Program Name/Sponsor Name/Sponsor Contact/Category/Location/Facilitator/Fee/Description/Prerequisites/Technical Specs/Website/Max SCECHs/Offering Dates/County — a much richer field set than plrn:ProfessionalLearningProgramAggregate models today (see coverage-gap Annotation on plrn:Req_31_5_12)." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+plrn:Wireframe31_5_5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/31-public-search/wireframes/plrn-31.5-sponsor-detail.png" ;
+    sd:notes "Confirmed by viewing: Sponsor Name/Sponsor ID/Phone/Email plus an Active Programs table for that sponsor — Sponsor ID and mailing-address fields shown here don't exist on plrn:ProfessionalLearningSponsorAggregate today (see plrn:Question_SponsorAddressAndHumanReadableId, corroborated below)." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+#################################################################
+# SECTION 1: FDD 31.1 / 31.2 — Public Search - Educator Credential (credentialing)
+#
+# credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch already cites
+# "FDD 31.1/31.2" as its source and credentialing-api.ttl's cred:Op_SearchPublicEducatorCredentials
+# / cred:Op_GetPublicEducatorCredentialHistory were built from that citation. Verified
+# below: the citation is ACCURATE — the rule's statement (name/credential_number search,
+# partial-match, whitespace-stripped, special-characters-ignored, non-null-status-only,
+# Valid/Expired/Nullified/Revoked/Suspended + permit Valid/PPR-Withdrawn, Active/Inactive
+# grouping, descending-Issue-Date/ascending-Status sort) matches this FDD's actual
+# Business Specifications and Addendum stories closely and correctly. Two real gaps and
+# two real discrepancies surfaced by reading the full FDD (not just the already-distilled
+# domain doc) are flagged below; everything else is a solid, confirmed match.
+#################################################################
+
+cred:Req_31_1_1 a sd:Requirement ;
+    sd:requirementId "31.1.1" ;
+    sd:title "Educator Credential Search hyperlink on MiEdWorkforce landing page, no login" ;
+    sd:statement "As a member of the public, I want an Educator Credential Search hyperlink available on the MiEdWorkforce landing page, found below the MiEdWorkforce banner, so that I can access the search without logging in." ;
+    sd:acceptanceCriteria "Landing page displays hyperlink 'Educator Credential Search' below the banner; no login required; clicking navigates to the Michigan Educator Credential Search Landing Page." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "The 'no authentication' half of this story is solidly confirmed by cred:Rule_PublicEducatorCredentialSearch ('no authentication and no permission check') and cred:Op_SearchPublicEducatorCredentials's sd:requiresAuth false. The landing-page-hyperlink PLACEMENT itself is public-portal chrome, not a credentialing capability — see the out-of-scope Annotation below (shared with epp:Req_31_4_1/plrn:Req_31_5_1, all three describing the same shared landing page per cred:WireframeLandingPageThreeSearches)." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_1_2 a sd:Requirement ;
+    sd:requirementId "31.1.2" ;
+    sd:title "Ignore special characters during basic search" ;
+    sd:statement "As a member of the public, I want the system to ignore special characters during a basic search so that minor differences in input do not prevent a match." ;
+    sd:acceptanceCriteria "System ignores special characters entered in the search field; accepts letters/numbers/special characters as input; still returns matches for text including special characters (e.g. D'Angelo returning DAngelo)." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "Direct match — the rule's statement explicitly says 'special characters ignored'." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_1_3 a sd:Requirement ;
+    sd:requirementId "31.1.3" ;
+    sd:title "Full/partial match, strip leading/trailing (not embedded) spaces" ;
+    sd:statement "As a member of the public, I want the search function to return full and partial matches and strip leading and trailing spaces but not embedded spaces so that I can find credentials even with incomplete or slightly inaccurate input." ;
+    sd:acceptanceCriteria "Returns full and partial matches for text and numeric criteria; strips leading/trailing spaces; does not strip embedded spaces." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "Direct match — the rule's statement explicitly says 'free-text, partial-match, whitespace-stripped'." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_1_4 a sd:Requirement ;
+    sd:requirementId "31.1.4" ;
+    sd:title "Filter out NULL Code ID; include only defined Certificate/Temporary-Credential statuses" ;
+    sd:statement "As a system user, I require the system to filter out educators whose Code ID has a NULL value from the returned search results." ;
+    sd:acceptanceCriteria "Filters out educators with a NULL Code ID. Displays Certificate statuses Valid/Expired/Nullified/Revoked/Suspended. Displays Temporary Credential statuses Valid/PPR Withdrawn (current school year only)." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "Direct match — the rule's statement explicitly says 'Only credentials with a non-null CredentialStatus are returned... results include Valid, Expired, Nullified, Revoked, and Suspended credentials, plus temporary permits Valid or PPR Withdrawn within the current academic school year.'" ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_1_5 a sd:Requirement ;
+    sd:requirementId "31.1.5" ;
+    sd:title "Credential Type filter: multiple selections or default All" ;
+    sd:statement "As a member of the public, I want the Credential Type filter to allow multiple selections or default to All so that I can search broadly or narrowly by specific credential types." ;
+    sd:acceptanceCriteria "Credential Type search field dynamically filters results; allows multiple selections; default value is 'All'; filters apply once 'Apply Filters' is selected." ;
+    sd:notes "No satisfiedBy: cred:Op_SearchPublicEducatorCredentials has no sd:parameters property at all — neither this multi-select Credential Type filter nor the Advanced Search's free-text Credential Number field (also part of this FDD's Business Specifications, though not separately numbered in the Addendum) are modeled as queryable parameters anywhere in credentialing-api.ttl. Genuine coverage gap — see Annotation below." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_1_6 a sd:Requirement ;
+    sd:requirementId "31.1.6" ;
+    sd:title "'No results found' validation message" ;
+    sd:statement "As a member of the public, I want to see an error message ('No results found') when my search criteria yields no results." ;
+    sd:acceptanceCriteria "Displays 'No results found' on a no-match search; message disappears on Clear/Clear Search or on a corrected search that returns results." ;
+    sd:notes "No satisfiedBy: this is purely a client-side validation-message behavior with no corresponding modeled element (no sd:errorResponses on cred:Op_SearchPublicEducatorCredentials either). Confirmed as a real, designed screen by cred:WireframeNoResultsHifi (viewed directly). Folded into the same coverage-gap Annotation as 31.1.5, since both are 'search-request-shape' details never promoted onto the ApiOperation." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "cred:Op_SearchPublicEducatorCredentials has no sd:parameters property at all — none of this FDD's Advanced Search surface (Credential Number free-text field, Credential Type multi-select filter defaulting to 'All') or its validation-message behavior ('Enter search criteria in at least one field', 'No results found') is promoted onto the ApiOperation today. The core search/matching LOGIC (cred:Rule_PublicEducatorCredentialSearch) is solidly modeled; it's specifically the request-shape/filter-parameter and UI-validation layer that's missing." ;
+    oa:hasTarget cred:Req_31_1_5, cred:Req_31_1_6 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_1 a sd:Requirement ;
+    sd:requirementId "31.2.1" ;
+    sd:title "Real-time search results" ;
+    sd:statement "As a member of the public, I want the search results to be real-time data so that I view the most current credential statuses." ;
+    sd:acceptanceCriteria "Initial search results reflect real-time data." ;
+    sd:satisfiedBy cred:Op_SearchPublicEducatorCredentials ;
+    sd:notes "A synchronous GET endpoint over live data satisfies 'real-time' by construction; no separate caching/staleness concern documented anywhere else in credentialing." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_2 a sd:Requirement ;
+    sd:requirementId "31.2.2" ;
+    sd:title "Hyperlinked initial results to full Credential Information" ;
+    sd:statement "As a member of the public, I want the initial results to be hyperlinked so that I can click to view the full Credential Information for an individual." ;
+    sd:acceptanceCriteria "Initial results table includes Name and Credential Type(s), hyperlinked on Name; clicking displays the Credential Information for that educator." ;
+    sd:satisfiedBy cred:Op_SearchPublicEducatorCredentials, cred:Op_GetPublicEducatorCredentialHistory ;
+    sd:notes "Good match on the two-step search-then-detail flow. Discrepancy worth flagging: this story (31.2.2) says the hyperlink is on the educator's Name, but 31.2.4 below says the hyperlink is on the Credential Number. The FDD's own Business Specifications section (non-addendum prose) also describes both patterns in different paragraphs. Not resolved here — see the discrepancy Annotation below (shared with 31.2.4)." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_3 a sd:Requirement ;
+    sd:requirementId "31.2.3" ;
+    sd:title "Credential History display: Number, Name, Subject/Grade, Issue/Expiration, Status" ;
+    sd:statement "As a member of the public, I want the Credential History display to show Credential Number, Name, Subject/Grade Level, Issue Date, Expiration Date, and Status so that I have a comprehensive view of the educator's credentials." ;
+    sd:acceptanceCriteria "Credentials compartmentalized into 'Active Credentials,' 'Active Temporary Credentials,' and 'Inactive Credentials.' Columns: Name, Credential Number, Subject/Grade Level, Issue Date, Expiration Date, Status. No Issue/Expiration Date shown for an individual endorsement." ;
+    sd:satisfiedBy cred:Op_GetPublicEducatorCredentialHistory, cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "Real discrepancy: cred:Rule_PublicEducatorCredentialSearch's own statement describes a two-way split ('a detail view groups that educator's credentials into Active (Valid) and Inactive... sections'), but this FDD's acceptance criteria (and cred:WireframeCredentialHistoryHifi, confirmed by direct viewing) describe a THREE-way split — Active Credentials / Active Temporary Credentials / Inactive Credentials — with Active Temporary Credentials carrying its own District column not modeled anywhere on cred:IssuedCredentialAggregate or any permit-related entity. The rule and cred:Op_GetPublicEducatorCredentialHistory's projection need to be extended to a 3-way grouping with a District field on temporary-credential rows, not just the 2-way split currently documented." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_4 a sd:Requirement ;
+    sd:requirementId "31.2.4" ;
+    sd:title "Multiple credentials collapsed by default, expand via Credential Number hyperlink" ;
+    sd:statement "As a member of the public, I want multiple credentials under the same credential, for an individual, to be collapsed by default and viewable via a hyperlink on the Credential Number, so the initial results are concise." ;
+    sd:acceptanceCriteria "Results include hyperlinks on Credential Numbers; default view collapsed; Credential Numbers with more than one result display a hyperlink to expand ('x' icon to collapse); expanded view shows all certificates/endorsements with expiration dates/statuses at the certificate level." ;
+    sd:satisfiedBy cred:Op_GetPublicEducatorCredentialHistory ;
+    sd:notes "Same hyperlink-placement discrepancy as 31.2.2 — see Annotation below." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "This FDD is internally inconsistent about where the expand-to-detail hyperlink lives: 31.2.2's acceptance criteria say 'The hyperlink is to be applied to educator's Name,' while 31.2.4's acceptance criteria say 'The Educator Credential Search results must include hyperlinks for the Credential Numbers.' Both cannot be the primary hyperlink target in the initial-results table at once. Not resolved by any review comment in this doc (unlike the 11/16 FDD's PPR-timing contradiction, which a comment thread explicitly settled) — flagged here as an open discrepancy for product-owner clarification, not silently picked one way." ;
+    oa:hasTarget cred:Req_31_2_2, cred:Req_31_2_4 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn cred:Fdd31_1_2Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "cred:Rule_PublicEducatorCredentialSearch's statement describes credential-history grouping as a 2-way Active/Inactive split; this FDD's own acceptance criteria (31.2.3) and its highest-fidelity wireframe (cred:WireframeCredentialHistoryHifi, confirmed by direct viewing) describe a 3-way split — Active Credentials / Active Temporary Credentials (with a District column) / Inactive Credentials. The rule and cred:Op_GetPublicEducatorCredentialHistory's sd:projection should be updated to the 3-way shape; District is new data not modeled on any temporary-credential/permit entity today." ;
+    oa:hasTarget cred:Req_31_2_3, cred:Rule_PublicEducatorCredentialSearch ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_5 a sd:Requirement ;
+    sd:requirementId "31.2.5" ;
+    sd:title "Sort: descending Issue Date, then ascending Status" ;
+    sd:statement "As a member of the public, I want the system to sort multiple credentials in descending order by Issue Date, and those of the same type alphabetically by Status (Valid, Expired, Nullified, Revoked, Suspended)." ;
+    sd:acceptanceCriteria "Multiple credentials sorted descending by Issue Date; same-Credential-Type secondary sort ascending alphabetically by Status." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch ;
+    sd:notes "Direct match — the rule's statement explicitly says 'Sort: multiple credentials descending by Issue Date; within the same Credential Type, ascending alphabetically by Status.'" ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_6 a sd:Requirement ;
+    sd:requirementId "31.2.6" ;
+    sd:title "Blank Issue/Expiration Date for adverse-action statuses" ;
+    sd:statement "As a member of the public, when a credential has an adverse action (Nullified, Revoked, Suspended, or PPR Withdrawn), I want the Issue Date and Expiration Date to be blank." ;
+    sd:acceptanceCriteria "Nullified/Revoked/Suspended certificates and PPR-Withdrawn temporary credentials (current school year) display blank Issue Date and Expiration Date." ;
+    sd:satisfiedBy cred:Rule_PublicEducatorCredentialSearch, cred:Op_GetPublicEducatorCredentialHistory ;
+    sd:notes "Direct match — cred:Op_GetPublicEducatorCredentialHistory's projection explicitly says 'issuedAt/expiresAt blanked for Nullified/Revoked/Suspended/PPR-Withdrawn per Rule_PublicEducatorCredentialSearch.'" ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_7 a sd:Requirement ;
+    sd:requirementId "31.2.7" ;
+    sd:title "Adverse-action icon and MDE contact message" ;
+    sd:statement "As a member of the public, I want an exclamation icon and an adverse action message to display for revoked or suspended credentials, providing MDE contact information." ;
+    sd:acceptanceCriteria "Exclamation icon next to PPR Withdrawn/Revoked/Suspended statuses; message below results: 'Adverse actions have been taken on a credential for this individual. For information regarding this credential, contact the Michigan Department of Education at MDE-Professional-Practice@michigan.gov.'" ;
+    sd:satisfiedBy cred:Op_GetPublicEducatorCredentialHistory ;
+    sd:notes "Direct match — projection explicitly includes 'hasAdverseAction/adverseActionMessage.' cred:WireframeCredentialHistoryHifi (viewed directly) shows the exact red banner text described here." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_8 a sd:Requirement ;
+    sd:requirementId "31.2.8" ;
+    sd:title "'Back to Educator Credentials' navigation button" ;
+    sd:statement "As a member of the public, I want a 'Back to Educator Credentials' button to easily return to my previous search results page." ;
+    sd:acceptanceCriteria "Credential results page includes a 'Back to Educator Credentials' button; clicking navigates to the previous search page." ;
+    sd:notes "No satisfiedBy: pure client-side page navigation, no backend operation involved. Folded into the out-of-scope UI-chrome Annotation below (shared with 31.2.9 and the landing-page hyperlinks) rather than treated as a credentialing coverage gap." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+cred:Req_31_2_9 a sd:Requirement ;
+    sd:requirementId "31.2.9" ;
+    sd:title "'Learn about Credential Types' external link" ;
+    sd:statement "As a member of the public, I want a 'Learn about Credential Types' hyperlink that opens a new window so that I can gain external context about credentials." ;
+    sd:acceptanceCriteria "Hyperlink titled 'Learn about Credential Types' opens a new window; URL provided by MDE." ;
+    sd:notes "No satisfiedBy: a static MDE-provided external link, not modeled data. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn cred:Fdd31_1_2Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Three requirements (31.1.1's landing-page hyperlink placement, 31.2.8's 'Back' button, 31.2.9's external 'Learn about Credential Types' link) are pure client-side navigation/UI chrome with no backend data or operation behind them — the kind of thing this graph models at the API/domain level, not the page-routing level. The landing-page hyperlink itself is shared MiEdWorkforce public-portal chrome (pub:PublicPortalContext, a stub with no real domain model of its own in this project) rather than a credentialing capability — see cred:WireframeLandingPageThreeSearches, which shows this same landing page also serving epp:Req_31_4_1 and plrn:Req_31_5_1's identical stories." ;
+    oa:hasTarget cred:Req_31_1_1, cred:Req_31_2_8, cred:Req_31_2_9, pub:PublicPortalContext ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn cred:Fdd31_1_2Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:commenting ;
+    rdfs:comment "Citation check: credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch cites 'FDD 31.1/31.2' as its source, and credentialing-api.ttl's cred:Op_SearchPublicEducatorCredentials/cred:Op_GetPublicEducatorCredentialHistory carry a header comment 'per FDD 31.1/31.2'. Both citations are CONFIRMED ACCURATE after reading the full FDD 31.1/31.2 docx (Business Specifications, Addendum stories 31.1.1-31.2.9, comments, and wireframes): the rule's stated search/matching/grouping/sorting behavior matches this FDD closely, with the specific gaps and discrepancies noted above (Advanced Search parameters not modeled; 2-way vs 3-way Active/Inactive grouping; Name-vs-Credential-Number hyperlink inconsistency) being genuinely new findings from this FDD-review pass, not contradictions of the original citation." ;
+    oa:hasTarget cred:Rule_PublicEducatorCredentialSearch ;
+    sd:status "resolved" ; sd:definedIn cred:Fdd31_1_2Doc .
+
+#################################################################
+# SECTION 2: FDD 31.3 — Public Search - Legacy Reports (credentialing; rejected/out-of-scope)
+#
+# credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch also says: "Not
+# modeled here: FDD 31.3's 'Legacy Reports' (pre-2014 Special Education Approvals,
+# L2K/SCR reports from MOECS) — explicitly out of scope per the FDD; internal SOM users
+# retrieve that historical data outside the system." Verified below: ACCURATE. The FDD's
+# own Addendum states plainly: "There are no user stories defined for implementation."
+#################################################################
+
+cred:Req_31_3 a sd:Requirement ;
+    sd:requirementId "31.3" ;
+    sd:title "Legacy Reports (pre-2014 Special Education Approvals) — feature not carried into MiEdWorkforce" ;
+    sd:statement "This feature was created to account for the Special Education Approvals issued prior to 2014, L2K and SCR reports available within MOECS. This functionality will not be carried into MiEdWorkforce, and therefore this feature is not needed. Internal SOM users will have access to the Special Education Approvals issued prior to 2014 outside of MiEdWorkforce when necessary." ;
+    sd:notes "No satisfiedBy — deliberately rejected, not a gap. The FDD's own Addendum confirms: 'There are no user stories defined for implementation. If data regarding these historical special education approvals is needed, internal State of Michigan users will work internally to retrieve it, rather than having it available through the MiEdWorkforce public interface.' This exactly matches, and CONFIRMS AS ACCURATE, credentialing-domain.ttl's existing citation on cred:Rule_PublicEducatorCredentialSearch." ;
+    sd:definedIn cred:Fdd31_3Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Citation check: credentialing-domain.ttl's cred:Rule_PublicEducatorCredentialSearch says FDD 31.3's Legacy Reports functionality is 'explicitly out of scope per the FDD; internal SOM users retrieve that historical data outside the system.' CONFIRMED ACCURATE by reading the actual FDD 31.3 docx in full (it has no embedded images and no review comments — a genuinely short, uncontested one-paragraph doc): the FDD states in its own words that this functionality 'will not be carried into MiEdWorkforce' and that SOM users will retrieve pre-2014 Special Education Approval data (L2K/SCR reports from MOECS) outside the system. A deliberate, documented non-requirement, not a coverage gap." ;
+    oa:hasTarget cred:Req_31_3 ;
+    sd:status "resolved" ; sd:definedIn cred:Fdd31_3Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "FDD 31.3's Business Specifications include a second sentence beyond the Legacy Reports rejection, easy to miss: 'The public search user support information will provide guidance to users that are not seeing expected results within the public credential search, the user will be able to request additional information for individuals.' This describes a distinct, real (if small) support/contact-request feature for the public credential search — NOT part of the Legacy Reports rejection — but like the credentialing-fdd-11-16.ttl pilot's 'Credential Removal Request' finding, this was never turned into a numbered Addendum user story (the Addendum only addresses Legacy Reports). No 'request additional information' contact-support flow exists anywhere in credentialing-api.ttl/credentialing-domain.ttl. An 'agreed-in-prose-but-never-drafted' gap, distinct from an ordinary coverage gap." ;
+    oa:hasTarget cred:Req_31_3 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn cred:Fdd31_3Doc .
+
+#################################################################
+# SECTION 3: FDD 31.4 — Public Search - Pro Prep (epp, NOT credentialing)
+#
+# Despite living in the "31 - Public Search" folder alongside the credentialing FDDs
+# above, this sub-document's actual subject — Educator Preparation Provider/Program
+# search — belongs entirely to epp:. epp-api.ttl already has epp:Op_SearchProPrepProviders
+# and epp:Op_GetProPrepProviderDetail (both external-public, requiresAuth false), and
+# epp-domain.ttl already has an open question (epp:Question_ProPrepPublicCatalogFieldGaps,
+# Open Question #12) citing this exact FDD by name and flagging City/Website field gaps
+# and whether Program should be a first-class searchable catalog entity. This FDD review
+# pass strongly corroborates that existing question with concrete new evidence (a
+# distinct Program-search wireframe with its own results shape) rather than contradicting
+# it — see the coverage-gap Annotations below, which sd:references it rather than
+# duplicating it.
+#################################################################
+
+epp:Req_31_4_1 a sd:Requirement ;
+    sd:requirementId "31.4.1" ;
+    sd:title "Educator Preparation Providers Search hyperlink on landing page, no login" ;
+    sd:statement "As a member of the public, I want a 'Educator Preparation Provider' Search hyperlink available on the MiEdWorkforce landing page, found below the MiEdWorkforce banner, so that I can access the search without logging in." ;
+    sd:acceptanceCriteria "Landing page displays hyperlink 'Educator Preparation Providers Search' below the banner; no login required; navigates to the Educator Preparation Provider Search Landing Page." ;
+    sd:notes "The 'no login' half is confirmed by epp:Op_SearchProPrepProviders's sd:requiresAuth false. The landing-page-hyperlink placement itself is shared public-portal chrome — see cred:WireframeLandingPageThreeSearches (same landing page also serves cred:Req_31_1_1/plrn:Req_31_5_1) and the out-of-scope Annotation below." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_2 a sd:Requirement ;
+    sd:requirementId "31.4.2" ;
+    sd:title "Providers vs. Programs search-mode toggle" ;
+    sd:statement "As a member of the public, I want buttons to choose between searching for Providers or searching for Programs on the landing page." ;
+    sd:acceptanceCriteria "Educator Preparation Providers Search Landing Page displays two selection options: a Providers button and a Programs button, switching search mode." ;
+    sd:notes "No satisfiedBy: epp-api.ttl only has one public search operation (epp:Op_SearchProPrepProviders, over providers). No equivalent 'search Programs' operation or Program-as-first-class-entity model exists — Program data only appears nested under a provider's certificateCategories/endorsements. See coverage-gap Annotation below, which corroborates the already-open epp:Question_ProPrepPublicCatalogFieldGaps (Open Question #12)." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_3 a sd:Requirement ;
+    sd:requirementId "31.4.3" ;
+    sd:title "Search matching Provider Name(s), full/partial match" ;
+    sd:statement "As a member of the public, the system must search the database for matching Provider Name(s) and return full and partial matches." ;
+    sd:acceptanceCriteria "Search returns full and partial matches; strips leading/trailing spaces; retains embedded spaces." ;
+    sd:satisfiedBy epp:Op_SearchProPrepProviders ;
+    sd:notes "Direct match on the core search operation; the specific match-algorithm details (partial-match, whitespace handling) aren't independently modeled as a BusinessRule the way credentialing's public search has one, but the operation itself is the right target." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_4 a sd:Requirement ;
+    sd:requirementId "31.4.4" ;
+    sd:title "Provider results table: Name, Program Type, Pathway, EPP Type, City, Website" ;
+    sd:statement "As a member of the public, when searching Providers, I want the results table to display the following data of active providers: Provider Name, Program Type, Pathway, EPP Type, City, and Website (Hyperlink)." ;
+    sd:acceptanceCriteria "Results list active providers only (closed/inactive excluded); columns: Provider Name (hyperlink), Program Type (comma-separated), Pathway (comma-separated), EPP Type, City, Website (hyperlink)." ;
+    sd:satisfiedBy epp:Op_SearchProPrepProviders ;
+    sd:notes "Strong partial match — epp:Op_SearchProPrepProviders's own sd:notes already flag exactly this gap: 'Does not return City or Website — see epp-domain.md Open Question #12.' This FDD story is independent confirmation that City/Website are real, needed fields, not speculative. See coverage-gap Annotation below." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_5 a sd:Requirement ;
+    sd:requirementId "31.4.5" ;
+    sd:title "Program results table: Name, Code, Type, Classification" ;
+    sd:statement "As a member of the public, when searching Programs, I want the results table to display the following data of active programs: Program Name, Program Code, Program Type, and Classification." ;
+    sd:acceptanceCriteria "Results list active programs only; columns: Program Name (hyperlink to Available Providers page), Program Code, Program Type, Classification." ;
+    sd:notes "No satisfiedBy: no Program-search ApiOperation exists (see 31.4.2). epp:Wireframe31_4_4 (viewed directly) confirms this is a distinct results shape from the Provider search, not a filtered view of it." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_6 a sd:Requirement ;
+    sd:requirementId "31.4.6" ;
+    sd:title "Program Name links to Available Providers (reverse lookup)" ;
+    sd:statement "As a member of the public, when I click the Program Name hyperlink in the program search results table, I want to be taken to the Available Providers page so I can see which institutions offer that specific program." ;
+    sd:acceptanceCriteria "Program Name hyperlink navigates to an Available Providers page listing Provider Name (hyperlink), Program Name/Code/Grade Band/Availability, Pathway, and provider website hyperlink." ;
+    sd:notes "No satisfiedBy: this reverse Program-to-Providers lookup has no corresponding ApiOperation — same underlying gap as 31.4.2/31.4.5 (Program isn't modeled as a first-class searchable/addressable entity)." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_7 a sd:Requirement ;
+    sd:requirementId "31.4.7" ;
+    sd:title "Search filters: Provider Name, Program Type, Pathway, EPP Type, City" ;
+    sd:statement "As a member of the public, I want search filtering options available for Provider Name (dynamic filtering), Program Type (Dropdown), Pathway (dropdown), EPP Type (dropdown), and City (dynamic filtering) so I can refine my search for both programs and providers." ;
+    sd:acceptanceCriteria "Filters for both Programs and Providers: Provider Name (dynamic), Program Type/Pathway/EPP Type (dropdowns, ascending alphabetical, values defined by EPP Admin per Feature 13.8), City (dynamic). 'Apply Filters'/'Reset Filters' buttons." ;
+    sd:satisfiedBy epp:Op_SearchProPrepProviders ;
+    sd:notes "Partial match: epp:Op_SearchProPrepProviders has no sd:parameters property, so none of these filters (including the already-flagged-missing City) are promoted onto the operation today. See coverage-gap Annotation below." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "This FDD independently corroborates epp-domain.ttl's existing epp:Question_ProPrepPublicCatalogFieldGaps (Open Question #12) with concrete new evidence: a distinct 'Program search' wireframe (epp:Wireframe31_4_4) with its own results shape (Program Name/Code/Type/Classification) and its own reverse-lookup 'Available Providers' page (epp:Wireframe31_4_5), confirming Program really is meant to be a first-class, independently-searchable catalog entity — not just data nested under a provider's certificateCategories/endorsements, which is all epp:Op_SearchProPrepProviders/epp:Op_GetProPrepProviderDetail expose today. No Program-search or Program-detail ApiOperation exists in epp-api.ttl at all." ;
+    oa:hasTarget epp:Req_31_4_2, epp:Req_31_4_5, epp:Req_31_4_6 ;
+    sd:references epp:Question_ProPrepPublicCatalogFieldGaps ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn epp:Fdd31_4Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Corroborates epp:Question_ProPrepPublicCatalogFieldGaps's City/Website finding with two further, independent confirmations: this FDD's results-table story (31.4.4, City/Website as required display columns) AND its filter story (31.4.7, City as a required dynamic filter) both need a field that exists in neither this domain's data model nor Organizations today. Also newly surfaces that epp:Op_SearchProPrepProviders has no sd:parameters property at all, so even the filters this domain COULD support (Provider Name, Program Type, Pathway, EPP Type) aren't promoted onto the operation, purely a documentation gap distinct from the City/Website data gap." ;
+    oa:hasTarget epp:Req_31_4_4, epp:Req_31_4_7 ;
+    sd:references epp:Question_ProPrepPublicCatalogFieldGaps ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_8 a sd:Requirement ;
+    sd:requirementId "31.4.8" ;
+    sd:title "Provider Detail page: contact info and Available Programs" ;
+    sd:statement "As a member of the public, when clicking a Provider Name, I want to see the 'Provider Details' page that includes Provider Contact Information (Address, Name, Title, Email, Phone), as well as a list of Available Programs." ;
+    sd:acceptanceCriteria "Provider Detail page displays Contact Information (Address/Name/Title/Email/Phone) and an Available Programs list (Program Name hyperlink, Code, Grade Band, Availability)." ;
+    sd:satisfiedBy epp:Op_GetProPrepProviderDetail ;
+    sd:notes "Good direct match — the operation's own projection already says 'contact info plus only currently-visible programs (certificate categories/endorsements)'." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_9 a sd:Requirement ;
+    sd:requirementId "31.4.9" ;
+    sd:title "'No results found' validation message" ;
+    sd:statement "As a member of the public, I want the system to display a \"No results found\" message when my search criteria yield zero matches, so that I am notified when my search is unsuccessful." ;
+    sd:acceptanceCriteria "Displays 'No results found' when a search yields no matching records." ;
+    sd:notes "No satisfiedBy: client-side validation-message behavior, no backend modeling expected. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+epp:Req_31_4_10 a sd:Requirement ;
+    sd:requirementId "31.4.10" ;
+    sd:title "'No results found' message clears on corrected search or Clear" ;
+    sd:statement "As a member of the public, I want the \"No results found\" message to disappear when I correct my search criteria or click Clear or Clear Search, so that the message does not persist once I initiate a new search." ;
+    sd:acceptanceCriteria "Message disappears automatically on a corrected search that yields results, or on clicking Clear/Clear Search (returns to default search state)." ;
+    sd:notes "No satisfiedBy: same client-side chrome as 31.4.9. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn epp:Fdd31_4Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Three requirements (31.4.1's landing-page hyperlink placement, 31.4.9/31.4.10's 'No results found' validation-message behavior) are pure client-side UI chrome with no backend data or operation behind them, same treatment as the equivalent credentialing (cred:Req_31_1_1/31.1.6) and proflearning (plrn:Req_31_5_1/31.5.5/31.5.6) stories in this same FDD-review pass. The landing-page hyperlink is shared MiEdWorkforce public-portal chrome (pub:PublicPortalContext stub), not an epp capability." ;
+    oa:hasTarget epp:Req_31_4_1, epp:Req_31_4_9, epp:Req_31_4_10, pub:PublicPortalContext ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn epp:Fdd31_4Doc .
+
+#################################################################
+# SECTION 4: FDD 31.5 — Professional Learning Search (proflearning, NOT credentialing)
+#
+# Also lives in the "31 - Public Search" folder but belongs entirely to plrn:. Already
+# well-anticipated by proflearning-api.ttl's plrn:Op_SearchCatalog (GET /catalog/search,
+# requiresAuth false, header comment explicitly says it exists "matching FDD 31.5") and
+# proflearning-domain.ttl's plrn:Question_SponsorAddressAndHumanReadableId (Open Question
+# #13), which already cites FDD 31.5 by name for the Sponsor address/ID field gap. This
+# review pass corroborates that question and surfaces one further, previously-undetected
+# gap (rich Program-detail fields) plus one rule-scope discrepancy (Sponsor status not
+# checked, only Program status).
+#################################################################
+
+plrn:Req_31_5_1 a sd:Requirement ;
+    sd:requirementId "31.5.1" ;
+    sd:title "Professional Learning Opportunities Search hyperlink on landing page, no login" ;
+    sd:statement "As a member of the public, I want a Professional Learning Opportunities Search hyperlink available on the MiEdWorkforce landing page, found below the MiEdWorkforce banner, so that I can access the search without logging in." ;
+    sd:acceptanceCriteria "Landing page displays hyperlink 'Professional Learning Opportunities' below the banner; no login required; navigates to the Michigan Professional Learning Resources Search Landing Page." ;
+    sd:notes "The 'no login' half is confirmed by plrn:Op_SearchCatalog's sd:requiresAuth false (the one operation in proflearning-api.ttl asserted unconditionally unauthenticated). The landing-page-hyperlink placement itself is shared public-portal chrome — cred:WireframeLandingPageThreeSearches (viewed directly) shows a tile literally labeled 'Professional Learning Opportunities,' matching this story's wording exactly, alongside the credentialing and Pro Prep search tiles. See out-of-scope Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_2 a sd:Requirement ;
+    sd:requirementId "31.5.2" ;
+    sd:title "Basic search returns only 'Active' status Sponsors and Programs" ;
+    sd:statement "As a member of the public, I want the basic search to only return SCECH Sponsors and Programs that have an 'Active' status." ;
+    sd:acceptanceCriteria "Search executes for SCECH Sponsors AND/OR Programs with 'Active' status only; non-Active (inactive/pending) sponsors or programs excluded." ;
+    sd:satisfiedBy plrn:Rule_OnlyActiveProgramsInCatalog ;
+    sd:notes "Partial match / discrepancy: plrn:Rule_OnlyActiveProgramsInCatalog's statement is 'The public catalog search only returns programs with status Active and sessions within their approval period' — it says nothing about SPONSOR status. This FDD explicitly requires filtering catalog results by Sponsor status too ('SCECH Sponsors... that have an Active status'), and plrn:ProfessionalLearningSponsorAggregate does have an Active/Inactive state (plrn:SponsorState_Active/plrn:SponsorState_Inactive) that could back this — but the rule and plrn:Op_SearchCatalog's own documentation only describe filtering the Program side. See discrepancy Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "plrn:Rule_OnlyActiveProgramsInCatalog only states a Program-status filter ('only returns programs with status Active'). This FDD (31.5.2) requires the same Active-only filtering to apply to SCECH Sponsors as well ('SCECH Sponsors and Programs that have an Active status') — plrn:ProfessionalLearningSponsorAggregate does model an Active/Inactive sponsor state that could support this, but neither the rule's statement nor plrn:Op_SearchCatalog's documentation currently describes a Sponsor-side status filter. Likely just an under-documented rule (the sponsor-status check may already be intended/implemented) rather than a missing capability, but worth confirming and updating the rule's statement to name-check Sponsor status explicitly." ;
+    oa:hasTarget plrn:Req_31_5_2, plrn:Rule_OnlyActiveProgramsInCatalog ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_3 a sd:Requirement ;
+    sd:requirementId "31.5.3" ;
+    sd:title "Ignore special characters during basic search" ;
+    sd:statement "As a member of the public, I want the system to ignore special characters during a basic search so that minor differences in input do not prevent a match." ;
+    sd:acceptanceCriteria "System ignores special characters entered in the search field; still returns matches for text including special characters (e.g. D'Angelo returning DAngelo)." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog ;
+    sd:notes "Partial satisfaction: plrn:Op_SearchCatalog is the right target operation, but (unlike credentialing's cred:Rule_PublicEducatorCredentialSearch) proflearning has no separate BusinessRule spelling out the exact matching algorithm (partial-match, whitespace/special-char handling) — it's implied by the operation existing, not independently documented." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_4 a sd:Requirement ;
+    sd:requirementId "31.5.4" ;
+    sd:title "Full/partial match, strip leading/trailing (not embedded) spaces" ;
+    sd:statement "As a member of the public, the system must search the MiEdWorkforce database for matching SCECH Sponsor(s) or Program(s) and return full and partial matches." ;
+    sd:acceptanceCriteria "Returns full and partial matches for text/numeric criteria; strips leading/trailing spaces; retains embedded spaces." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog ;
+    sd:notes "Same partial-satisfaction note as 31.5.3 — right operation, matching-algorithm details not independently documented as a rule." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_5 a sd:Requirement ;
+    sd:requirementId "31.5.5" ;
+    sd:title "'No results found' validation message" ;
+    sd:statement "As a member of the public, I want to see an error message ('No results found') when my search criteria yields no results." ;
+    sd:acceptanceCriteria "Displays 'No results found' on a no-match search; disappears on Reset or on a corrected search that returns results." ;
+    sd:notes "No satisfiedBy: client-side validation-message behavior. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_6 a sd:Requirement ;
+    sd:requirementId "31.5.6" ;
+    sd:title "'No results found' message clears on corrected search or Reset" ;
+    sd:statement "As a member of the public, I want the \"No results found\" message to disappear when I correct my search criteria or click Reset, so that the message does not persist once I initiate a new search." ;
+    sd:acceptanceCriteria "Message disappears automatically on corrected search with results, or on Reset (returns to default search state)." ;
+    sd:notes "No satisfiedBy: same client-side chrome as 31.5.5. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_7 a sd:Requirement ;
+    sd:requirementId "31.5.7" ;
+    sd:title "Advanced Search filters: Sponsor Name/ID, Program Name, City, Zip, County, Category, Program Formats, #SCECHs, Date Range" ;
+    sd:statement "As a member of the public, I want the Advanced Search to include filters for Sponsor Name, Sponsor ID, Program Name, City, Zip Code, County, Category, Program Formats, Number of Awarded SCECHs, and Offering Date Range (From date and To date) so I can narrow down potential results." ;
+    sd:acceptanceCriteria "Advanced Search expands to show all listed filters; City/Category/Program Formats/County allow multiple selections; Sponsor ID uses 'standard matching logic' on a free-form alpha+6-digit-number field." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog ;
+    sd:notes "Partial match: plrn:Op_SearchCatalog's own sd:notes already say 'City/zip/county/human-readable Sponsor ID filters described in FDD 31.5 are not yet implemented here — see plrn:Question_SponsorAddressAndHumanReadableId.' This story is direct, independent confirmation that gap is real and FDD-31.5-sourced exactly as that question already assumed. See coverage-gap Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_8 a sd:Requirement ;
+    sd:requirementId "31.5.8" ;
+    sd:title "Reset button clears all search state" ;
+    sd:statement "As a member of the public, I want a Reset button that clears all search inputs (basic and advanced), restores default filter values, and collapses the Advanced Search options, so that I can quickly and easily start a new search for professional learning resources." ;
+    sd:acceptanceCriteria "Reset clears main and Advanced Search fields; restores Sponsor ID field to 'Start typing...'; collapses Advanced Search." ;
+    sd:notes "No satisfiedBy: client-side form-state behavior. Folded into the out-of-scope UI-chrome Annotation below." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_9 a sd:Requirement ;
+    sd:requirementId "31.5.9" ;
+    sd:title "Hover-icon tooltips on Advanced Search fields, admin-editable text" ;
+    sd:statement "As a member of the public, I want the Advanced Search field names to display informational icons that reveal additional descriptive text when hovered over, so I can easily understand the purpose and required format for each search filter." ;
+    sd:acceptanceCriteria "Icons next to Advanced Search field names, visible when expanded; hovering shows a tooltip with field-specific guidance." ;
+    sd:notes "No satisfiedBy: pure UI-chrome content, though notably a review comment (#5, Dontje) adds a real requirement beyond the acceptance criteria's own wording — 'The hover text will be editable by the MiEdWorkforce System Admin' — meaning this needs an admin-configurable content store, not just static tooltip copy. Neither the static tooltips nor the admin-editability is modeled anywhere in proflearning. Folded into the out-of-scope UI-chrome Annotation below given its overall small footprint, but the admin-editability detail is worth a second look if/when Professional Learning Admin (14.0) tooling is built out further." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Five requirements (31.5.1's landing-page hyperlink placement, 31.5.5/31.5.6's 'No results found' validation-message behavior, 31.5.8's Reset-button form state, 31.5.9's hover-tooltip chrome) are pure client-side UI behavior with no backend data or operation behind them — same treatment as the equivalent credentialing and epp stories in this same FDD-review pass. The landing-page hyperlink is shared MiEdWorkforce public-portal chrome (pub:PublicPortalContext stub), not a proflearning capability." ;
+    oa:hasTarget plrn:Req_31_5_1, plrn:Req_31_5_5, plrn:Req_31_5_6, plrn:Req_31_5_8, plrn:Req_31_5_9, pub:PublicPortalContext ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn plrn:Fdd31_5Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Independently corroborates plrn:Question_SponsorAddressAndHumanReadableId (Open Question #13) with a full field-by-field confirmation: this FDD's Advanced Search story (31.5.7) requires City/Zip/County/Sponsor-ID filters, and its Sponsor Detail story (31.5.13, see below) requires displaying Sponsor ID and mailing address on the detail page — neither exists in plrn:ProfessionalLearningSponsorAggregate (whose only address-adjacent data is plrn:SponsorContact's name/phone/email) or plrn:Op_SearchCatalog's filter set today. No new open question needed; this is the same gap the existing question already anticipated, now confirmed from the primary FDD source directly rather than secondhand." ;
+    oa:hasTarget plrn:Req_31_5_7, plrn:Req_31_5_13 ;
+    sd:references plrn:Question_SponsorAddressAndHumanReadableId ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_10 a sd:Requirement ;
+    sd:requirementId "31.5.10" ;
+    sd:title "Sortable, filterable, paginated results grid" ;
+    sd:statement "As a member of the public, I want the Professional Learning results to be displayed in a sortable, filterable, and paginated grid." ;
+    sd:acceptanceCriteria "Results grid supports standard sorting, filtering, and pagination; dynamically filtered, real-time data." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog ;
+    sd:notes "Direct match — plrn:Op_SearchCatalog's own sd:responseSchema explicitly includes a 'pagination' field alongside the results array." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_11 a sd:Requirement ;
+    sd:requirementId "31.5.11" ;
+    sd:title "Results grid columns: Program, Sponsor, County, Category, Format, Max SCECH Hours, Begin/End Date" ;
+    sd:statement "As a member of the public, I want the Professional Learning Search results grid to display Program Name, Sponsor Name, County, Category, Program Format, Max SCECH Hours, Begin Date, and End Date, so I can quickly assess the key details of available sponsors and programs." ;
+    sd:acceptanceCriteria "Grid named 'Search Results' with columns Program Name (hyperlink), Sponsor Name (hyperlink), County, Category, Program Format, Max SCECH Hours, Begin Date, End Date; dynamically filtered, real-time; standard sort/filter/pagination." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog ;
+    sd:notes "Direct, field-for-field match — plrn:Op_SearchCatalog's sd:responseSchema literally lists 'title, sponsorName, format, category, maxScechHours, ..., beginDate, endDate, county' on its composite CatalogSearchResult shape." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_12 a sd:Requirement ;
+    sd:requirementId "31.5.12" ;
+    sd:title "Program detail: Facilitator, Fee, Description, Prerequisites, Tech Specs, Website" ;
+    sd:statement "As a member of the public, I want the Program Name hyperlink in the search grid to display additional details such as Program Facilitator (with hyperlinked email) and Program Website." ;
+    sd:acceptanceCriteria "Clicking Program Name shows Program Name, Sponsor Name (hyperlink), Sponsor Contact, Category, Program Location, Program Facilitator (hyperlinked email, multiple independently selectable), Participant Fee, Program Description, Prerequisites/Restrictions, Technical Specifications, Program Website, Number of Maximum SCECHs, Offering Dates, County." ;
+    sd:satisfiedBy plrn:Op_GetProgram ;
+    sd:notes "Real coverage gap: plrn:Op_GetProgram is the right operation to target, but plrn:ProfessionalLearningProgramAggregate's actual value objects (plrn:ProgramContact: name/phone/email; plrn:SCECHAllocation; plrn:ApprovalPeriod; plrn:SessionLocation; plrn:ProgramFormatVO; plrn:ProgramCategoryVO; plrn:EndorsementAlignment; plrn:EvaluationRequirement) have NO field for Program Description, Prerequisites/Restrictions, Technical Specifications, Program Website, or Participant Fee, and no distinct 'Facilitator' concept (only a single generic Contact with one name/phone/email, not the FDD's 'if multiple facilitators are listed, each is independently selectable'). This is a substantially richer public-detail-page field set than the domain model captures today — a genuine, previously-undetected gap surfaced by reading the actual FDD and viewing plrn:Wireframe31_5_4 directly, not visible from the already-distilled domain doc alone." ;
+    sd:definedIn plrn:Fdd31_5Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "plrn:ProfessionalLearningProgramAggregate has no field for Program Description, Prerequisites/Restrictions, Technical Specifications, Program Website, or Participant Fee, and models only a single generic Contact (name/phone/email) rather than a distinct, possibly-multiple Program Facilitator concept with a hyperlinked email. plrn:Wireframe31_5_4 (viewed directly) confirms all of these are real, designed public-detail-page fields, not a speculative wish-list. Distinct from plrn:Question_SponsorAddressAndHumanReadableId (which is about Sponsor-side address/ID fields) — this is a Program-side field-richness gap." ;
+    oa:hasTarget plrn:Req_31_5_12 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd31_5Doc .
+
+plrn:Req_31_5_13 a sd:Requirement ;
+    sd:requirementId "31.5.13" ;
+    sd:title "Sponsor detail: Sponsor ID, mailing address, hyperlinked phone/email" ;
+    sd:statement "As a member of the public, I want the Sponsor Name hyperlink in the search grid to display Sponsor ID, Mailing Address, and hyperlinked contact phone and email information." ;
+    sd:acceptanceCriteria "Clicking Sponsor Name shows Sponsor ID, Mailing Address, Contact Name, Phone (hyperlink, multiple independently selectable), Email (hyperlink, multiple independently selectable), and a list of that sponsor's Active Programs (Program Name, Description, Category, Begin/End Date)." ;
+    sd:satisfiedBy plrn:Op_GetSponsor ;
+    sd:notes "Real coverage gap, already anticipated: plrn:Op_GetSponsor's own sd:notes reference the sponsor-detail pattern, but plrn:ProfessionalLearningSponsorAggregate's SponsorContact value object only has name/phone/email (singular, not independently-selectable multiples) and has no Sponsor ID (human-readable, distinct from the internal UUID) or Mailing Address field at all. See the coverage-gap Annotation above (shared with 31.5.7), which corroborates the pre-existing plrn:Question_SponsorAddressAndHumanReadableId." ;
+    sd:definedIn plrn:Fdd31_5Doc .

@@ -1,0 +1,349 @@
+# FDD 27 review — "27 - Professional Learning - Educator" (Features 27.1-27.3).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Professional
+# Learning graph (proflearning-domain.ttl / proflearning-permissions.ttl /
+# proflearning-api.ttl / proflearning-sequences.ttl, all loaded together), plus
+# communications-capability.ttl/-api.ttl/-sequences.ttl for cross-domain satisfaction
+# checks (Alerts, templated/consolidated email) and this same session's own
+# 28-professional-learning-processing.ttl (FDD 28, same proflearning domain, admin/
+# processing side) for cross-FDD reconciliation.
+#
+# Relationship to FDD 28 (Processing): FDD 28 is the Professional-Learning-Administrator
+# side of this same domain (sponsor/program worklist review, credit adjustment,
+# correction-request approval); FDD 27 is the Citizen-Educator side (search/bookmark/
+# register, evaluation submission that triggers award, and an educator-initiated
+# correction/dispute request). The two FDDs are complementary, not overlapping: no
+# numbered story here duplicates one already ingested in FDD 28. Two of FDD 28's own
+# findings are independently corroborated from this, the opposite side of the same
+# workflow: (1) plrn:Perm_EvaluationSubmit's "no evaluation-submission capability exists
+# end-to-end" gap — FDD 28's 28.4.6 confirmed the ADMIN review-side of this gap; this
+# FDD's 27.2.1 independently confirms the missing SUBMISSION-side of the identical gap,
+# now confirmed from both directions. (2) plrn:Question_EducatorInitiatedCorrectionPathway
+# (Open Question #11, raised during proflearning-domain.ttl's own conversion from the
+# aggregate's own sponsor-only shape) — FDD 27's 27.2.2 is the concrete FDD text that
+# question already anticipated but had not yet been confirmed by; now confirmed directly.
+# One NEW cross-cutting finding this FDD adds that FDD 28 did not surface: a genuine,
+# late (2026-01-27), never-incorporated-into-the-visible-Addendum-text review comment
+# (Dontje, comment 12) saying the entire evaluation-submission-triggers-award narrative
+# in 27.2.1/27.3.1-27.3.3 needs to be corrected to an educator-ATTESTATION-triggers-award
+# model, because evaluations ship OFF at launch — see
+# plrn:Question_AttestationVsEvaluationSubmissionUnresolved below. Unlike FDD 28's own
+# Sponsor-editability comment thread (which reached a final, resolved position that the
+# visible Addendum text already reflects), this comment thread never got folded back into
+# the text — the Addendum here is genuinely stale relative to the final review position.
+#
+# Structure of the document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "High Level Scenarios" paraphrase table
+#   (10 use cases, several sub-lettered 4a-4c) restate the same search/bookmark/evaluate/
+#   register narrative at coarser grain — the HLS table is skipped per CONVENTIONS.md
+#   (duplicative), including two 2026-03-11 review comments (Caswell, IDs 957036924 and
+#   332187690) suggesting the HLS table's own use-case #7 and #6 be removed — since the
+#   table itself isn't modeled, no Requirement-level action was needed for those, but
+#   their late date (over 7 months after the 08/05/2025 signoff) is further, independent
+#   confirmation — matching FDD 28 and FDD 29's own sibling documents — that this
+#   document continued under active revision well past its nominal approval date.
+# - An "Addendum" with real Feature/story numbering (27.1.1-27.1.5, 27.2.1-27.2.2,
+#   27.3.1-27.3.4 — 11 stories total) is the primary Requirement unit used below.
+# - Several real, described (and in two cases wireframed) Business-Specification-only
+#   capabilities are never given an Addendum number at all, the same pattern FDD 28/29
+#   already established for their own folders: past-attended-program search/history
+#   (HLS use case 3), college-course-credit selection from STARR data (HLS use cases
+#   4/4a/4b/4c — already fully modeled elsewhere in this domain, see below), and a
+#   registration-detail-storage capability (HLS use case 5) that two reviewers (Ross,
+#   Dontje) explicitly flagged mid-review as no longer accurate — see the "Business-
+#   Specification-only capabilities" section for all three, modeled with synthetic
+#   plrn:Req_27_BizSpec_* IDs.
+#
+# Comments (11 anchored + 2 late-added, via comments.xml/commentsExtended.xml): the
+# single most load-bearing thread is comment 10-11-12 (Ross asks whether the citizen
+# user or the sponsor submits attendance/SCECH hours; Dontje: "The sponsor is responsible
+# for submitting attendance" — consistent with proflearning-domain.ttl's own sponsor-
+# certifies-attendance model, no correction needed there — but Dontje's SAME comment (12)
+# goes on to describe a materially different award-triggering mechanism for the
+# evaluation-off launch configuration that was never reflected back into the visible
+# 27.2.1/27.3.1-27.3.3 text; see plrn:Question_AttestationVsEvaluationSubmissionUnresolved.
+# Comment 8 (Ross, 2025-12-04) / comment 9 (Dontje, "Agreed", 2026-01-27) resolve a
+# separate, real discrepancy: the Business Specifications prose's own registration-detail-
+# storage language ("the details of the registration are stored in MiEdWorkforce to
+# report on potential attendees") is confirmed STALE by both reviewers — bookmarking,
+# not registration-detail storage, is the real, current mechanism; modeled as a rejected
+# BizSpec-only Requirement below rather than a coverage gap. Comment 16 (Dontje) is a
+# small, already-incorporated correction (search Format filter should read "or
+# blended/hybrid" — the visible 27.1.2 AC text already includes this, no separate
+# Annotation needed). Comment 17/18/19 (Dontje, all "Need to discuss"/"impacted by the
+# discussion") are the same attestation-vs-evaluation thread reasserting itself against
+# 27.2.1, 27.3.2, and 27.3.3 individually — folded into the one
+# Question_AttestationVsEvaluationSubmissionUnresolved Annotation rather than repeated
+# three more times. Comment 20 (Dontje, on 27.3.4's admin-configured interval) — "This
+# should be captured in #14" — is an explicit, unresolved cross-FDD scope question
+# structurally identical to FDD 28's own comment 18 (Groom, evaluation-review ownership
+# vs. FDD 14); modeled as Question_ReminderIntervalConfigFddOwnershipUnresolved. Comment
+# 5 (Groom, 2025-07-17, "add scenario") is too vague standing alone (no scenario text
+# specified, no reply) to model as an independent finding — noted here, not promoted to
+# an Annotation. Comment 6 (Chaturvedi, 2025-10-06) proposes a materially different
+# college-course-credit intake mechanism (educator self-uploads transcripts, system
+# auto-calculates SCECH hours, EPP reviews during credentialing) than the one actually
+# modeled (STARR-sourced-only, no self-upload path) — never resolved one way or the
+# other in a later comment; modeled as Question_CollegeCourseSelfUploadAlternative.
+#
+# Tracked changes: not inspected in detail for this pass — a shorter document than FDD
+# 28/29, and no comment thread here points at a stale-vs-corrected-text situation that
+# would specifically require reconstructing w:ins/w:del.
+#
+# Wireframes: this document has NO "Wireframe N" or "Figure N" captions anywhere (unlike
+# FDD 28's captioned set) — all 19 embedded images (word/media/image1.jpg-image19.png)
+# are uncaptioned inline screenshots. Six were viewed and extracted, spread across the
+# document's own embed order per CONVENTIONS.md's depth-calibration guidance for a
+# smaller (11-story) FDD: image1.jpg (Program Details page, confirming 27.1.1's website
+# link and 27.1.2's click-through), image3.jpg (Search by Program page, confirming
+# 27.1.2's keyword/date-range/county/sponsor/category/hours/fee/format filters,
+# including Dontje's own "or blended/hybrid" correction from comment 16), image9.jpg
+# (a "Find Learning Opportunities" screen with "Completed Programs"/"Saved Programs"
+# tabs — the tab labels support 27.1.4 and the BizSpec-only past-attended-programs
+# search, but the table CONTENT underneath is Staffing-domain FTE/Building/vacancy data
+# ("English Language Arts", "Mathematics", Filled/Unfilled/Approved FTE, EKHS building)
+# reused wholesale from a different domain's wireframe rather than Professional-Learning-
+# shaped columns — a wireframe-fidelity mismatch distinct from a scope gap, noted on
+# plrn:Req_27_BizSpec_PastAttendedProgramsSearch below rather than taken at face value),
+# image13.jpg (an educator's "Awaiting Evaluation" program overview showing
+# Awarded/Possible Hours by Type and an "Appeal Hours" link — directly confirms both
+# 27.2.1's evaluation-gated award display AND 27.2.2's correction/dispute entry point on
+# the same screen), image14.jpg (the evaluation submission form itself, confirming
+# 27.2.1's survey-question UI), and image19.png (an admin email-template Urgency/
+# Frequency configuration screen — breadcrumbed under Credentialing > Communication
+# Management, i.e. a screen reused wholesale from a DIFFERENT bounded context's own FDD
+# to illustrate the shared Communications template-admin capability 27.3.4 depends on;
+# consistent with comm:Perm_ProflearningTemplatesView/Edit/Activate already existing as
+# one of Communications' four gated functional areas per FDD 28's own finding). The
+# remaining 13 images were not individually viewed; spot-checking their position in the
+# document's own embed order (image1-image19, sequential, no reordering detected) shows
+# no evidence of a distinct undocumented feature cluster the way FDD 28 found for its own
+# Sponsor/Coordinator-reference-screen cluster — this document's screens are uniformly
+# Citizen-Educator-facing throughout, consistent with its own stated actor scope.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+plrn:Fdd27Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/27 - Professional Learning - Educator/27 - Professional Learning - Educator.docx" ;
+    sd:notes "Covers Features 27.1-27.3 (document's own subtitle: '27 - Professional Learning - Educator (27.1 - 27.3)'). Author Vidhya Punniyamoorthy (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 per the signoff table — but comments.xml/commentsExtended.xml contain dated entries from 2025-10-06 through 2026-03-11, well after that signoff date (same post-signoff-revision pattern already found in FDD 28's and FDD 29's own sibling documents in this batch)." .
+
+plrn:Wireframe1Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-01-program-details-registration-link.jpg" ;
+    sd:notes "Confirmed by viewing: a Program Details page ('Drawing for Absolute Beginners') with a highlighted 'Visit Program Website' button and a bookmark icon, plus Sponsor Name/Contact, Program Location, Participant Fee, Professional Learning Hours, Offering Dates, Program Description, Prerequisite/Restrictions, and Requirements sections. Directly corroborates 27.1.1 (clickable program website link) and 27.1.2's 'Clicking on a Program Name navigates the user to the Program Details page' AC." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Wireframe2Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-02-search-by-program.jpg" ;
+    sd:notes "Confirmed by viewing: 'Search by Program' filter panel — Program Keywords, Date Range, Select Counties (multi-select typeahead), Select Sponsor, Select Category, Learning Hours range slider, Fee range slider, and Program Format checkboxes (Blended/Hybrid, Face-to-Face, Virtual/Online) — directly corroborates 27.1.2's AC list, including Dontje's comment-16 'or blended/hybrid' correction, which the visible AC text already incorporates." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Wireframe3Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-03-saved-completed-programs-tabs.jpg" ;
+    sd:notes "Confirmed by viewing: a 'Find Learning Opportunities' screen with 'Completed Programs' / 'Saved Programs' tabs (the latter selected), and two results tables (one headed 'Program Name', one headed 'Provider Name') each with a bookmark-icon column. WIREFRAME-FIDELITY MISMATCH: the actual table columns/data underneath (Category, Building, Filled FTE, Unfilled FTE, Approved FTE, Status; row values 'English Language Arts'/'Mathematics'/'EKHS') are Staffing-domain vacancy/position data, not Professional-Learning-shaped columns (Program Name, Date(s), Credit Hours per 27.1.2's own AC) — this screen was evidently reused wholesale from a Staffing wireframe with only the tab labels changed, not redrawn for this content. The tab STRUCTURE (Completed Programs / Saved Programs) is still real signal for 27.1.4 and plrn:Req_27_BizSpec_PastAttendedProgramsSearch; the table content should not be read literally. See that Requirement's own notes." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Wireframe4Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-04-awaiting-evaluation-overview-appeal.jpg" ;
+    sd:notes "Confirmed by viewing: an educator-facing 'Drawing for Absolute Beginners' program page tagged 'Awaiting Evaluation', with an Awarded Hours table (Awarded Hours / Possible Hours / Type / Sponsor Comments) and an 'Appeal Hours' link, plus an 'Evaluation' tab alongside 'Overview'. Directly corroborates both 27.2.1 (evaluation-gated hours, 'Hours awarded will not be applied... if the evaluation has not been completed') and 27.2.2 (the 'Appeal Hours' link is the correction/dispute entry point) on the same screen." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Wireframe5Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-05-evaluation-submission-form.jpg" ;
+    sd:notes "Confirmed by viewing: the 'Evaluation' tab of the same program page — a 'What was your experience?' survey with configurable Question fields (two dropdowns, one free-text with a 255-char counter) and a 'Submit Evaluation' button. Directly corroborates 27.2.1's evaluation-submission mechanism, and is the concrete UI comment 12's attestation critique says needs to be reconsidered for the evaluations-OFF launch configuration — see plrn:Question_AttestationVsEvaluationSubmissionUnresolved." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Wireframe6Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/27-proflearning-educator/wireframes/wireframe-06-email-template-admin-crossdomain.png" ;
+    sd:notes "Confirmed by viewing: an email-template editor ('{email_template_name}', General Info + Urgency/Frequency fields) breadcrumbed under Credentialing > Credentialing Data & Management > Communication Management > Emails — i.e. a screen from a DIFFERENT bounded context's own FDD, reused here to illustrate the shared Communications template-admin capability that 27.3.4's 'configure adjustable thresholds' story would extend. Supports the observation (see plrn:Req_27_3_4's own notes) that Communications' generic per-template Urgency/Frequency configuration is a real, modeled admin surface, but its 'Frequency' control is a per-template categorical select ('Set Frequency'), not the numeric adjustable time-interval value 27.3.4 actually describes." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+#################################################################
+# Requirements — Feature 27.1: Registration
+#################################################################
+
+plrn:Req_27_1_1 a sd:UserStory ;
+    sd:requirementId "27.1.1" ;
+    sd:title "View program website link to register" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to view a link to the respective program's website so that I can register for currently offered or future Professional Learning programs." ;
+    sd:acceptanceCriteria "The Professional Learning program website link is available and clickable. The system navigates the user to the area where they will be able to register for the specific Professional Learning program offering(s), within the external website. The user can register for currently offered or future Professional Learning programs using the respective program's website link." ;
+    sd:satisfiedBy plrn:Op_GetProgram ;
+    sd:notes "Confirmed by Wireframe 1 (plrn:Wireframe1Doc, 'Visit Program Website' button). Minor documentation gap: no explicit website-URL field is modeled on plrn:ProfessionalLearningProgramAggregate or plrn:ProgramContact (which only has name/phone/email) — the closest textual evidence is plrn:UT_ProgramFee's own definition ('actual payment collection happens on the sponsor's external registration website'), which confirms the concept exists but doesn't name a field for it. Registration itself (the AC's second/third bullets) happens entirely on the external site, outside MiEdWorkforce's own scope — consistent with proflearning-domain.ttl's own explicit non-ownership of 'program fee collection... on the sponsor's own external registration site'." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_1_2 a sd:UserStory ;
+    sd:requirementId "27.1.2" ;
+    sd:title "Search for Professional Learning Programs" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to search for Professional Learning Programs using various criteria, so that I can identify relevant learning opportunities to attend or bookmark for later." ;
+    sd:acceptanceCriteria "Follows standard Public Search (31), feature 32.5 layout conventions. Search by keyword (Program Name). Filter by Program Type, Format (Virtual/In-Person/Blended-Hybrid), Date Range, Credit Hours (SCECHs). Results in tabular/card format (Program Name, Date(s), Credit Hours). Sort by Date and Program Name. Pagination supported. Clicking a Program Name navigates to Program Details. Default view shows only active/upcoming programs. A bookmark indicator/action is available directly from search results." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog, plrn:Seq_PublicCatalogSearch ;
+    sd:notes "Confirmed by Wireframe 2 (plrn:Wireframe2Doc) — filter fields (keyword, date range, county, sponsor, category, hours, fee, format including Dontje's comment-16 'or blended/hybrid' correction) match closely, though county/sponsor/fee filters go beyond this story's own narrower AC list. Same minor documentation-gap pattern already noted across other domains' equivalent stories: plrn:Op_SearchCatalog's sd:responseSchema documents the result shape but not its query parameters, so Program Type/Format/Date-Range/Credit-Hours are not individually confirmed as real query parameters, only that the operation and result fields exist. Pagination is documented (response includes 'pagination'). Default-active-only filtering matches plrn:Rule_OnlyActiveProgramsInCatalog exactly." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_1_3 a sd:UserStory ;
+    sd:requirementId "27.1.3" ;
+    sd:title "Search for Professional Learning Providers (Sponsors)" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to search for Professional Learning Providers (Sponsors), so that I can find specific organizations offering training and view their contact information or course catalogs." ;
+    sd:acceptanceCriteria "Follows standard Public Search (31), feature 32.5 layout conventions. Search by Sponsor Name. Results display Provider Name and Contact Information. Sort alphabetically by Provider Name. Clicking a Provider Name navigates to the Provider Details page, listing that provider's active programs under a 'Programs' tab. Viewable regardless of login status; bookmarking requires login. A bookmark indicator/action is available directly from search results." ;
+    sd:satisfiedBy plrn:Op_SearchCatalog, plrn:Op_GetSponsor, plrn:Seq_PublicCatalogSearch ;
+    sd:notes "Clean match: plrn:Op_SearchCatalog's CatalogSearchResult is explicitly a composite spanning both Program and Sponsor (resultType discriminates), and plrn:Op_GetSponsor's SponsorDetail response already nests activePrograms[] — exactly the 'Provider Details page... Programs tab' AC. Dual-access (external-public + internal-user) on both operations matches the 'viewable regardless of login status' requirement precisely." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_1_4 a sd:UserStory ;
+    sd:requirementId "27.1.4" ;
+    sd:title "Bookmark Professional Learning Programs (Saved Programs)" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to bookmark Professional Learning Programs from the catalog or search results, so that I can easily access them later under a \"Saved Programs\" section on my dashboard." ;
+    sd:acceptanceCriteria "Bookmark from search results list or Program Details page. Visual indicator on bookmarked programs. A 'Saved Programs' dashboard section exists. Clicking a saved program navigates to Program Details. Shows upcoming/active by default; a 'Show Inactive'/'Show Past' toggle is available. Data adheres to academic year boundaries. Users can remove a bookmark from either the dashboard list or the Program Details page." ;
+    sd:satisfiedBy plrn:Seq_PublicCatalogSearch, plrn:Op_CreateBookmark, plrn:Op_ListBookmarks, plrn:Op_DeleteBookmark, plrn:Perm_CatalogBookmark ;
+    sd:notes "Core bookmarking mechanism is a clean match (itemType=Program on all three Bookmark operations); plrn:Seq_PublicCatalogSearch's own 'opt Bookmark (authenticated only)' branch is the end-to-end sequence that actually carries this story out, per this Phase 2 pass's convention of preferring the Sequence link over a lone operation when one exists — linked first, ahead of the individual Bookmark operations it calls. Confirmed real (tab structure, if not table content) by Wireframe 3 (plrn:Wireframe3Doc) — see that SourceDocument's own note on the wireframe-fidelity mismatch in its underlying table data. Two narrower gaps, minor relative to the rest of this story: (1) the 'Show Inactive'/'Show Past' toggle and 'academic year boundaries' filtering are not documented as query parameters anywhere on plrn:Op_ListBookmarks (same class of minor documentation gap noted elsewhere in this domain's search/list operations); (2) the dashboard SECTION itself ('Saved Programs' as a piece of dashboard layout/composition, distinct from the bookmark data it displays) is a Dashboards-capability concern — dash:DashboardsContext exists only as a stub (sd:status \"stub\") per CONVENTIONS.md's registry, so the dashboard-placement half of this story has no real target to point at; the underlying data API is real and is what satisfiedBy names here." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_1_5 a sd:UserStory ;
+    sd:requirementId "27.1.5" ;
+    sd:title "Bookmark Professional Learning Providers (Saved Providers)" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to bookmark Professional Learning Providers (Sponsors), so that I can quickly find their information and offerings under a \"Saved Providers\" section on my dashboard." ;
+    sd:acceptanceCriteria "Bookmark from Provider search results or Provider Details page. A 'Saved Providers' dashboard section exists, separate from 'Saved Programs'. List displays Provider Name and contact/status information. Clicking a provider name navigates to Provider Details. Removing a bookmark immediately updates the dashboard section. An inactive provider remains in the saved list with a visual inactive indicator." ;
+    sd:satisfiedBy plrn:Seq_PublicCatalogSearch, plrn:Op_CreateBookmark, plrn:Op_ListBookmarks, plrn:Op_DeleteBookmark, plrn:Perm_CatalogBookmark ;
+    sd:notes "Same mechanism, same Sequence-first rationale, and same two gaps as plrn:Req_27_1_4 (itemType=Sponsor here) — see that story's notes; not repeated in full. The 'inactive provider remains listed with a visual indicator' behavior is plausible given plrn:SponsorStatus (Active/Inactive) is a real, queryable field on plrn:Op_GetSponsor's response, but is not independently confirmed as bookmark-list-specific behavior anywhere in the API documentation." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+#################################################################
+# Requirements — Feature 27.2: Worklist
+#
+# GENUINE, TWO-SIDED CONFIRMATION: both stories in this Feature independently confirm
+# gaps already on record from FDD 28's own admin-side review of this same domain (see
+# this file's header note) — 27.2.1 confirms the evaluation-submission gap from the
+# submission side (FDD 28's 28.4.6 only confirmed the review side); 27.2.2 confirms
+# plrn:Question_EducatorInitiatedCorrectionPathway (Open Question #11) directly, for the
+# first time from the FDD that actually describes the educator-initiated pathway itself.
+#################################################################
+
+plrn:Req_27_2_1 a sd:UserStory ;
+    sd:requirementId "27.2.1" ;
+    sd:title "Submit required program evaluation to receive credit hours" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to submit the required program evaluation so that the system automatically awards my professional learning credit hours." ;
+    sd:acceptanceCriteria "The Citizen User can complete and submit the required Professional Learning program evaluation, per Programs with status of \"Awaiting Evaluation\". Upon successful submission, the system automatically awards the appropriate Professional Learning credit hours." ;
+    sd:notes "GENUINE GAP, independently confirmed from the opposite side of a gap FDD 28 already flagged: proflearning-permissions.ttl's plrn:Perm_EvaluationSubmit and plrn:Perm_EvaluationView both already document that neither an evaluation-submission API operation nor an 'Attendee Submits Evaluation' sequence exists anywhere in proflearning-api.ttl/proflearning-sequences.ttl, despite plrn:EvaluationTemplateAggregate's own 'Referenced In' list citing such a sequence and plrn:Rule_EvaluationRequirementProgramSpecific depending on evaluation submission as a certification precondition. FDD 28's own 28.4.6 (this session's prior pass) confirmed the ADMIN review-side of this same missing capability; this story is the independent SUBMISSION-side confirmation, now from the actual educator-facing FDD, not an assumption. Confirmed real and wireframed (Wireframe 4 / plrn:Wireframe4Doc, Wireframe 5 / plrn:Wireframe5Doc) — a load-bearing, twice-confirmed gap, not modeled speculatively. ADDITIONALLY unresolved per a late review comment: see plrn:Question_AttestationVsEvaluationSubmissionUnresolved — Dontje's comment 12 says the entire award-on-evaluation-submission narrative this story describes needs revision for the evaluations-OFF launch configuration, and that revision was never folded back into this story's visible text." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_2_2 a sd:UserStory ;
+    sd:requirementId "27.2.2" ;
+    sd:title "Submit a request for correction or review of awarded hours" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to submit a request for correction or review of my professional learning hours awarded so that I can dispute records I believe are incorrect." ;
+    sd:acceptanceCriteria "The user can initiate this request when they believe the awarded hours are incorrect. The user can submit a request or query for correction/review of awarded hours. The system sends the request/query to the Professional Learning administrator for review." ;
+    sd:notes "GENUINE GAP, direct confirmation of plrn:Question_EducatorInitiatedCorrectionPathway (Open Question #11), raised during proflearning-domain.ttl's own conversion purely from the aggregate's own sponsor/coordinator-only shape (plrn:SCECHCorrectionRequestAggregate's ERD documents submitted_by_user_unique_id as 'Coordinator who submitted'; plrn:Perm_CorrectionSubmit is coordinator-scoped only) — this is the first FDD in this batch to actually describe the educator-initiated pathway that question anticipated, not just infer its absence. Confirmed wireframed: Wireframe 4 (plrn:Wireframe4Doc)'s 'Appeal Hours' link is this story's own entry point, on the same screen as 27.2.1's evaluation-gated award display. satisfiedBy deliberately left unasserted — plrn:Op_SubmitCorrectionRequest and plrn:Perm_CorrectionSubmit both exist but are coordinator-scoped only; extending either to a citizen/educator caller (a different accessType/scope entirely) is exactly the open design decision Question #11 already names, not something this review can resolve unilaterally by linking to the wrong-actor operation." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "27.2.2 (educator/citizen-initiated SCECH hours correction/dispute request) independently confirms plrn:Question_EducatorInitiatedCorrectionPathway (proflearning-domain.ttl, Open Question #11) with concrete FDD text and a wireframed 'Appeal Hours' entry point (Wireframe 4) for the first time — previously that question existed only as an inference from the aggregate's own sponsor-only shape. High confidence this is real, needed functionality (a second correction-request entry point, parallel to but distinct from the existing coordinator-initiated plrn:Op_SubmitCorrectionRequest) rather than a documentation artifact." ;
+    oa:hasTarget plrn:Req_27_2_2, plrn:SCECHCorrectionRequestAggregate ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+plrn:Question_AttestationVsEvaluationSubmissionUnresolved a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ;
+    sd:findingType "discrepancy" ;
+    rdfs:comment "Comment 12 (Dontje, 2026-01-27), anchored on the same Business Specifications passage that became 27.2.1: 'the survey will exist upon implementation with the admin ability to update the questions. In addition, the admin can turn on/off and required/optional. Upon MiEdWorkforce implementation, the surveys will be off. The educators need a way to attest to attending to add the SCECH hours. For example, number 8 [Business Specs paragraph -> Addendum 27.2.1] needs to be updated to state that the SCECH hours are awarded when the educator attestation occurs. Number 9 and 10 [-> 27.3.2, 27.3.3] are applicable when the surveys are on and required; if the surveys are off, the system will send the alert/email to remind the educator to attest.' Three follow-up comments (17, 18, 19, all Dontje, same session) reassert 'Need to discuss'/'impacted by the discussion' directly against 27.2.1, 27.3.2, and 27.3.3's own Addendum text. UNLIKE FDD 28's own Sponsor-application-editability comment thread (which reached a final resolved position that the visible Addendum text already reflects), this thread was NEVER folded back into 27.2.1/27.3.1/27.3.2/27.3.3's visible wording — all four stories still describe evaluation SUBMISSION as the award/reminder trigger, not educator ATTESTATION. Whether 'attestation' names a wholly new, unmodeled educator-facing concept, or is better read as clarifying prose around the existing plrn:Rule_EvaluationRequirementProgramSpecific ('if [Evaluation Required is] OFF, credits award immediately upon sponsor certification') is itself unresolved — that business rule already covers the sponsor-certification side of an evaluations-off launch, but says nothing about an educator-facing attestation UI, which is what this comment specifically calls for ('the educators need a way to attest'). No AttestationRecord or equivalent concept exists anywhere in proflearning-domain.ttl. Genuinely open, not something this review can resolve unilaterally." ;
+    oa:hasTarget plrn:Req_27_2_1, plrn:Req_27_3_1, plrn:Req_27_3_2, plrn:Req_27_3_3 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+#################################################################
+# Requirements — Feature 27.3: Communication
+#################################################################
+
+plrn:Req_27_3_1 a sd:UserStory ;
+    sd:requirementId "27.3.1" ;
+    sd:title "Receive email/alert reminders for pending evaluations via centralized Communications" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to receive emails (and system alerts) using the centralized Communications framework so that I am reminded to complete pending tasks that are preventing me from receiving Professional Learning credit." ;
+    sd:acceptanceCriteria "An email/alert is sent if the user attended a program requiring evaluation and hasn't submitted it. If the program doesn't require evaluation, no notification is sent and credits award automatically upon sponsor submission. The notification is triggered on an adjustable interval, configurable by the Professional Learning Administrator. Emails use the standardized framework with dynamic coded-insert fields." ;
+    sd:notes "PARTIAL match, architecture exists but the specific instance doesn't: proflearning-domain.ttl already asserts comm:CommunicationsContext sd:subscribesTo plrn:EvaluationRequiredEvent, and communications-capability.ttl models a real, generic event-driven templated-email mechanism (comm:EmailTemplateAggregate + the event-consumption architecture demonstrated end-to-end by comm:Seq_MassEmailWithConsolidation, albeit for a Data Quality event as its own worked example, not a Proflearning one) — the underlying capability plausibly extends to this use case, and comm:Perm_ProflearningTemplatesView/Create/Edit/Activate and comm:Perm_ProflearningEmailsViewHistory/Resend already exist as one of Communications' four gated functional areas per FDD 28's own finding. But no Proflearning-specific sequence or template instance is actually confirmed, and — more significantly — no REPEATING, configurable-interval reminder cadence exists anywhere in Communications: comm:Seq_MassEmailWithConsolidation's only configurable timing concept is a one-time 15-minute consolidation-buffer window (per event TYPE, not a recurring per-condition reminder), a different mechanism than 'send this reminder again every N days until the condition clears.' See the shared coverage-gap Annotation covering this story, 27.3.3, and 27.3.4 together." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_3_2 a sd:UserStory ;
+    sd:requirementId "27.3.2" ;
+    sd:title "Generate a dashboard alert for pending evaluations" ;
+    sd:statement "As a MiEdWorkforce System, I want to generate a system alert for the Citizen User if they have pending evaluations for programs that require them, so that they are prompted to complete the steps necessary to receive their credits." ;
+    sd:acceptanceCriteria "The system identifies a Citizen User who attended a program with 'Evaluation Required' ON. If required and not submitted, the record is flagged 'Pending Evaluation'. An alert is generated and displayed in the Alerts list/Dashboard (Bell icon or Dashboard Widget) upon login. The alert notifies the user of the specific pending evaluation(s) and links to the evaluation form." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:Seq_DashboardAlertCreationAndDisplay, comm:Op_ListAlerts ;
+    sd:notes "GOOD MATCH: comm:AlertAggregate/comm:Seq_DashboardAlertCreationAndDisplay is a real, generic, already-modeled mechanism (role/event-based targeting, action-link deep-linking, dashboard-widget/bell-icon display via comm:Op_ListAlerts) and proflearning-domain.ttl already asserts the specific subscription this story needs (comm:CommunicationsContext sd:subscribesTo plrn:EvaluationRequiredEvent). The sequence's own worked example uses a Data Quality event, but the mechanism itself is event-agnostic, unlike 27.3.1/27.3.3/27.3.4's email-interval gap. Also targeted by plrn:Question_AttestationVsEvaluationSubmissionUnresolved — comment 19's 'Need to discuss' on this exact story means its literal 'pending evaluation' framing may need to become 'pending attestation' pending that unresolved discussion, but the underlying Alert mechanism itself is unaffected either way." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_3_3 a sd:UserStory ;
+    sd:requirementId "27.3.3" ;
+    sd:title "Send email notifications for pending evaluations on a configurable interval" ;
+    sd:statement "As a MiEdWorkforce System, I want to send email notifications to Citizen Users regarding pending Professional Learning evaluation(s) only when an evaluation is required, so that they are reminded to submit them to receive their credit." ;
+    sd:acceptanceCriteria "The system identifies Citizen Users with 'Evaluation Required' ON and evaluation not yet completed. If not required, no email is sent. An email reminder is sent to identified users. Frequency/timing is governed by a configurable interval set by the Professional Learning Administrator. Email content uses the centralized Alerts, Emails, and Communications framework." ;
+    sd:notes "Same partial-match/gap as plrn:Req_27_3_1 — see that story's notes and the shared coverage-gap Annotation below (this story, 27.3.1, and 27.3.4 together). The 'only when required' conditional-send logic is a plausible template-selection/targeting-rule detail within the existing comm:EmailTemplateAggregate mechanism, but the recurring configurable-interval half of this AC has no counterpart anywhere in communications-capability.ttl/-sequences.ttl." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_3_4 a sd:UserStory ;
+    sd:requirementId "27.3.4" ;
+    sd:title "Configure the reminder interval threshold" ;
+    sd:statement "As a Professional Learning Administrator, I want to configure the adjustable thresholds (time intervals) for pending evaluation email notifications so that the frequency of reminders is managed centrally." ;
+    sd:acceptanceCriteria "The Administrator can access system settings for communications/business-rule thresholds. The Administrator can define/update the interval value triggering pending-evaluation email reminders. The system uses this interval to control reminder frequency, only for programs with 'Evaluation Required' active. Updates to intervals are logged in audit history (Modified By/Modified Date)." ;
+    sd:notes "GENUINE, NEWLY-FLAGGED GAP: no configurable numeric time-interval/threshold concept for a RECURRING reminder cadence exists anywhere in communications-capability.ttl, -api.ttl, -sequences.ttl, or -technical-design.ttl — Wireframe 6 (plrn:Wireframe6Doc, confirmed by viewing, cross-domain-reused from a Credentialing FDD) shows the closest real analogue, a per-template 'Frequency' field, but it is a categorical select ('Set Frequency'), not the numeric adjustable-interval value this story describes, and it is scoped per-template rather than per-business-rule-threshold. proflearning-domain.md's own Open Question re: evaluation reminder scheduling (deduped into plrn:Question_EvaluationPolicyDetails during proflearning-domain.ttl's own conversion: 'are evaluation reminder emails sent at fixed intervals, or is the schedule configurable per program?') already flagged this as an open design question from the OTHER side (proflearning's own domain doc); this story is FDD 27's confirmation that a configurable-threshold admin capability is real, expected functionality, not speculative. ALSO an unresolved cross-FDD ownership question: comment 20 (Dontje, 2026-01-27) says outright 'This should be captured in #14' (Professional Learning Admin) — see plrn:Question_ReminderIntervalConfigFddOwnershipUnresolved, structurally identical to FDD 28's own comment-18 cross-FDD scope question about evaluation-review ownership." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "27.3.1, 27.3.3, and 27.3.4 all depend on the SAME missing capability: a configurable, RECURRING reminder interval/threshold for an unresolved condition (a pending evaluation, or — per plrn:Question_AttestationVsEvaluationSubmissionUnresolved — a pending attestation). communications-capability.ttl/-sequences.ttl model real, generic event-driven email/alert delivery (comm:EmailTemplateAggregate, comm:Seq_MassEmailWithConsolidation) but the only configurable-timing concept anywhere in Communications is a one-time, per-event-type consolidation-buffer window (15 minutes default) — a fundamentally different mechanism from 'keep reminding on interval N until the condition clears.' One coverage-gap Annotation covering all three stories rather than three near-duplicate ones, since the fix, if made, is a single new mechanism (a configurable recurring-reminder scheduler/BatchJob keyed off an unresolved-condition flag) that would satisfy all three at once, not three separate fixes." ;
+    oa:hasTarget plrn:Req_27_3_1, plrn:Req_27_3_3, plrn:Req_27_3_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+plrn:Question_ReminderIntervalConfigFddOwnershipUnresolved a sd:Annotation ;
+    oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 20 (Dontje, 2026-01-27) on 27.3.4 (Professional Learning Admin configures the reminder-interval threshold): 'This should be captured in #14.' This is an explicit, still-open scope question from the FDD's own reviewer about whether this admin-configuration capability belongs in FDD 27 (this document, Educator-facing) or FDD 14 (Professional Learning Admin) — never resolved anywhere in this document's own comment thread, and FDD 14 was not reviewed as part of this pass. Structurally identical to FDD 28's own comment-18 cross-FDD ownership question (evaluation review: FDD 28 vs. FDD 14) — a second, independent instance of FDD 14's admin-functionality boundary being unclear to this project's own reviewers, not a one-off." ;
+    oa:hasTarget plrn:Req_27_3_4 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+#################################################################
+# Business-Specification-only capabilities — described in the Business Specifications
+# prose / High Level Scenarios table but never given an Addendum number. Same treatment
+# FDD 28/29 already established for their own folders (synthetic plrn:Req_27_BizSpec_*
+# IDs, cross-referenced rather than silently absorbed or dropped).
+#################################################################
+
+plrn:Req_27_BizSpec_PastAttendedProgramsSearch a sd:UserStory ;
+    sd:requirementId "27-BizSpec-PastAttendedProgramsSearch" ;
+    sd:title "Search and view past attended Professional Learning programs" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to search and view my past attended Professional Learning programs in a sortable, filterable results table, so that I can review my own participation history." ;
+    sd:acceptanceCriteria "Search results display in a table, sortable and filterable (date range, cumulatively, status, etc.). Detailed requirements to be provided (per the source document's own placeholder text)." ;
+    sd:notes "GENUINE, NEWLY-FLAGGED GAP: never promoted to an Addendum number (High Level Scenarios use case 3 describes it; no 27.x story exists for it). No API operation anywhere in proflearning-api.ttl returns an educator's own attendance/participation history (the closest analogues — plrn:Op_GetSessionRoster, plrn:Op_ListProgramApplications — are both admin/coordinator-facing, session- or sponsor-scoped, not a citizen's own cross-program history view). Wireframe 3 (plrn:Wireframe3Doc)'s 'Completed Programs' tab is real, wireframed evidence this capability was intended as a distinct screen, but — per that SourceDocument's own note — the table content underneath is mismatched Staffing-domain data, not useable as a literal field-list confirmation. The source document itself flags this area as unfinished ('Detailed requirements will be provided'), consistent with treating this as an honest gap rather than something to force-fit against an unrelated existing operation." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "An educator/citizen-facing 'my past attended programs' search-and-history view (High Level Scenarios use case 3, wireframed as a 'Completed Programs' tab in Wireframe 3) has no backing API operation anywhere in proflearning-api.ttl — every existing list/search operation is either admin/coordinator-scoped (plrn:Op_ListProgramApplications, plrn:Op_GetSessionRoster) or the public, unauthenticated catalog (plrn:Op_SearchCatalog). Not previously flagged by proflearning-domain.ttl's own conversion or by FDD 28's admin-side review; a new finding specific to this, the citizen-facing FDD." ;
+    oa:hasTarget plrn:Req_27_BizSpec_PastAttendedProgramsSearch ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_BizSpec_CollegeCourseCredit a sd:UserStory ;
+    sd:requirementId "27-BizSpec-CollegeCourseCredit" ;
+    sd:title "Select completed STARR college courses for Professional Learning credit" ;
+    sd:statement "As a MiEdWorkforce Citizen User, I want to view college course data submitted within the CEPI STARR collection and select completed courses to apply toward my Professional Learning credit, so that qualifying coursework counts toward my requirements." ;
+    sd:acceptanceCriteria "Displays all STARR-reported college courses for the user's Unique ID since the last credential issuance. A course completed before the last credential issuance is not eligible/displayed. The user selects courses to apply for credit. Once applied, a course is no longer available in the display list (High Level Scenarios use cases 4/4a/4b/4c)." ;
+    sd:satisfiedBy plrn:CollegeCourseCreditAggregate, plrn:Op_GetEligibleCollegeCourses, plrn:Op_ApplyCollegeCourse, plrn:Seq_EducatorAppliesCollegeCourse, plrn:Rule_CollegeCoursePostDatesIssuance, plrn:Rule_CollegeCourseNotReusable ;
+    sd:notes "FULLY SATISFIED, unlike the rest of this BizSpec-only cluster — proflearning-domain.ttl/-api.ttl/-sequences.ttl already model this capability end-to-end, matching the AC almost field-for-field (issuance-date eligibility, one-time-use, STARR sourcing). Never promoted to an Addendum number, but that's consistent with it being complete rather than a gap: this domain's own already-documented gap on the SAME sequence is the cross-domain last-issuance-date lookup (cred:LastIssuanceOperation, credentialing-api.ttl has no /last-issuance path — see proflearning-domain.ttl's own notes), not anything specific to this story. See also plrn:Question_CollegeCourseSelfUploadAlternative below for a proposed, unadopted alternative intake mechanism raised in this FDD's own comments." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+plrn:Question_CollegeCourseSelfUploadAlternative a sd:Annotation ;
+    oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 6 (Chaturvedi, 2025-10-06), anchored on the same STARR college-course passage as plrn:Req_27_BizSpec_CollegeCourseCredit: 'educator should be able to upload their own college credits and their transcripts. system automatically calculates the scech hrs and the EPP will review it when they review the credentialling application.' This proposes a materially different intake mechanism (educator self-upload + EPP manual review during credentialing) alongside or instead of the modeled STARR-sourced-only path — never adopted, corrected, or explicitly rejected in any later comment. No self-upload/EPP-review pathway exists anywhere in proflearning-domain.ttl or epp's own converted domain files. Recorded as an open, unconfirmed alternative rather than assumed adopted or dropped." ;
+    oa:hasTarget plrn:Req_27_BizSpec_CollegeCourseCredit ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd27Doc .
+
+plrn:Req_27_BizSpec_ProgramRegistrationDetailsStorage a sd:Requirement ;
+    sd:requirementId "27-BizSpec-ProgramRegistrationDetailsStorage" ;
+    sd:title "Store registration details to report on potential attendees (REJECTED / superseded)" ;
+    sd:statement "Once the MiEdWorkforce citizen user registers for a Professional Learning program using the respective program's website link, the details of the registration are stored in MiEdWorkforce to report on potential attendees (Program Name, Date, etc.)." ;
+    sd:notes "Not modeled as a user story — the source text describes a system BEHAVIOR (auto-storing registration details), not a citizen-facing want, and two reviewers explicitly confirm it is stale: comment 8 (Ross, 2025-12-04) — 'I believe this is no longer the case and that the bookmarking is for the citizen user to have a more condensed listing of programs and providers that have previously been bookmarked'; comment 9 (Dontje, 2026-01-27) — 'Agreed.' Registration itself happens entirely on the sponsor's external website (see plrn:Req_27_1_1's own notes); MiEdWorkforce's real, current mechanism for a citizen to track programs of interest is bookmarking (27.1.4/27.1.5), not a registration-detail-storage/potential-attendee-reporting feature. Modeled here as a rejected Requirement, not a coverage gap — building registration-storage would contradict two reviewers' explicit, agreed-upon correction." ;
+    sd:definedIn plrn:Fdd27Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "The Business Specifications' own registration-detail-storage / potential-attendee-reporting language (High Level Scenarios use case 5) was explicitly superseded during review: comment 8 (Ross) says this is 'no longer the case' and that bookmarking is the real mechanism; comment 9 (Dontje) agrees. No action needed against proflearning-domain.ttl — no PotentialAttendee/RegistrationDetail concept should be modeled; the already-modeled Bookmark mechanism (plrn:Req_27_1_4/27_1_5) is the confirmed, current replacement." ;
+    oa:hasTarget plrn:Req_27_BizSpec_ProgramRegistrationDetailsStorage ; sd:status "resolved" ; sd:definedIn plrn:Fdd27Doc .

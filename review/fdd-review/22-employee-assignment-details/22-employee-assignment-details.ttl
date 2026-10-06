@@ -1,0 +1,377 @@
+# FDD 22 review — "22 - Data Collection & Compliance - Employee Assignment Details"
+# (Features 22.1-22.5), plus Feature 22.6 (Appropriate Placement Audit) from the companion
+# folder document "21.7; 22.6 - ... Employee and Appropriate Placement Audit.docx".
+#
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Staffing graph
+# (staffing-domain.ttl / staffing-permissions.ttl / staffing-api.ttl / staffing-sequences.ttl /
+# staffing-technical-design.ttl, all loaded together), with cred:Op_GetEducatorCredentials and
+# comm:CommunicationsContext referenced as already-real cross-domain IRIs (both declared in
+# credentialing-domain.ttl / communications' own files, not redeclared here).
+#
+# *** RESOLUTION OF THE FDD-29-FLAGGED GAP (see this repo's GAPS.md, FDD 29 section) ***
+# GAPS.md currently states, from the FDD 29 pass: "Data Collection & Compliance — Employee
+# Assignment Details (22) — referenced as supplying data consumed by credential application
+# workflows; no corresponding domain conversion exists (22 is one of several Data Collection
+# & Compliance FDD folders with no mapped bounded context at all)." Having now actually read
+# FDD 22 in full against staffing-domain.ttl (a real, converted CoreDomain, not a stub): THIS
+# CLAIM IS NO LONGER (AND WAS ARGUABLY NEVER) ACCURATE. staff:AssignmentAggregate is
+# essentially a direct model of this FDD's own subject matter (Assignment Details, Education
+# Job Type-driven data-element requirements, Credential Error Justification, endorsement/SCED
+# validation) down to near-verbatim invariant wording (see Req_22_3_2 below, a citation-verified
+# word-for-word match). staff:EmployeeRosterAggregate's EducationHistory/EvaluationOutcome/
+# NewTeacherMonitoring sub-entities, staff:CollectionAggregate (certification workflow), and
+# staff:AuditWorkItemAggregate (the Appropriate Placement Audit half, Feature 22.6) round out
+# the rest of this FDD's scope. The likely explanation: FDD 29's own pass was scoped to
+# Credentialing and treated FDD 22 as an un-reviewed dependency without cross-checking whether
+# a domain conversion existed elsewhere in the batch under a name FDD 29 wasn't looking for
+# ("staffing" rather than "Data Collection & Compliance") — an easy miss when reviewing one
+# domain's Dependencies section in isolation. This pass's own finding, to replace that GAPS.md
+# entry with: FDD 22 IS covered by the real, converted staffing bounded context; remaining gaps
+# are narrow and API-surface-specific (see below and staffing-permissions.ttl's own header),
+# not "no corresponding domain conversion at all."
+#
+# Structure of the source material and what's used as the Requirement unit:
+# - "22 - Collection & Compliance - Employee Assignment Details.docx" has a long Business
+#   Specifications prose section (the real design detail) and a 97-row "HIGH LEVEL SCENARIOS"
+#   paraphrase table restating the same content at coarser grain — the HLS table is skipped per
+#   CONVENTIONS.md. Its own Addendum gives real Feature/story numbering: 22.1.1-22.1.7
+#   (Instructional Staff), 22.2.1-22.2.3 (Non-Instructional Staff), 22.3.1-22.3.3 (Student
+#   Support Staff), 22.4 (Data Input via API/File Upload — one paragraph, no numbered stories
+#   of its own, explicitly pointing at FDD 21.5's stories instead), 22.5 (Email/Comm — one
+#   paragraph, no numbered stories, pointing at Business Specifications #6 and #4). These two
+#   pointer "features" are modeled below as single plain sd:Requirement nodes (Req_22_4,
+#   Req_22_5), not sd:UserStory, since neither is phrased as a story nor carries its own
+#   acceptance criteria — each gets an out-of-scope Annotation rather than false story content.
+# - The companion folder document "21.7; 22.6 - ... Employee and Appropriate Placement
+#   Audit.docx" covers TWO FDDs at once (per CONVENTIONS.md's "Cross-document FDD groups"
+#   guidance): Feature 21.7 (Employee Audit, an FDD-21 concern) and Feature 22.6 (Appropriate
+#   Placement Audit, an FDD-22 concern). Per this session's brief, FDD 21 is being reviewed
+#   concurrently by another agent — so ONLY Feature 22.6's five stories (22.6.1-22.6.5) are
+#   modeled below; Feature 21.7's three stories (21.7.1-21.7.3) are deliberately NOT modeled
+#   here and are left for FDD 21's own review pass to pick up.
+# - Business Specifications-section-only content that never got its own Addendum story number
+#   (e.g. the Collection Exception e-form's district/DQ-issue/records-impacted field detail
+#   from comment 373610033, or the bulk-file-upload workflow) is folded into notes on the
+#   closest related story rather than promoted to a synthetic Requirement of its own — the
+#   Addendum's own numbering is treated as authoritative for what counts as a distinct item,
+#   consistent with FDD 29's precedent of only using synthetic IDs when a real, wireframed,
+#   field-level capability was entirely missing from the numbering (not the case here).
+#
+# Comments (16 across both docx files, read via comments.xml): most are short, resolved
+# one-off wording clarifications (exception vs. exemption terminology; "add examples";
+# duplicate-field flags) folded into notes on the nearest story rather than modeled
+# individually. Three comments surfaced substantive findings, modeled as Annotations below:
+# a credential/endorsement-to-position mapping OWNERSHIP ambiguity (comment 12: "Maybe MiEd
+# admin? MOECS also collects this info, this is reviewed as part of credential apps" — raised
+# against the Dependencies section's flat claim that "MiEdWorkforce Admin (12.1)" owns this),
+# a New-Teacher-Mentor search-alignment note (comment 16) that independently corroborates
+# staffing-domain.ttl's own existing staff:Question_MentorVerificationEndpointDirection (not
+# re-raised as a new Annotation, just cross-referenced), and a bulk-upload file-format question
+# (comment 1124016608, "Can the users upload an excel file?") that independently corroborates
+# staffing-permissions.ttl's own documented staffing.employee-roster.bulk-upload API-surface
+# gap (also not re-raised, just cross-referenced).
+#
+# Wireframes: neither docx captions its images "Wireframe N" (unlike FDD 29/11/16's pattern).
+# The main FDD's 6 images (word/media/image1-6.png) are a mix of legacy "MORE"-system
+# screenshots (Education History display/entry, Evaluation Outcome update — images 1-5) and one
+# modern MiEdWorkforce mockup (a generic file-upload screen, image6, captioned nowhere in text —
+# its File Type dropdown reads "Identity", and its supported formats are .doc/.docx/.pdf, which
+# does NOT match the Business Specifications' own claim that bulk Employee Roster uploads
+# support Excel/CSV/XML — flagged as a discrepancy below since these may be two different upload
+# surfaces the FDD conflates, or a genuine format mismatch). All 6 were viewed; images 3-5 are
+# near-duplicate steps of the same Evaluation Outcome update flow (only image3 extracted in
+# full, images 4-5 confirmed as the same screen advancing through save states — not
+# individually described further, per depth-calibration guidance). The companion document's 7
+# images (media/image.png, image2-7.png — note the irregular "image.png" with no numeral,
+# matching FDD 29's own observation of packaging quirks in these documents) are modern,
+# higher-fidelity MiEdWorkforce mockups; 5 of 7 were viewed and extracted (image6 was not
+# individually viewed — confirmed structurally identical to image.png/image4.png's worklist
+# pattern by its thumbnail, not a distinct screen). All extracted to wireframes/ below.
+#
+# Depth calibration: 18 real numbered stories (13 from the main FDD, 5 from the companion's
+# Feature 22.6) plus 2 pointer-feature Requirements — a mid-sized FDD, reviewed at full
+# per-story depth (no batching of near-identical stories was needed; the closest case,
+# 22.2.1/22.3.1's near-identical "specific Local Job Function required" language, is still
+# modeled as two distinct stories since each targets a different Education Job Type).
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd22Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/22 - Data Collection & Compliance - Employee Assignment Details/22 - Collection & Compliance - Employee Assignment Details.docx" ;
+    sd:notes "Covers Features 22.1-22.5 (document subtitle: 'Data Collection & Compliance- Employee Assignment Details (22.1-22.5)'). Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 per the signoff table — but comments.xml contains entries dated through 2026-04-01, well after that signoff date, meaning the document continued to be actively revised/discussed after its nominal approval, same pattern FDD 29's own header noted for its document." .
+
+staff:Fdd22CompanionDoc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/22 - Data Collection & Compliance - Employee Assignment Details/21.7; 22.6 - Collection & Compliance - Employee and Appropriate Placement Audit.docx" ;
+    sd:notes "Covers TWO FDDs' worth of content: Feature 21.7 (Employee Audit — an FDD-21 concern, deliberately NOT modeled in this file, left for FDD 21's own review pass per this session's scope) and Feature 22.6 (Appropriate Placement Audit — modeled below, Req_22_6_1 through Req_22_6_5). Same approver pair (Dontje/Groom), signed 08/04/2025; comments.xml runs through 2026-04-28, again well past nominal signoff." .
+
+staff:Wireframe22_01 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-01-education-history-readonly-legacy.png" ;
+    sd:notes "Confirmed by viewing: legacy 'MORE'-system read-only Education History table (College/University Attended, Degree, Year Completed) with two sample rows. Corroborates staff:EducationHistory's read-only-when-CEPI-sourced framing, though this specific screen shows locally-entered data, not a CEPI Data Warehouse feed distinguishably." ;
+    sd:definedIn staff:Fdd22Doc .
+staff:Wireframe22_02 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-02-education-history-editable-legacy.png" ;
+    sd:notes "Confirmed by viewing: same table in edit mode (dropdown Degree selector, blank third row for new entry) — 'LIST ALL DEGREES EARNED' heading. Corroborates staff:EducationHistory's district/citizen manual-entry path." ;
+    sd:definedIn staff:Fdd22Doc .
+staff:Wireframe22_03 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-03-evaluation-outcome-update-legacy.png" ;
+    sd:notes "Confirmed by viewing: legacy Evaluation Outcome update screen showing 'Note: Updates can only be made to previous 5 years of data', a per-school-year Type of Credential/Assignment Codes/Effectiveness Rating panel, and a 'Change To' dropdown (Highly Effective/Effective/Ineffective/Minimally Effective). The 5-year note corroborates staff:Rule_EvaluationOutcomeAppealWindow's district-side window; two further near-duplicate screenshots advancing through this same save flow (image4.png, image5.png in the source docx) were viewed but not individually extracted." ;
+    sd:definedIn staff:Fdd22Doc .
+staff:Wireframe22_04 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-04-file-upload-identity-doctype.png" ;
+    sd:notes "Confirmed by viewing: modern MiEdWorkforce 'File upload' screen, File Type dropdown defaulted to 'Identity', accepting only .doc/.docx/.pdf up to 1MB via a drag-and-drop control. Not captioned or referenced anywhere in the surrounding text. Its file-type/format shape (Identity-document upload, office-doc formats) does not match the Business Specifications section's own description of BULK Employee Roster file upload (Excel/CSV/XML formats) — these read as two distinct upload surfaces (a per-record supporting-identity-document upload vs. a bulk roster-data file upload) that the FDD's placement of this image doesn't clearly disambiguate. Not raised as a standalone Annotation given low impact (neither capability is targeted by a numbered 22.x story — Feature 22.4 explicitly defers file-upload stories to FDD 21.5) but noted here for traceability." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Wireframe22_05 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-05-isd-auditor-audits-worklist.png" ;
+    sd:notes "Confirmed by viewing: ISD-scoped 'Audits' worklist (Kent ISD), Search box, Collection dropdown (Fall 2025), sortable/filterable School District column, paginated (1-10 of 6115 items). This is Feature 21.7's own worklist (an FDD-21 concern) — extracted here only because it sits in the same companion document as Feature 22.6, and its layout is directly structurally reused for Req_22_6_1's SOM-scoped worklist (see Wireframe22_08)." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+staff:Wireframe22_06 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-06-district-data-collection-report.png" ;
+    sd:notes "Confirmed by viewing: 'Data Collection Report' tab for a district, with a large placeholder panel literally labeled 'Power BI Charts?' (a live open question in the design itself, not yet a firm decision) followed by FIVE named sub-panels: Employees Not Appropriately Assigned, Employees with No Assignment, Changes to Employee Roster, Changes to Positions, All Employees — plus an attestation checkbox and 'Submit to State' button. This is 5 of the 7 sections Req_22_6_2's acceptance criteria names ('Required Positions with No Assignments' and 'Buildings with No Appropriate Positions' are NOT shown in the wireframe) — see Question_DistrictReportSectionsIncomplete below." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+staff:Wireframe22_07 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-07-employee-details-drawer.png" ;
+    sd:notes "Confirmed by viewing: 'Employee Information' side-drawer (Name, Certificate #, Certificate Type, National Board Certified, Renewal Status), an Endorsements table (Subject/Grade, Institution, Nullified), a Certificate History table (App#/Iss. Date/Exp. Date/Status, two rows both Expired), an Assignments table (same App#/date/status column shape — appears to reuse the Certificate History row shape rather than showing actual staffing assignment data, possibly a mockup placeholder issue rather than intentional), a Remarks table (Comment/Created by/Date Created) with an 'Add Comment' action, and a highlighted red 'Add to Investigation' panel/button. Corroborates Req_22_6_3's acceptance criteria field list closely, but ALSO shows an 'Add to Investigation' capability with no backing narrative anywhere in either document's numbered stories or Business Specifications prose — an undocumented UI affordance, not raised as its own Annotation given it's a single unexplained button, but noted for visibility." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+staff:Wireframe22_08 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-08-som-auditor-appropriate-assignment-worklist.png" ;
+    sd:notes "Confirmed by viewing: SOM-scoped 'Appropriate Assignment Reports & Audits' worklist — identical layout to Wireframe22_05's ISD-scoped Audits worklist (Search, Collection dropdown, sortable/filterable columns, same 6115-item pagination placeholder data). Direct visual match for Req_22_6_1's acceptance criteria." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+staff:Wireframe22_09 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/22-employee-assignment-details/wireframes/wireframe-09-audit-document-upload-request.png" ;
+    sd:notes "Confirmed by viewing: district-side 'Fall 2025 Collection > Documents' tab showing a 'Need to Upload Documents' banner and a Documents table with exactly the two example document types staffing-domain.ttl's own staff:DocumentRequest description names verbatim ('Master Teacher Schedule', .xlsx, Uploaded; 'Attendance for Daily Substitutes', Not Uploaded) plus a Submit button. Strong direct corroboration of Req_22_6_4/22_6_5 and staff:Op_RequestAuditDocumentation." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+
+#################################################################
+# Requirements — Feature 22.1: Instructional Staff
+#################################################################
+
+staff:Req_22_1_1 a sd:UserStory ;
+    sd:requirementId "22.1.1" ;
+    sd:title "Validate credential/endorsement for assigned employee; justification if not appropriately placed" ;
+    sd:statement "As a Business User with the School District role, I want the system to validate that an assigned employee holds the necessary credentials for their position, so that I can provide a required justification if they are not appropriately placed." ;
+    sd:acceptanceCriteria "On saving Administrator/Instructional assignment details, validate the employee's Unique ID against held credentials/endorsements for the specific SCED Code/Grade Level; trigger a validation error if invalid; offer a link to the Temporary Credential Application process OR a required free-form Credential Error Justification field; display a State Aid Deduction warning when justification is required; store the justification for Appropriate Placement Audit review (not viewable to the citizen); alert the SOM Audit role when a justification is submitted." ;
+    sd:satisfiedBy staff:Rule_CredentialMatchingForAdminInstructional, staff:Rule_EndorsementAlignmentForTeaching, staff:Op_ValidatePlacement, staff:Op_CreateAssignmentWithJustification, staff:CredentialErrorJustification, staff:Seq_AssignEmployeeToPosition, staff:CredentialErrorJustificationSubmittedEvent, cred:Op_GetEducatorCredentials ;
+    sd:notes "Strong, near-complete match: staff:Seq_AssignEmployeeToPosition's sequence diagram shows exactly this branch ('Apply for Temporary Credential' or 'Submit Justification' with free-form text), backed by cred:Op_GetEducatorCredentials for the credential/endorsement check and staff:CredentialErrorJustificationSubmittedEvent for the alert. The 'not viewable to citizen' visibility constraint and the SOM-Audit-role-specifically framing (vs. a generic audit alert) aren't independently modeled as access-control assertions on staff:CredentialErrorJustification itself, but are consistent with staff:AuditWorkItemAggregate's own invariant that 'Credential error justifications from district submissions must appear in the auditor's audit item list.' See Question_CredentialPositionMappingOwnershipAmbiguous below for a related, narrower open question about who owns the underlying credential-to-position mapping definitions this validation depends on." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_2 a sd:UserStory ;
+    sd:requirementId "22.1.2" ;
+    sd:title "Direct user to Temporary Credential Application or Credential Error Justification" ;
+    sd:statement "As a School District user, I want to be directed to the Temporary Credential Application process or the Credential Error Justification form if the employee lacks a valid credential for an Instructional or Administrator position, so that I can ensure compliance and document potential state aid deductions." ;
+    sd:acceptanceCriteria "Require a valid credential for Administrator/Instructional Education Job Type; if lacking, direct the user to the Temporary Credential Application process; display a State Aid Deduction warning when justification is required." ;
+    sd:satisfiedBy staff:Rule_CredentialMatchingForAdminInstructional, staff:Seq_AssignEmployeeToPosition ;
+    sd:notes "Same underlying mechanism as Req_22_1_1 — this story is the FDD's own restatement of the same branch from the district-user's perspective rather than a distinct capability. Rule_CredentialMatchingForAdminInstructional's own example ('district must either apply for temporary credential or submit credential error justification') matches almost verbatim." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_3 a sd:UserStory ;
+    sd:requirementId "22.1.3" ;
+    sd:title "Report course-level information for Teacher assignments; endorsement alignment" ;
+    sd:statement "As a School District user, I want to report course level information, including SCED codes and grade span, when assigning a \"Teacher\" position, so that the appropriate placement audit can verify endorsement alignment." ;
+    sd:acceptanceCriteria "Require course-level data elements (SCED Course Code, Subject Area, Local Course ID/Title, Course Code System, Academic School Year, SCED Grade Span, Course Level Characteristic, Core Academic Course, Course Interaction Mode, Virtual Indicator, Additional Credit Type, Tuition Funded, Teaching Assignment Start/End Date, Grade Level When Course Taken) when Local Job Category is 'Teacher'; require the employee to hold valid endorsement(s) covering the reported course content and grade level." ;
+    sd:satisfiedBy staff:Rule_EndorsementAlignmentForTeaching, staff:CourseDetail, staff:AssignmentAggregate ;
+    sd:notes "Rule and entity match well at the conceptual level (staff:CourseDetail's own description: 'SCED code, subject area, grade span, interaction mode for teaching assignments'; staff:AssignmentAggregate's invariant: 'Teacher assignments require valid endorsements for SCED course and grade level'). The FULL field-by-field CEDS element list this story enumerates (17 distinct elements) is not individually promoted onto staff:CourseDetail — consistent with staffing-domain.ttl's own documented scope decision to skip ERD/DataTable field-level modeling; not re-raised as a gap since that's a deliberate, already-stated scope choice, not an oversight." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_4 a sd:UserStory ;
+    sd:requirementId "22.1.4" ;
+    sd:title "Identify New Teachers, require monitoring, support mentor assignment" ;
+    sd:statement "As a School District user, I want the system to identify New Teachers, require monitoring details, and support mentor assignment, so that New Teachers are properly monitored and the collection can be certified." ;
+    sd:acceptanceCriteria "Display a New Teacher indicator (calculated from Years of Prior Teaching Experience) for individuals within their first 3 years of classroom teaching; require the New Teacher Monitoring component when the flag is true, disable/read-only it when false; block certification if the component is missing or has errors; allow entering a mentor Unique ID with name-lookup verification, or a free-form entry when no Unique ID is available (via a checkbox); alert the assigned mentor on submission." ;
+    sd:satisfiedBy staff:Rule_NewTeacherMonitoringRequirement, staff:NewTeacherMonitoring, staff:NewTeacherMentorAssignedEvent, staff:Op_SearchEducators ;
+    sd:notes "Domain model and business rule match closely, including the mentor-Unique-ID-resolves-to-name-for-verification detail (staff:NewTeacherMonitoring's own description) and the free-form fallback. GENUINE, ALREADY-DOCUMENTED GAP (not newly raised here, cross-referenced from staffing-permissions.ttl's own header): no sd:ApiOperation exists anywhere in staffing-api.yml for New Teacher Monitoring at all — staff:Perm_NewTeacherMonitoringView/Update both note this explicitly, and even the NewTeacherMentorAssignedEvent has no operation shown creating it. This story is satisfied at the domain-model/business-rule level but not at the API-surface level; partial satisfaction, per the ontology's own guidance on this, not overclaimed as complete. staff:Op_SearchEducators is the closest existing operation for the mentor name-lookup, per staffing-api.ttl's own note pointing at staff:Question_MentorVerificationEndpointDirection (staffing-domain.ttl) — comment 16 on this FDD ('Align this search with the Temporary Credential Mentor reporting') independently corroborates that exact cross-domain alignment question, not re-raised as a new Annotation here." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_5 a sd:UserStory ;
+    sd:requirementId "22.1.5" ;
+    sd:title "Notify Citizen of new Evaluation Outcome" ;
+    sd:statement "As a Citizen accountholder, I want to be notified when a new Evaluation Outcome is submitted by the School District user, so that I can review the reported data." ;
+    sd:acceptanceCriteria "Notify the Citizen accountholder via a defined template when a new Evaluation Outcome is submitted; send no notification if the Unique ID has no associated MiLogin for Citizens account." ;
+    sd:satisfiedBy staff:EvaluationOutcomeRecordedEvent, comm:CommunicationsContext ;
+    sd:notes "Event and cross-domain subscription (comm:CommunicationsContext sd:subscribesTo staff:EvaluationOutcomeRecordedEvent) match. Same already-documented API-surface gap as Req_22_1_4: staff:Perm_EvaluationOutcomeSubmit/View both note no sd:ApiOperation exists anywhere in staffing-api.yml for Evaluation Outcome — domain-model/event-level satisfaction only, not API-surface complete." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_6 a sd:UserStory ;
+    sd:requirementId "22.1.6" ;
+    sd:title "Citizen appeals an Evaluation Outcome within the appealable window" ;
+    sd:statement "As a Citizen accountholder, I want to be able to appeal an evaluation outcome reported by a School District user within the defined appealable window (currently 5 years)." ;
+    sd:acceptanceCriteria "Provide a Citizen-facing appeal button on the Evaluation Outcomes component; the appeal window for citizen appeals is 5 years; route the appeal to the School District user's worklist for review/approval; store all appeal audit details." ;
+    sd:satisfiedBy staff:Rule_EvaluationOutcomeAppealWindow, staff:EvaluationOutcome ;
+    sd:notes "GENUINE DISCREPANCY (see Question_CitizenEvaluationAppealWindowDiscrepancy below): this story states the CITIZEN's own appeal window is '5 years', but staffing-domain.ttl's staff:Rule_EvaluationOutcomeAppealWindow states the opposite for citizens specifically — 'Citizens can appeal any evaluation outcome within their record' (i.e. no time limit), with the 5-year window applying only to DISTRICT appeals. This FDD's own main Business Specifications prose (non-Addendum section) agrees with the domain model ('Citizens can appeal any evaluation outcome within their record... School District users [can appeal]... if the school year is within the defined appealable window') — so the discrepancy is internal to this FDD's own Addendum restating its own Business Specifications section incorrectly, not a genuine domain-vs-FDD conflict. Still satisfied at the mechanism level (appeal exists, routes to district worklist, audit stored)." ;
+    sd:definedIn staff:Fdd22Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Req_22_1_6's Addendum text claims the CITIZEN's evaluation-outcome appeal window is '5 years', but this FDD's own Business Specifications prose (predating the Addendum in the same document) and staffing-domain.ttl's staff:Rule_EvaluationOutcomeAppealWindow both agree citizens may appeal ANY evaluation outcome with no time limit — the 5-year window applies only to District-user appeals. The Addendum author appears to have conflated the two actor-specific rules when summarizing into a single citizen-facing user story." ;
+    oa:hasTarget staff:Req_22_1_6 ; sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_1_7 a sd:UserStory ;
+    sd:requirementId "22.1.7" ;
+    sd:title "District approves or denies a citizen's Evaluation Outcome appeal" ;
+    sd:statement "As a School District user, I want to have the option to approve or deny a Citizen's appeal request for an Evaluation Outcome, so that I can correct data inaccuracies if necessary." ;
+    sd:acceptanceCriteria "Receive the citizen's appeal request in a worklist; provide approve/deny options; on approval, allow entering the corrected Evaluation Outcome; on denial, leave the outcome unchanged." ;
+    sd:satisfiedBy staff:Rule_EvaluationOutcomeAppealWindow, staff:EvaluationOutcome ;
+    sd:notes "Domain description ('appealable by both employee and district within defined windows') matches the approve/deny/correct shape; same already-documented Evaluation-Outcome API-surface gap as Req_22_1_5 applies (no sd:ApiOperation modeled for this workflow anywhere)." ;
+    sd:definedIn staff:Fdd22Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "This FDD's Dependencies section states flatly: 'The appropriate credential to position mappings are defined by the MiEdWorkforce Admin (12.1)' and, separately, 'the appropriate endorsements to assignment mappings are defined by the MiEdWorkforce Admin (12.1)' — but a review comment on this exact point (comment 12, Groom: 'Maybe MiEd admin? MOECS also collects this info, this is reviewed as part of credential apps') shows the FDD's own author was unsure whether this configuration surface belongs to a system-wide Admin Users capability (FDD 12, not yet reviewed or converted into any of the 11 mied-v3 domains) or to Credentialing's own configurability (cred:CredentialDefinitionAggregate/cred:EndorsementDefinitionAggregate, which do model some of this internally per credentialing-domain.ttl). Left unresolved in the source and here — not assumed either way." ;
+    oa:hasTarget staff:Req_22_1_1, staff:Req_22_1_2, staff:Req_22_1_3 ; sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd22Doc .
+
+#################################################################
+# Requirements — Feature 22.2: Non-Instructional Staff
+#################################################################
+
+staff:Req_22_2_1 a sd:UserStory ;
+    sd:requirementId "22.2.1" ;
+    sd:title "Submit Assignment Details for Non-Instructional Staff" ;
+    sd:statement "As a School District user, I want to submit Assignment Details for Non-Instructional Staff, so that I can accurately report their employment period, effort (FTE), and specific job role to the state." ;
+    sd:acceptanceCriteria "Require Assignment Start/End Date, Job Identifier, Staff FTE, District/Building Identifier, Classroom Position Type, and Education Job Type when Education Job Type is Non-Instructional; enforce selection of a specific Local Job Function (not category-level only)." ;
+    sd:satisfiedBy staff:Op_CreateAssignment, staff:AssignmentDetail, staff:EducationJobType, staff:LocalJobFunction ;
+    sd:notes "Direct structural match to staff:AssignmentDetail/EducationJobType. The 'must select a specific Local Job Function, not category-level only' constraint is not asserted as an explicit invariant on staff:PositionRosterAggregate or staff:AssignmentAggregate today (staff:LocalJobFunction exists as a ValueObject but nothing in staffing-domain.ttl's invariants text forbids a category-only selection) — a minor, narrow modeling gap, not raised as a separate Annotation given its low impact." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_2_2 a sd:UserStory ;
+    sd:requirementId "22.2.2" ;
+    sd:title "Manually update Education History when no CEPI data exists" ;
+    sd:statement "As a School District user, I want to perform updates to the education history for employees where no historical CEPI data exists, so that the \"Highest Level of Education Completed\" is accurately calculated for state and federal reporting." ;
+    sd:acceptanceCriteria "Allow manual add/update of education records only when no historical CEPI/STARR data exists for the Unique ID; require the Degree element, other elements optional; calculate/store 'Highest Level of Education Completed' in the K12Staff CEDS Domain; the component is Required for Teachers/School Administrators, Optional for others, with an alert if required data is missing." ;
+    sd:satisfiedBy staff:EducationHistory, staff:AssignmentAggregate ;
+    sd:notes "staff:EducationHistory's own description is close to a word-for-word match ('Sourced either from CEPI Data Warehouse/STARR-NSC interfaces (read-only...) or manually entered by district or citizen when no historical record exists (degree required, all other fields optional)'). Same already-documented API-surface gap as the New Teacher/Evaluation Outcome stories above: staff:Perm_EducationHistoryView/Update both note no sd:ApiOperation exists anywhere in staffing-api.yml for Education History." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_2_3 a sd:UserStory ;
+    sd:requirementId "22.2.3" ;
+    sd:title "Alert on missing required Assignment Details" ;
+    sd:statement "As a School District user, I want to receive an alert if required assignment details are missing, so that I can correct the record prior to collection certification." ;
+    sd:acceptanceCriteria "Validate the Assignment Details component on Save/Submit; display an alert on the page for errors/warnings; require error correction prior to collection certification." ;
+    sd:satisfiedBy staff:Op_RunQualityReview, staff:Rule_CollectionCannotCertifyWithErrors, staff:AssignState_Error ;
+    sd:notes "Direct match to the Collection quality-review/certification-blocking mechanism already modeled." ;
+    sd:definedIn staff:Fdd22Doc .
+
+#################################################################
+# Requirements — Feature 22.3: Student Support Staff
+#################################################################
+
+staff:Req_22_3_1 a sd:UserStory ;
+    sd:requirementId "22.3.1" ;
+    sd:title "Submit Assignment Details for Student Support Staff with specific Job Functions" ;
+    sd:statement "As a School District user, I want to submit Assignment Details for Student Support Staff with specific Job Functions, so that I can accurately report staff roles as required by state compliance standards without using broad categories." ;
+    sd:acceptanceCriteria "Require K12 Staff Classification, Staff FTE, District/Building Identifier, Assignment Start/End Dates, Classroom Position Type, Primary Assignment Indicator, Local Job Category, Education Job Type, and Job Identifier when Education Job Type is Student Support Staff; mandate a specific Local Job Function (e.g. 'Social Worker'), not category-level only." ;
+    sd:satisfiedBy staff:Op_CreateAssignment, staff:AssignmentDetail, staff:EducationJobType, staff:LocalJobFunction ;
+    sd:notes "Same structural match and same minor 'specific-function-not-category-only' invariant gap as Req_22_2_1 (Non-Instructional's analogous story) — not re-raised as a separate Annotation." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_3_2 a sd:UserStory ;
+    sd:requirementId "22.3.2" ;
+    sd:title "Require Education History for specified position types before certification" ;
+    sd:statement "As a School District user, I want the system to require Education History details for Teacher, Administrator, Special Education Paraprofessionals, Teacher positions on a Temporary Credential positions, so that I cannot certify the collection with missing federal compliance data." ;
+    sd:acceptanceCriteria "The Education History component is required for Teacher, Administrator, Special Education Paraprofessional, and Teacher-on-Temporary-Credential positions; other positions may optionally report it; required-but-missing/errored records block collection certification." ;
+    sd:satisfiedBy staff:AssignmentAggregate, staff:Rule_CollectionCannotCertifyWithErrors ;
+    sd:notes "CITATION VERIFIED: staff:AssignmentAggregate's own invariant text is a near-exact match — 'Education History is required before certification for employees in a defined subset of positions (Teacher, Administrator, Special Education Paraprofessional, Teacher on a Temporary Credential); optional for all other positions.' Same list, same four position types, same wording pattern." ;
+    sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_3_3 a sd:UserStory ;
+    sd:requirementId "22.3.3" ;
+    sd:title "View pre-populated Education History from CEPI/STARR-NSC" ;
+    sd:statement "As a School District user, I want to view pre-populated Education History data sourced from the CEPI Data Warehouse and STARR/NSC interfaces, so that I do not have to manually enter verified data that the state already possesses." ;
+    sd:acceptanceCriteria "Reference post-secondary history by Unique ID from CEPI Data Warehouse/STARR-NSC; pre-populate Name of Institution, Degree/Certificate Type, Conferring Date, Education Verification Method; the School District user can view but not edit/remove CEPI-sourced data; notify on STARR/NSC-sourced updates." ;
+    sd:satisfiedBy staff:EducationHistory ;
+    sd:notes "Direct match — staff:EducationHistory's description explicitly names both the CEPI Data Warehouse/STARR-NSC sourcing and the read-only-to-district constraint on that sourced data." ;
+    sd:definedIn staff:Fdd22Doc .
+
+#################################################################
+# Requirements — Feature 22.4 / 22.5: pointer sections (no numbered stories of their own)
+#################################################################
+
+staff:Req_22_4 a sd:Requirement ;
+    sd:requirementId "22.4" ;
+    sd:title "Feature 22.4: Data Input via API and File Upload (pointer, no own stories)" ;
+    sd:statement "(Not phrased as a user story in the source.) 'All user stories regarding the uploading of supporting documentation and bulk attendee data files can be found within user stories associated with Feature 21.5: Employee Roster Data Input via API and File Upload.'" ;
+    sd:notes "This section carries no acceptance criteria or numbered stories of its own — it is a pure cross-reference to FDD 21's own Feature 21.5, which is out of this session's scope (FDD 21 is being reviewed by another agent concurrently). Modeled as a plain sd:Requirement rather than sd:UserStory since it is not narrative-form content, and given an out-of-scope Annotation rather than left dangling. WORTH FLAGGING even though out-of-scope for THIS file: this FDD's own main Business Specifications prose independently promises bulk-file and API update methods for Employee Assignment Details ('The system will allow the user... to update the Employee Assignment Details for the new academic year using the following methods: Online / Bulk file / API'), and comment 1124016608 on this exact document ('Can the users upload an excel file?') shows this was still an open question during review. staffing-api.yml/staffing-permissions.ttl already document, independently of this FDD, that NO bulk-upload endpoint exists anywhere in Staffing's real API surface (staff:Perm_EmployeeRosterBulkUpload has no matching sd:ApiOperation at all — see that permission's own notes). This FDD's own promise of a bulk/API update path for Assignment Details specifically has the same gap: staff:Op_CreateAssignment/staff:Op_UpdateAssignment are both single-record, online-only operations; nothing in staffing-api.yml exposes a bulk or batch assignment-update surface either. Per this session's brief, sibling FDD-18 and FDD-21 reviews (Roster of Positions and Roster of Employees, reviewed concurrently) independently found the identical absence for their own aggregates (Position Roster, Employee Roster) — three separate FDDs, covering three different Staffing aggregates, all promising a bulk-file/API update path that has zero corresponding sd:ApiOperation anywhere in staffing-api.yml. That consistency across independently-reviewed FDDs indicates this is a SYSTEMIC gap in Staffing's converted API surface (the bulk/batch ingestion layer for the whole domain was apparently never built out, not just overlooked for one aggregate), not three unrelated per-FDD findings — worth stating as such when this file's finding is reconciled with FDD 18's and FDD 21's own." ;
+    sd:definedIn staff:Fdd22Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 22.4's own text defers entirely to FDD 21.5 (Employee Roster Data Input via API and File Upload) for its user stories — nothing to model here beyond the cross-reference. FDD 21 is out of this session's own scope (reviewed concurrently by another agent)." ;
+    oa:hasTarget staff:Req_22_4 ; sd:status "resolved" ; sd:definedIn staff:Fdd22Doc .
+
+staff:Req_22_5 a sd:Requirement ;
+    sd:requirementId "22.5" ;
+    sd:title "Feature 22.5: Email/Comm (pointer, no own stories)" ;
+    sd:statement "(Not phrased as a user story in the source.) 'All underlying logic for sending, tracking, and displaying emails, alerts and notifications are derived from Business Specification #6 (Alerts, Emails & Communications). This feature is strictly limited to the configuration of these tools... specifically for the Data Collection & Compliance module. Additionally, Business Specification #4 (Business Rules Management) will specify when and to whom it is sent.'" ;
+    sd:notes "Pure cross-reference to two other Business Specifications, neither of which has its own numbered story here. Business Specification #6 maps to comm:CommunicationsContext (a real, if stub-status, bounded context already referenced throughout staffing-domain.ttl's own subscribesTo claims). Business Specification #4 (Business Rule Management) has no corresponding bounded context anywhere in the 11 converted mied-v3 domains — already logged in GAPS.md from the FDD 29 pass; this FDD independently confirms the same gap, not re-logged as new." ;
+    sd:definedIn staff:Fdd22Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 22.5's own text explicitly defers all alert/notification generation logic to Business Specification #6 (Alerts, Emails & Communications — comm:CommunicationsContext) and all routing/timing logic to Business Specification #4 (Business Rule Management — no corresponding bounded context exists yet; already an open GAPS.md item from the FDD 29 pass, independently reconfirmed here). Nothing Staffing-specific to model beyond the existing subscribesTo claims already asserted in staffing-domain.ttl." ;
+    oa:hasTarget staff:Req_22_5 ; sd:status "resolved" ; sd:definedIn staff:Fdd22Doc .
+
+#################################################################
+# Requirements — Feature 22.6: Appropriate Placement Audit (from the companion document)
+#################################################################
+
+staff:Req_22_6_1 a sd:UserStory ;
+    sd:requirementId "22.6.1" ;
+    sd:title "SOM Auditor centralized state-level audit worklist" ;
+    sd:statement "As an SOM Auditor, I want access to a centralized audit worklist that displays state-level audit tasks, so that I can monitor, manage, and track the progress of Employee and Appropriate Placement audits across all districts." ;
+    sd:acceptanceCriteria "Access the Appropriate Assignment Reports & Audits Worklist from the dashboard, restricted to SOM Auditor role/ISD-RESA permissions; display district-level audit items with district name, audit type, action item description, due date, status, Credential Error Justification (if provided); support sorting/filtering; a Collection Name single-select filter; 'No results found' messaging; open items via hyperlink; status values New/In Progress/Awaiting District Response/Completed." ;
+    sd:satisfiedBy staff:Op_GetAuditItems, staff:Perm_AuditView, staff:AuditStatus, staff:AuditState_New, staff:AuditState_InProgress, staff:AuditState_AwaitingDistrictResponse, staff:AuditState_Completed ;
+    sd:notes "Direct visual match confirmed by Wireframe22_08. staff:Op_GetAuditItems's own notes explicitly distinguish ISD Auditors (constituent districts) from SOM Auditors (across all ISDs) — matches scope:SystemWide on staff:Perm_AuditView for the SOM case. The Collection Name filter, free-text Search, and sort/filter UI controls are not independently modeled as graph nodes (consistent with this ontology's general preference not to model UI chrome) — not a gap, just outside what this graph captures." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+
+staff:Req_22_6_2 a sd:UserStory ;
+    sd:requirementId "22.6.2" ;
+    sd:title "SOM Auditor navigates to district Data Collection Report" ;
+    sd:statement "As a SOM Auditor, I want to select a worklist item by clicking the School District Name hyperlink, so that I can navigate directly to the district's Data Collection Report to review audit-related data." ;
+    sd:acceptanceCriteria "Clicking the district name navigates to the Data Collection Report tab, loaded in the context of the selected audit period; restricted to SOM Auditor role; displays sections: Power BI Charts, Employees Not Appropriately Placed, Employees with No Assignment, Changes to Employee Roster, Required Positions with No Assignments, Buildings with No Appropriate Positions, Changes to Positions, All Employees." ;
+    sd:satisfiedBy staff:Op_GetDistrictAuditReport, staff:AuditWorkItemAggregate ;
+    sd:notes "staff:Op_GetDistrictAuditReport's own documented projection ('employees not appropriately placed, employees without assignments, credential error justifications, and change summaries') covers roughly 3 of the 7 named sections well (Employees Not Appropriately Placed, Employees with No Assignment, Changes to Employee Roster/Positions collapsed into one 'change summaries' concept). See Question_DistrictReportSectionsIncomplete below for the two sections ('Required Positions with No Assignments', 'Buildings with No Appropriate Positions') that have no corresponding data shape anywhere in staff:AuditWorkItemAggregate at all, and for the still-undecided Power BI charting mechanism itself." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Req_22_6_2's acceptance criteria name 7 Data Collection Report sections. staff:Op_GetDistrictAuditReport's documented projection covers Employees Not Appropriately Placed, Employees with No Assignment, and change summaries (Employee Roster/Positions) — but TWO sections have no corresponding concept anywhere in staff:AuditWorkItemAggregate or elsewhere in staffing-domain.ttl at all: 'Required Positions with No Assignments' (positions established in the Position Roster with no staff assigned) and 'Buildings with No Appropriate Positions' (buildings 'Open' in EEM but with no assigned positions/staff — this would require cross-referencing orgs:OrganizationsContext's building data, per staffing-domain.ttl's own existing, unresolved orgs:BuildingsLookupOperation gap). Wireframe22_06 (viewed directly) independently confirms the gap from the visual side: it shows only 5 of the 7 named sections, omitting exactly these same two, AND its main chart area is literally labeled 'Power BI Charts?' — a live open question in the design itself about whether/how Power BI is even the chosen mechanism, not yet a firm decision to build against." ;
+    oa:hasTarget staff:Req_22_6_2 ; sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd22CompanionDoc .
+
+staff:Req_22_6_3 a sd:UserStory ;
+    sd:requirementId "22.6.3" ;
+    sd:title "SOM Auditor views composed employee/credential/assignment details" ;
+    sd:statement "As a SOM Auditor, I want to view employee information, so that I can understand employment, assignment, and credential details for review and decision-making." ;
+    sd:acceptanceCriteria "Clicking an Employee Name hyperlink opens a drawer showing: Name, Certificate Number, Certificate Type, National Board Certified, Renewal Status, Endorsements (Subject/Grade, Institution, Nullified), Certificate History (App#/Issue Date/Expiration Date/Status), Assignment (App#/Issue Date/Expiration Date/Status), Remarks (Comment/Created By/Date Created)." ;
+    sd:notes "No satisfiedBy: this is a genuinely composed, cross-domain view — most of its fields (Certificate Number/Type, National Board Certified, Renewal Status, Endorsements with Nullified flag, Certificate History) are Credentialing-shaped data, not Staffing data, yet nothing in either staffing-domain.ttl or credentialing-domain.ttl (as loaded/referenced here) models an operation or projection that composes exactly this Employee+Credential+Assignment+Remarks shape for an audit context. Wireframe22_07 (viewed directly) confirms this is a real, designed screen, not a stray acceptance-criteria list — including a 'Remarks' comment thread (Created By/Date Created, editable) and an unexplained 'Add to Investigation' action with no backing narrative anywhere. See Question_EmployeeDetailsAuditDrawerNotModeled below." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Req_22_6_3's Employee Details audit drawer composes fields from what should be (per staffing-domain.ttl's own explicit domain-boundary notes) Credentialing's data — Certificate Number/Type, National Board Certified, Renewal Status, Endorsements with a per-endorsement 'Nullified' flag, and a full Certificate History (App#/Issue/Expiration/Status) — alongside an 'Assignment' section and a free-form, auditor-editable 'Remarks' comment thread that exists in neither domain's model. No sd:ApiOperation, sd:Aggregate, or projection anywhere in the graph as currently converted composes this exact cross-domain shape for audit purposes; this looks like it should be a Staffing-owned audit-composition view calling into Credentialing (parallel to how staff:Op_GetDistrictAuditReport already composes cross-record staffing data), but no such operation is documented in staffing-api.yml. Also notable: the wireframe's 'Add to Investigation' button has zero backing narrative in either document's text — possibly an orphaned/future-scope UI element, possibly an undocumented capability, unresolved." ;
+    oa:hasTarget staff:Req_22_6_3 ; sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd22CompanionDoc .
+
+staff:Req_22_6_4 a sd:UserStory ;
+    sd:requirementId "22.6.4" ;
+    sd:title "SOM Auditor requests additional documentation from ISD or district" ;
+    sd:statement "As a MiEdWorkforce State of Michigan Auditor, I want to be able to request additional documentation or information directly from the ISD or district user from within MiEdWorkforce, so that the audit chain of communication is maintained in the system." ;
+    sd:acceptanceCriteria "Allow the SOM Auditor to request additional documentation/information from either an ISD user or a district user from within the system; allow upload of requested documentation (e.g. Local Master Teacher Schedule, Attendance for daily substitute usage)." ;
+    sd:satisfiedBy staff:Op_RequestAuditDocumentation, staff:DocumentRequest, staff:Perm_AuditRequestDocumentation ;
+    sd:notes "The DISTRICT-facing half (SOM/ISD Auditor requests documentation FROM a district) matches staff:Op_RequestAuditDocumentation and staff:DocumentRequest closely — Wireframe22_09 (viewed directly) confirms the exact two example document types verbatim. The ISD-facing half (SOM Auditor requesting documentation/information FROM an ISD user, as opposed to a district user) has no distinct modeled path: staff:AuditWorkItemAggregate and its invariants are framed entirely around district-level audit items reviewed by ISD Auditors — there is no separate SOM-oversees-ISD audit item/worklist concept, so an SOM-to-ISD document request has nothing structurally different to attach to than the existing district-facing flow. See Question_SomIsdAuditOversightNotModeled below (shared with Req_22_6_1's worklist scope)." ;
+    sd:definedIn staff:Fdd22CompanionDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "This FDD (22.6.4, and the Business Specifications prose's own 'SOM Auditor can request additional documentation or information from the ISD or district user') repeatedly frames SOM Auditor oversight as extending to BOTH ISD-level and district-level review, and 22.6.1's 'Appropriate Assignment Reports & Audits Worklist' is described as its own SOM-scoped worklist (not just the ISD Auditor's worklist filtered wider). But staff:AuditWorkItemAggregate — the only audit-workflow aggregate that exists — is created exclusively per-district, per staff:Rule_ISDAuditItemCreatedAfterCertification ('an audit work item is automatically created for the constituent district's ISD/RESA entity... visible to that ISD's auditors'). There is no modeled concept of an SOM-level audit item that reviews an ISD'S OWN performance/compliance (as opposed to reviewing the same district-level items an ISD Auditor already sees) — i.e. no distinct 'SOM audits an ISD' object exists, only 'ISD (and, by broader permission scope, SOM) audits a district.' This may be an accurate simplification (SOM's role may genuinely just be broader-scoped visibility into the same district-level items, not a separate ISD-performance audit), or a genuine missing concept — left open rather than guessed." ;
+    oa:hasTarget staff:Req_22_6_1, staff:Req_22_6_4 ; sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd22CompanionDoc .
+
+staff:Req_22_6_5 a sd:UserStory ;
+    sd:requirementId "22.6.5" ;
+    sd:title "District notified of assigned audit steps" ;
+    sd:statement "As a School District user, I want to receive a notification when assigned steps within the audit process, such as requested documentation, so that I can address audit requirements promptly." ;
+    sd:acceptanceCriteria "District-level users with the Staffing Data role receive a notification when assigned steps occur within the audit process, including when the ISD Auditor or the State of Michigan Auditor requests additional documentation or information." ;
+    sd:satisfiedBy staff:DocumentRequestCreatedEvent, comm:CommunicationsContext ;
+    sd:notes "Direct match — staff:DocumentRequestCreatedEvent's own trigger text and comm:CommunicationsContext's subscription already cover this exact notification path (district Staffing Data role users alerted on a document request)." ;
+    sd:definedIn staff:Fdd22CompanionDoc .

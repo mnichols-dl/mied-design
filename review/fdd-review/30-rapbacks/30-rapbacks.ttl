@@ -1,0 +1,444 @@
+# FDD 30 review — "30 - Interface Integration - Rapbacks" (Features 30.1-30.8), plus its two
+# companion Interface Design documents under "30.0 CHRISS (RapBacks)/" (the MSP push-webhook
+# spec and the CHRISS SOAP full-rap-sheet-retrieval spec). Ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md.
+#
+# DOMAIN DETERMINATION (done before assuming): Rap Back / CHRISS is NOT modeled as its own
+# bounded context anywhere in this project, and CONVENTIONS.md's stub registry has no
+# "rapbacks" entry. profpractice-domain.ttl's own header, however, already states plainly:
+# "Rap Back and CHRISS are modeled as ONE sd:ExternalSystem (ext:RapBackSystem)... reused
+# directly" and profpractice already carries a real ExternalBackgroundCheckAggregate, two
+# confirmed sequences (Seq_ReceiveRapBackNotification for the MSP push webhook,
+# Seq_RetrieveFullRapSheet for the on-demand CHRISS SOAP pull), matching ApiOperations
+# (Op_ReceiveRapBackNotification, Op_RetrieveRapSheet, Op_GetExternalCheck,
+# Op_AddExternalCheckRemark), permissions (Perm_RapbackView, Perm_RapsheetRetrieve), and five
+# BusinessRules (Rule_RapBackTriggeredDisclosure, Rule_RapSheetDisplayOnly, plus the NASDTEC/
+# clearance rules). This FDD's own Interface Design companion docs (CHRISS – RapBacks Response
+# = the MSP webhook; CHRISS – RapBacks Details = the SOAP GET_RAPBACK pull) match those two
+# sequences' technical shape almost exactly (webhook payload fields, SOAP envelope, "never
+# stored" rule). Combined with this session's FDD 09 pass explicitly carving "Rap Back
+# Reviewer" OUT of PPR's own review-worklist scope ("Rap Back Reviewer responsibility; Removed
+# from PPR" — see 09-professional-practices.ttl), the picture is: profpractices already owns
+# the Rap Back/CHRISS *integration plumbing* (ingest + on-demand retrieval), but this FDD
+# describes a much larger, mostly UNMODELED admin console and processing workflow (identity/
+# employment/credential matching, MCL-code compliance matching, bulk actions, search/export,
+# notes, aliases) sitting on top of that plumbing, run by a distinct "Rapback Admin" role that
+# does not exist anywhere in profpractice-permissions.ttl (which only has PPR Reviewer/PPR
+# Admin/Credentialing Admin). Conclusion: this pass stays in profpractices (profp: prefix,
+# reusing profp:ExternalBackgroundCheckAggregate/ext:RapBackSystem/etc. verbatim, no new
+# bounded context minted) rather than being logged as a whole-area GAPS.md entry, because real,
+# non-stub satisfiedBy targets DO exist for a meaningful minority of this FDD's stories — but
+# most of the FDD's own distinctive content (everything past "ingest + retrieve") is a genuine,
+# large coverage gap on top of an otherwise-real bounded context, not a "nothing exists at all"
+# situation. This is the intended shape of this pass per the assignment brief ("you are the
+# pass that actually models it").
+#
+# Source material and what was skipped:
+# - "30 - Rapbacks.md" (fast pass) then the .docx unzipped for word/comments.xml (34 comments,
+#   flattened chronologically 2025-02 through 2026-04 — no threading structure like FDD 29's
+#   w15:paraIdParent was present, so read as a flat list) and word/media (4 real, uncaptioned
+#   PNGs — all viewed, not guessed; see Wireframes below).
+# - The HIGH LEVEL SCENARIOS table (rows 1-13 with sub-letters) restates the Business
+#   Specifications prose at coarser grain — skipped per CONVENTIONS.md, EXCEPT as corroborating
+#   evidence that three pieces of that prose (MCL-code matching, the SSN/name identity-matching
+#   cascade, and the search/filter capability) were never promoted into the Addendum's own
+#   30.x numbering at all — three separate review comments ("I do not see user story for this
+#   requirement" / "No user story for this requirement", all from Punniyamoorthy 2026-01-26)
+#   independently flag this same gap. Modeled below as synthetic profp:Req_30_BizSpec_* IDs
+#   (same convention FDD 29's pass used for its own Addendum-omission finding) rather than
+#   silently absorbed into 30.1-30.8's numbering, or silently dropped for lacking a number.
+# - Addendum numbering has one minor, non-colliding gap (30.4.1 does not exist — Business
+#   Specs' own "Notes and Notes history" lead-in has no matching Addendum story; 30.4.2/30.4.3
+#   pick up mid-feature) — noted, not treated as anything more than a numbering artifact.
+# - MORE-Rapbacks Process.vsdx and Rapbacks-MCLKeywords.xlsx are named in "Additional
+#   Resources"; the .vsdx is skipped per the project owner's standing instruction on
+#   .vsdx/.vsd/.vsdm/.xmind/.pptx. Rapbacks-MCLKeywords.xlsx (833 rows, its own .md sibling
+#   read in full) is the concrete, real MDE-defined MCL-code list the Business Specifications
+#   section's "matched against the MDE-defined list of MCL codes" line refers to — confirms the
+#   MCL-matching business rule is real, specific, and sizeable, not vague filler; not modeled
+#   as 833 individual instances (a reference-data list, not a graph-worthy structure), cited by
+#   count and file location on profp:Req_30_BizSpec_MclMatching instead.
+# - The two Interface Design companion docs (30.0 CHRISS (RapBacks)/*.docx) are pure technical
+#   interface specs (transmission details + sample payload/SOAP envelope) with NO embedded
+#   images and NO comments.xml content of substance (reviewer sign-off rows only) — read in
+#   full, used as corroborating/technical-verification evidence on 30.1.1/30.2.2 rather than
+#   as their own separate Requirement set (they don't carry numbered user stories of their own).
+#
+# Comments (34 total, flat list, no thread IDs in this docx): most are either resolved
+# clarifications later confirmed added ("This has been added", Sinha, 2026-03-12) — folded into
+# the relevant Requirement's sd:notes rather than transcribed — or narrow wording/naming fixes
+# (e.g. "No Action Required" -> "No Referral Required" renamed early, comments 7/11/12,
+# 2025-02-20/21). Four comments surfaced genuine, still-open findings promoted to their own
+# Annotations below: the MCL-match consequence being undefined (Groom, 2026-02-09 — "need to
+# determine what MCL matching results in/action, and result display"), the manual-review-not-
+# auto-block confirmation (Caswell, 2025-12-04, corroborated by Groom the same thread, 2026-02-
+# 09 — "will not be rejected from MiEd and will be able to be reviewed manually"), the Notes-
+# naming/editability open question (Caswell, 2025-12-04 — "'Internal Comments'... do we also
+# need date updated? as this notes can be edited"), and a cross-domain question about whether
+# EPP's Candidate Tracking data should also be checked (Punniyamoorthy, 2026-01-26 — "It doesn't
+# need to check for the Candidate tracking records?" — FDD 25 territory, not reviewed in this
+# pass; noted, not resolved).
+#
+# Wireframes: 4 real, uncaptioned PNGs (word/media/image1.png-image4.png), all viewed directly
+# (no "Wireframe N" captions exist in this docx, unlike FDD 29 — confirmed by grepping
+# document.xml for the word "Wireframe" and finding zero matches — so there is no caption-order
+# question to verify here; each image's content was read directly off the image itself).
+# Extracted to wireframes/wireframe-01 through -04, matching the four distinct screens actually
+# shown (search page; record detail with rap sheet/status/aliases/notes; add-alias form; a
+# cropped alias-table detail — image4 is a tighter crop of part of image2, same relationship
+# FDD 29's Wireframe10/Wireframe1 pair had).
+#
+# NOTABLE CROSS-REFERENCE FOUND (not previously flagged anywhere): profpractice-domain.ttl's
+# own profp:NonSystemActionLoggedEvent (defined for the unrelated-looking "Log Non-System
+# Action" PPR reviewer feature) already carries the payload enum
+# "actionType (NotifiedSchoolDistrict|ReferredToPPR|NotifiedMSPRemoval)" — this is a verbatim,
+# non-coincidental match to this FDD's own three Rapback processing actions (Notify School
+# District / Refer to Professional Practice Review / No Referral Required + "Notify MSP for
+# removal" flag). This was almost certainly written with Rap Back processing already in mind,
+# but the aggregate it hangs off (profp:DisclosureAggregate, via profp:Op_LogNonSystemAction)
+# is the PPR Disclosure aggregate, not profp:ExternalBackgroundCheckAggregate (the Rap Back
+# record itself) — a real structural mismatch, since this FDD's bulk actions operate on Rapback
+# records that may not yet have a linked Disclosure at all (e.g. "No Referral Required" is
+# explicitly the no-disclosure-created outcome). Treated below as a genuine PARTIAL match
+# (satisfiedBy asserted, with the aggregate mismatch called out in sd:notes) rather than either
+# a full match or a bare gap — this is exactly the kind of finding worth surfacing rather than
+# quietly picking one reading.
+#
+# ROLE GAP (cross-cutting, affects nearly every story in this FDD, so stated once here rather
+# than repeated on all 21+ Requirements): every single story in this FDD is written for a
+# "Rapback Admin" role. No such role or permission exists anywhere in profpractice-permissions.ttl
+# (which models PPR Reviewer / PPR Admin / Credentialing Admin only) or in iam's role catalog.
+# See profp:Question_RapbackAdminRoleNotModeled below.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+profp:Fdd30Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/30 - Interface Integration - Rapbacks/30 - Rapbacks.docx" ;
+    sd:notes "Covers Features 30.1-30.8 (document subtitle: '30.0 Interface/Integration - Rapbacks (30.1-30.8)'). Author Vidhya Punniyamoorthy (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 — but comments.xml contains entries dated through 2026-04, well after nominal sign-off, same post-approval-revision pattern already noted in the FDD 29 review." .
+
+profp:Fdd30ChrissWebhookDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/30 - Interface Integration - Rapbacks/30.0 CHRISS (RapBacks)/Interface Design document - Chriss (RapBacks).docx" ;
+    sd:notes "Technical interface spec for the MSP-to-MiEdWorkforce push webhook (RESTful, HTTPS POST, API Token auth, ~200kB/month, daily). Matches profp:Op_ReceiveRapBackNotification / profp:Seq_ReceiveRapBackNotification closely: same field set (AgencyName, ApplicantName, SID, ApplicantDOB, TCN, ApplicantSSN, TCNDate, PIC, JudicialFlag, RequestID). No embedded images; no substantive review comments (sign-off rows only)." .
+
+profp:Fdd30ChrissSoapDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/30 - Interface Integration - Rapbacks/30.0 CHRISS (RapBacks)/Interface Design document - Chriss (RapBacks Details).docx" ;
+    sd:notes "Technical interface spec for the on-demand CHRISS SOAP 1.2 GET_RAPBACK pull (~20MB/month, as-needed frequency, application-level User/Password auth). Explicitly states 'None of the data returned is saved in MOECS (legacy system), and should not be saved in MiEdWorkforce either' — direct textual source for profp:Rule_RapSheetDisplayOnly. Matches profp:Op_RetrieveRapSheet / profp:Seq_RetrieveFullRapSheet's SOAP envelope shape exactly. No embedded images; no substantive review comments." .
+
+profp:Fdd30MclKeywordsDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/30 - Interface Integration - Rapbacks/Rapbacks-MCLKeywords.xlsx" ;
+    sd:notes "833-row reference list of Michigan Compiled Law (MCL) statute citations (e.g. MCL 750.520b, MCL 333.7403), named by the Business Specifications section as the exact 'MDE-defined list of MCL codes' Rapback records are matched against. Confirms the MCL-matching business rule (profp:Req_30_BizSpec_MclMatching) is real and specific, not vague filler. Not modeled as individual graph instances — a reference-data list, cited by count/location instead, consistent with this project's treatment of large enumerated code lists elsewhere." .
+
+profp:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/30-rapbacks/wireframes/wireframe-01-rapbacks-search.png" ;
+    sd:notes "Confirmed by viewing: 'Rapbacks search' page. Filter fields: TCN, SID, Offense Type (dropdown), Segment (dropdown), First Name, Last Name, Action(s) Taken (checkboxes: Ready to Process/Notified School District/Referred to Professional Practice Review/Notified MSP for Removal/No Action Required — note this wireframe still shows the pre-rename 'No Action Required' label, not the corrected 'No Referral Required' from comment 7/11/12), Employment/Credential Checks (Is Employed?/Has Credential? checkboxes). Results table columns: TCN (hyperlink)/SID/Last name/First name/DOB/Unique ID/Matched on SSN?/Received/Has Credential?/Is Employed?/Requesting Agency/School District/Action Taken, with row checkboxes, a Download dropdown, Page Size control, and pagination ('1-10 of 6115 items' — confirms this is expected to be a high-volume dataset, relevant to 30.3's bulk-processing rationale). A bulk 'Action Taken' dropdown + Save/Cancel appears below the table for the checked rows. Direct visual confirmation of 30.1.2, 30.3.1, and the synthetic search/filter and identity-matching-status display gaps." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/30-rapbacks/wireframes/wireframe-02-rapback-record-detail.png" ;
+    sd:notes "Confirmed by viewing: 'Rapbacks Record Detail' page. Left panel: identity header (Name/DOB/SSN/TCN/SID), Employment Status + 'Employment History' link, Credential Status + 'Credential History' link, a Status radio group (Ready to Process/No Action Required [pre-rename label again]/Actions Taken, with sub-checkboxes Notified School District/Referred to Professional Practices Review/Notified MSP for Removal), an Aliases table (Name/DOB/SSN, delete icon, '+ Add Alias' — see Wireframe3), and a Notes list (author/date, edit/delete icons per note, free-text body). Right panel: 'Rapsheet Details' — a monospace-styled block of raw MSP/CHRISS text (matches the CHRISS interface doc's own 'reply should be treated as unformatted text, best presented in a window with monospace font' instruction verbatim). Direct visual confirmation of 30.2.1/30.2.2 (rap sheet display), 30.4.2 (notes with edit capability — corroborates the still-open 'can notes be edited' review question), 30.6.1-30.6.3 (status/action radio group), 30.8.1/30.8.2 (aliases table)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/30-rapbacks/wireframes/wireframe-03-add-alias.png" ;
+    sd:notes "Confirmed by viewing: 'Add Alias' form — First Name, Last Name, Date of Birth, SSN fields plus Cancel/Add buttons. Direct confirmation of 30.8.1's field-level shape." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/30-rapbacks/wireframes/wireframe-04-aliases-table.png" ;
+    sd:notes "Confirmed by viewing: a tighter crop of the same Aliases table already visible in Wireframe2 (Name/DOB/SSN + delete icon) — this is a cropped detail of part of Wireframe2's screen, not an independent screen, the same relationship FDD 29's Wireframe10/Wireframe1 pair had." ;
+    sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.1: Rapback landing page / search results
+#################################################################
+
+profp:Req_30_1_1 a sd:UserStory ;
+    sd:requirementId "30.1.1" ;
+    sd:title "Consolidated Rapback records list for triage" ;
+    sd:statement "As a Rapback Admin, I need to view a consolidated list of Rapback records, so that I can prioritize and process criminal conviction notifications." ;
+    sd:acceptanceCriteria "A dedicated page is available for the Rapback Admin to review and process criminal conviction notifications. The system retrieves Rapback records received from MSP for review. The system stores specific metadata: Applicant Name, SID, Applicant DOB, TCN, Applicant SSN, TCN Date, Unique ID, Judicial Flag, Request ID, Create Date. The displayed records serve as the worklist of notifications requiring prioritization and processing." ;
+    sd:satisfiedBy profp:ExternalBackgroundCheckAggregate, profp:Seq_ReceiveRapBackNotification, profp:Op_ReceiveRapBackNotification ;
+    sd:notes "Partial: the webhook-ingest plumbing (matching this story's own metadata field list almost verbatim against the confirmed real MSP payload in Fdd30ChrissWebhookDoc) is real and modeled. What's NOT modeled: a dedicated Rapback-Admin-facing list/landing page as its own concept (profp:ExternalBackgroundCheckAggregate has no list/search ApiOperation — profp:Op_GetExternalCheck is get-by-id only), and several of this story's named metadata fields (Requesting Agency, SID, Judicial Flag, Request ID) are folded into profp:CheckResponseData's opaque 'structured metadata' description rather than individually promoted ValueObjects. Confirmed by viewing Wireframe1 (search + results table, paginated to '6115 items' — a real, high-volume worklist)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_1_2 a sd:UserStory ;
+    sd:requirementId "30.1.2" ;
+    sd:title "Search results surface key triage metadata" ;
+    sd:statement "As a Rapback Admin, I need the search results to display key metadata like Unique ID and employment status, so that I can evaluate the record's relevance." ;
+    sd:acceptanceCriteria "Results table displays Unique ID, Employed column, Credential column, TCN/SID/Last Name/First Name, Received Date and Status; TCN is a hyperlink to the individual record detail and on-demand Rapsheet." ;
+    sd:notes "No satisfiedBy: this is a results-table/list-view requirement, and no list or search ApiOperation exists anywhere for profp:ExternalBackgroundCheckAggregate (only get-by-id via Op_GetExternalCheck). Confirmed by viewing Wireframe1's actual results table, which matches this story's column list closely. Grouped with the synthetic search/filter gap below (profp:Req_30_BizSpec_SearchFilter) since both describe the same missing list-query capability from different angles." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No list/search ApiOperation exists anywhere for profp:ExternalBackgroundCheckAggregate — only get-by-id (profp:Op_GetExternalCheck). This is one gap viewed from two angles: 30.1.2 is the results-table/column-display half, profp:Req_30_BizSpec_SearchFilter (below) is the filter-criteria half of the same missing list-query capability." ;
+    oa:hasTarget profp:Req_30_1_2, profp:Req_30_BizSpec_SearchFilter ; sd:impact "M" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.2: Rapback record detail & on-demand Rapsheet
+#################################################################
+
+profp:Req_30_2_1 a sd:UserStory ;
+    sd:requirementId "30.2.1" ;
+    sd:title "Navigate from search results to record detail" ;
+    sd:statement "As a Rapback Admin, I need to click the TCN in the search results, so that I can navigate to the specific individual's Rapback record detail page." ;
+    sd:acceptanceCriteria "TCN is a hyperlink within the results table; clicking it opens the individual Rapback record detail page." ;
+    sd:satisfiedBy profp:Op_GetExternalCheck ;
+    sd:notes "Direct match — Op_GetExternalCheck is exactly this get-by-id detail operation. Confirmed by viewing Wireframe2 (the destination detail page)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_2_2 a sd:UserStory ;
+    sd:requirementId "30.2.2" ;
+    sd:title "On-demand Rapsheet generation, never stored" ;
+    sd:statement "As a Rapback Admin, I need the system to generate the Rapsheet on-demand from the MSP service when viewing the detail page, so that I can review the latest criminal conviction details without storing sensitive data." ;
+    sd:acceptanceCriteria "Rapsheet is generated on-demand through the MSP/CHRISS service as part of the TCN process; not stored within MiEdWorkforce; not cached." ;
+    sd:satisfiedBy profp:Seq_RetrieveFullRapSheet, profp:Op_RetrieveRapSheet, profp:Rule_RapSheetDisplayOnly ;
+    sd:notes "Strong, well-corroborated match: this story, profp:Rule_RapSheetDisplayOnly's own statement, and Fdd30ChrissSoapDoc's explicit 'should not be saved in MiEdWorkforce either' line are all textually consistent, and Wireframe2's monospace 'Rapsheet Details' panel visually confirms the display-only, unformatted-text presentation Fdd30ChrissSoapDoc itself specifies." ;
+    sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.3: Bulk processing actions
+#################################################################
+
+profp:Req_30_3_1 a sd:UserStory ;
+    sd:requirementId "30.3.1" ;
+    sd:title "Bulk-select and process Rapback records" ;
+    sd:statement "As a Rapback Admin, I need the ability to select multiple records and apply processing actions in bulk, so that I can efficiently handle high volumes of Rapback records." ;
+    sd:acceptanceCriteria "Rapback Admin permission gates search/review/bulk-process; user verifies/validates matching before processing; 'System Actions' (Refer to Professional Practice Review, No Referral Required) apply in bulk; 'Non-System Actions' (Notify School District, Notify MSP for Removal) can be logged simultaneously in bulk." ;
+    sd:notes "No satisfiedBy: the bulk-apply mechanic itself (acting on N selected records in one submission) has no equivalent anywhere in profpractice-api.ttl — every relevant operation (Op_LogNonSystemAction, Op_UpdateDisclosureStatus) is single-record. Confirmed by viewing Wireframe1's row-checkbox + single 'Action Taken' dropdown/Save control, which is the bulk-action UI this story describes. See the header note on the NonSystemActionLoggedEvent cross-reference for the individual-action vocabulary that IS modeled (just not at bulk-record-count scale)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_3_2 a sd:UserStory ;
+    sd:requirementId "30.3.2" ;
+    sd:title "Bulk-log 'Notify School District' non-system action" ;
+    sd:statement "As a Rapback Admin, I want to bulk log that I have notified the school district(s) about selected Rapback records, so that the system maintains an accurate audit trail of my external communications." ;
+    sd:acceptanceCriteria "Admin selects multiple records and checks the 'Notify School District' non-system-action flag; no automated email is generated; status/audit log updates to reflect the district was notified." ;
+    sd:satisfiedBy profp:Op_LogNonSystemAction, profp:NonSystemActionLoggedEvent, profp:DisclosureNonSystemActions ;
+    sd:notes "PARTIAL — see this file's header note on the NonSystemActionLoggedEvent cross-reference: profp:NonSystemActionLoggedEvent's own actionType enum already names 'NotifiedSchoolDistrict' verbatim, a striking match. However the operation/event are modeled against profp:DisclosureAggregate, not profp:ExternalBackgroundCheckAggregate (the Rapback record) — a real aggregate-scope mismatch, since this action can be taken on a Rapback record before any Disclosure exists for it. Bulk application (multiple records at once) is also not modeled — see profp:Req_30_3_1." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_3_3 a sd:UserStory ;
+    sd:requirementId "30.3.3" ;
+    sd:title "'No Referral Required' with optional 'Notify MSP for removal' flag, in bulk" ;
+    sd:statement "As a Rapback Admin, when classifying records as 'No Referral Required' in bulk, I need an option to flag them for 'Notify MSP for removal', so that my necessary external follow-up is documented." ;
+    sd:acceptanceCriteria "Applying 'No Referral Required' in bulk offers a checkbox/flag to also log 'Notify MSP for removal'; the actual MSP notification remains a manual, out-of-system process; selected records update to 'No Referral Required' status with the flag logged." ;
+    sd:satisfiedBy profp:Op_LogNonSystemAction, profp:NonSystemActionLoggedEvent ;
+    sd:notes "Same PARTIAL match reasoning as 30.3.2: profp:NonSystemActionLoggedEvent's actionType enum names 'NotifiedMSPRemoval' verbatim, but again scoped to Disclosure, not ExternalBackgroundCheck, and single-record not bulk. 'No Referral Required' as a terminal status on the Rapback record itself (distinct from any Disclosure status) has no domain-model counterpart at all — see profp:CheckState_Resolved as the closest existing ExternalBackgroundCheck terminal state, an approximate match at best (it doesn't distinguish 'referred to PPR' from 'no referral needed' the way this FDD's status vocabulary does)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.4: Notes
+#################################################################
+
+profp:Req_30_4_2 a sd:UserStory ;
+    sd:requirementId "30.4.2" ;
+    sd:title "View notes history for a Rapback record" ;
+    sd:statement "As a Rapback Administrator, I want to view the history of notes added to a record, including who added them and when, so that I have a clear audit trail of the internal communication regarding the record." ;
+    sd:acceptanceCriteria "System displays a history of notes on the Rapback record; each history entry includes note content, the modifying/adding user, and date/time; if a note is edited, the audit details of the change are captured." ;
+    sd:notes "No satisfiedBy: profp:ExternalBackgroundCheckAggregate has no Notes concept at all (only RapSheetRetrievalLog, a different-purpose audit log). The structurally closest thing in the whole domain is profp:DisclosureInternalRemarks/DisclosureExternalRemarks + profp:Op_AddDisclosureRemark on the DISCLOSURE aggregate — a real precedent for the shape of the feature, but on the wrong aggregate and, per profp:Op_AddDisclosureRemark's own notes, not modeled as EDITABLE (add-only), whereas this story's own acceptance criteria and Wireframe2's pencil/edit icon both show edit as a first-class capability. This exact editability question is itself still open in the FDD's own review-comment trail (comment 1467423164: 'Do we also need date updated? as this notes can be edited after it is created' — unresolved in-document, per this file's header note). Renamed to 'Internal Comments' per another still-noted review comment (1100015163) but the Addendum text itself was never updated to match — a minor, low-impact naming drift, not re-raised as its own Annotation." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_4_3 a sd:UserStory ;
+    sd:requirementId "30.4.3" ;
+    sd:title "Auto-capture who/when on note creation" ;
+    sd:statement "As a Rapback Admin, when adding notes, the system should automatically record who made the note and when, so that the audit trail is preserved." ;
+    sd:acceptanceCriteria "System stores audit details for Rapback actions; automatically includes a date/time stamp and the modifying user; full note history including these audit details is stored and reviewable historically." ;
+    sd:notes "No satisfiedBy: same gap as 30.4.2 — no Notes concept on profp:ExternalBackgroundCheckAggregate. Confirmed by viewing Wireframe2's Notes list, which does show author name + date per entry, matching this story's intent, but there is no backing domain-model/API node for it." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "A Notes/Internal-Comments concept on the Rapback record (profp:ExternalBackgroundCheckAggregate) — with edit history — does not exist anywhere in profpractice-domain.ttl. The closest domain-model precedent (Disclosure's InternalRemarks/ExternalRemarks) is add-only and lives on a different aggregate entirely. The FDD's own review-comment trail leaves the editability/versioning question open (comment 1467423164), so this is not simply an unmodeled-but-settled feature — the requirement itself is still evolving in its source document." ;
+    oa:hasTarget profp:Req_30_4_2, profp:Req_30_4_3 ; sd:impact "M" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.5: Downloadable exports
+#################################################################
+
+profp:Req_30_5_1 a sd:UserStory ;
+    sd:requirementId "30.5.1" ;
+    sd:title "Download Rapback search results" ;
+    sd:statement "As a Rapback Admin, I need to be able to download Rapback search results into defined file formats, so that I can perform necessary offline processing and reconciliation." ;
+    sd:acceptanceCriteria "Search results are downloadable; 'Ready to Process' results download as a SID Review File (Excel); 'Ready to Process' and 'Is Employed' results download as a District Notification File (Excel)." ;
+    sd:notes "No satisfiedBy: no export/download ApiOperation exists anywhere for profp:ExternalBackgroundCheckAggregate. profp:Op_GetPprReportData is the nearest reporting-shaped operation in this domain but is an ad-hoc aggregated-metrics endpoint (Disclosure Processing Metrics, Compliance Status, etc.) rendered by Power BI — a different purpose (dashboards/analytics) from this story's row-level, Excel-formatted case-management export. Confirmed by viewing Wireframe1's 'Download' dropdown control on the results table." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_5_2 a sd:UserStory ;
+    sd:requirementId "30.5.2" ;
+    sd:title "SID Review File: one row per employing district" ;
+    sd:statement "As a Rapback Admin, I need the SID Review File to include a separate row for each employing district of an individual, so that employment status and termination details are clearly tracked." ;
+    sd:acceptanceCriteria "File includes SID, Last Name, First Name, Unique ID, Entity Name (if applicable), Date of Termination (if applicable); one row per employing school district when 'Is Employed' is checked; each unique SID/Entity Name pair listed only once." ;
+    sd:notes "No satisfiedBy — same export-capability gap as 30.5.1, compounded by the underlying per-district employment data itself not being queryable from this domain (see profp:Req_30_7_1/30_7_2)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_5_3 a sd:UserStory ;
+    sd:requirementId "30.5.3" ;
+    sd:title "District Notification File with EEM-sourced lead administrator contact" ;
+    sd:statement "As a Rapback Admin, I need the District Notification File to include lead administrator contact information sourced from EEM, so that communication regarding Rapbacks is directed appropriately." ;
+    sd:acceptanceCriteria "Results sorted by employing school district; file includes School District, Lead Administrator First/Last Name/Title/Email, and up to 20 SIDs per district; Lead Administrator data populated from the EEM database." ;
+    sd:notes "No satisfiedBy — same export-capability gap as 30.5.1. The EEM data source itself IS a real, canonical stub elsewhere in this project (ext:EEMSystem, declared in organizations-capability.ttl — 'external educator/employment master data source') but no sd:Dependency from profpractices to ext:EEMSystem exists for this lead-administrator-lookup purpose; this FDD's own Dependencies section confirms the EEM linkage generally ('dependent on entity data established through Interface/Integrations Set up- Receive: EEM Interface (8.1)') but FDD 8 itself is unconverted (see GAPS.md)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No export/download ApiOperation exists anywhere for profp:ExternalBackgroundCheckAggregate (profp:Op_GetPprReportData is a differently-purposed, Power-BI-facing aggregated-metrics endpoint, not a row-level Excel case-management export). This one gap underlies all three of 30.5.1 (the download capability itself), 30.5.2 (the SID Review File's per-district row shape, additionally blocked on the employment-data gap in Feature 30.7), and 30.5.3 (the District Notification File's EEM-sourced lead-administrator data, additionally blocked on the missing profpractices-to-EEM Dependency)." ;
+    oa:hasTarget profp:Req_30_5_1, profp:Req_30_5_2, profp:Req_30_5_3 ; sd:impact "M" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.6: Audit trail
+#################################################################
+
+profp:Req_30_6_1 a sd:UserStory ;
+    sd:requirementId "30.6.1" ;
+    sd:title "Store all actions taken on a Rapback record" ;
+    sd:statement "As a Rapback Admin, I need the system to store all actions taken on a Rapback record (Action, Date/Time, User), so that I can fulfill audit and compliance requirements." ;
+    sd:acceptanceCriteria "All audit details for Rapback actions are stored: Action, Date/Time Stamp, Modified by; admin can view historical action details; audit details are reviewable historically." ;
+    sd:satisfiedBy profp:Op_LogNonSystemAction, profp:NonSystemActionLoggedEvent, profp:DisclosureNonSystemActions ;
+    sd:notes "PARTIAL — same DisclosureAggregate-vs-ExternalBackgroundCheckAggregate scope mismatch already flagged on 30.3.2/30.3.3 applies here too, plus the review-comment trail itself explicitly folds this story together with the Notes-history stories ('Audit Trail is not just for the notes, it will capture the status change and/or modifying the record. I think 30.6.1 and this can be one user story' — comment 383636854, later marked done via 'This has been added to 30.6.1', comment 1809660593) — i.e. the FDD's own authors ended up treating 30.4.x/30.6.1's audit trail as one merged concept, consistent with this file modeling both against the same underlying gap/partial-match pattern." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_6_2 a sd:UserStory ;
+    sd:requirementId "30.6.2" ;
+    sd:title "Action history items link to the underlying email or PPR item" ;
+    sd:statement "As a Rapback Admin, I need the action history items to be hyperlinks, so that I can click to view the exact email sent or the specific PPR work item created." ;
+    sd:acceptanceCriteria "Action item in audit details is a hyperlink; clicking it displays the associated email or PPR item detail." ;
+    sd:notes "No satisfiedBy: this is a UI-navigation requirement with no domain-model counterpart — there is no modeled concept of an audit-log entry carrying a resolvable link to 'the email that was sent' (a Communications-capability artifact) or 'the PPR work item that was created' (profp:PPRWorklistAggregate item), only the underlying domain events that would need to produce such artifacts. Comment 1157398303 (Groom) is directly relevant here: 'This should align with PPR worklist elements with an indicator that it is sent from RapBack processing' — confirming intent that a Rapback-originated PPR worklist item should be a normal PPRWorklist item with an added provenance indicator, not a separate concept, but no such indicator field exists on profp:PPRWorklistAggregate/profp:DisclosureRoutedToWorklistEvent today." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_6_3 a sd:UserStory ;
+    sd:requirementId "30.6.3" ;
+    sd:title "'No Referral Required' has no clickable action detail" ;
+    sd:statement "As a Rapback Admin, I need the 'No Referral Required' action history item to not be clickable, as there is no associated external artifact to review." ;
+    sd:acceptanceCriteria "The 'No Referral Required' action item is not available/clickable as a hyperlink." ;
+    sd:notes "No satisfiedBy — a negative UI-behavior detail on top of the same unmodeled action-history-hyperlink concept as 30.6.2; grouped with it rather than given a separate Annotation." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No modeled concept anywhere lets an audit/action-history entry resolve to the specific email or PPR-worklist item it produced (30.6.2), nor therefore express the negative case of that link being absent (30.6.3). Comment 1157398303 confirms the intended design (a normal PPRWorklist item with a Rapback-provenance indicator) but no such indicator field exists on profp:PPRWorklistAggregate/profp:DisclosureRoutedToWorklistEvent today." ;
+    oa:hasTarget profp:Req_30_6_2, profp:Req_30_6_3 ; sd:impact "L" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.7: Employment & credential cross-checks
+#################################################################
+
+profp:Req_30_7_1 a sd:UserStory ;
+    sd:requirementId "30.7.1" ;
+    sd:title "Auto-check active employment for a matched Unique ID" ;
+    sd:statement "As the MiEdWorkforce System, I must automatically check for active employment records associated with a matched Unique ID, so that I can set the 'Is Employed' flag for administrative review." ;
+    sd:acceptanceCriteria "System checks employment for Unique IDs with Matched-on-SSN or Matched-on-FN/LN/DOB status; sets Is Employed flag if one or more employment records found, else leaves unchecked; stores date/time the check completed." ;
+    sd:notes "No satisfiedBy: this requires profpractices to QUERY staffing's employment data for a Rapback-matched Unique ID — the reverse direction from every existing profpractices<->staffing relationship in this project (profpractice-domain.ttl's own scope note explicitly disclaims owning 'employment roster management (staffing)', and the only existing cross-domain wiring is Staffing SUBSCRIBING to PPR's own assessment events/PPRClearanceAssessmentChanged, not PPR querying Staffing). staff:EmployeeRosterAggregate (with a staff:EmploymentStatus value object) and staff:Op_ListEmployees/staff:Op_SearchEmployees are the plausible real targets once this new dependency direction is built, but no sd:Dependency edge or query pattern for it exists today — a genuine, unconfirmed gap, not a fabricated link." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_7_2 a sd:UserStory ;
+    sd:requirementId "30.7.2" ;
+    sd:title "Record operational district and termination date on employment match" ;
+    sd:statement "As the MiEdWorkforce System, I must store the associated operational district and termination date when employment records are found, so that the Rapback Admin knows which entities are affected." ;
+    sd:acceptanceCriteria "For an Active employment status under the Employee Roster, the system keeps a record of each distinct operational district and any termination date for that employment record." ;
+    sd:notes "No satisfiedBy — same new-dependency-direction gap as 30.7.1. The FDD's own review comment trail leaves the storage location genuinely unresolved too ('Where do we keep this record? 30.7.2 user story' — comment 1108281494), so this is not simply an unmodeled-but-settled requirement; it's still an open question in the source document itself." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_7_3 a sd:UserStory ;
+    sd:requirementId "30.7.3" ;
+    sd:title "Auto-check teaching credentials for a matched Unique ID" ;
+    sd:statement "As the MiEdWorkforce System, I must automatically check for current or previous teaching credentials associated with a matched Unique ID, so that I can set the 'Has Credential' flag." ;
+    sd:acceptanceCriteria "System checks certificates (any status), permits, career authorizations, or special-ed approvals from the previous or current school year for Unique IDs matched on SSN or FN/LN/DOB; sets Has Credential flag and records cert type/status if found; stores date/time the check completed." ;
+    sd:notes "No satisfiedBy: same new-dependency-direction reasoning as 30.7.1, but toward credentialing instead of staffing. cred:Op_GetEducatorCredentials (returns cred:IssuedCredentialAggregate, all of an educator's credentials/endorsements by educatorUniqueId) is the plausible real target once this dependency direction is built, but no such Dependency exists in profpractice-domain.ttl today. A related, unresolved review comment (2071511738 — 'It doesn't need to check for the Candidate tracking records?') raises whether EPP's Candidate Tracking data (epp:Seq_BulkUploadCandidateTrackingData, per FDD 29's own GAPS.md note) should ALSO be checked alongside issued credentials — a further, even-less-settled extension of this same gap, not resolved here." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 30.7 (employment and credential cross-checks against a Rapback-matched Unique ID) requires profpractices to query staffing's employee roster and credentialing's issued credentials — the reverse of every cross-domain relationship currently modeled between these bounded contexts (today, Staffing/Credentialing query/subscribe to PPR's own assessments, not the other way around). staff:EmployeeRosterAggregate/staff:EmploymentStatus and cred:Op_GetEducatorCredentials/cred:IssuedCredentialAggregate are plausible real satisfiers once this new dependency direction is designed, but nothing today models it. Two sub-questions remain genuinely unresolved even within the FDD's own review trail: where the per-district employment record is stored (comment 1108281494) and whether EPP Candidate Tracking data should also be in scope (comment 2071511738)." ;
+    oa:hasTarget profp:Req_30_7_1, profp:Req_30_7_2, profp:Req_30_7_3 ; sd:impact "H" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Feature 30.8: Alias names
+#################################################################
+
+profp:Req_30_8_1 a sd:UserStory ;
+    sd:requirementId "30.8.1" ;
+    sd:title "Add and maintain alias names on a Rapback record" ;
+    sd:statement "As a Rapback Admin, I need the ability to add and maintain alias names on a Rapback record, so that I can accurately perform manual identity verification, especially when initial automatic matching fails." ;
+    sd:acceptanceCriteria "System supports adding/maintaining alias names per individual Rapback record, available to users with Rapback permissions; alias name is recorded for the record." ;
+    sd:notes "No satisfiedBy: no Alias/AKA concept exists anywhere in this project (checked profpractice-domain.ttl and grepped the full mied-v3 tree for 'Alias' — no hits outside this FDD's own fdd-review file). Confirmed by viewing Wireframe3 (Add Alias form: First/Last/DOB/SSN) and Wireframe2/Wireframe4 (Aliases table on the record detail page)." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_8_2 a sd:UserStory ;
+    sd:requirementId "30.8.2" ;
+    sd:title "View alias name history" ;
+    sd:statement "As a Rapback Admin, I need to view the history of all alias names recorded for an individual, so that I maintain a complete record of identity changes." ;
+    sd:acceptanceCriteria "System shows the history of alias name(s) for each individual Rapback record; Rapback Admin can view the alias name(s)." ;
+    sd:notes "No satisfiedBy — same gap as 30.8.1. Note the wireframes (2 and 4) show only a current alias LIST with delete, not an alias-change HISTORY view distinct from the current list — a minor discrepancy between this story's 'history' framing and what's actually wireframed, not otherwise resolved in the document." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_8_3 a sd:UserStory ;
+    sd:requirementId "30.8.3" ;
+    sd:title "Audit alias additions/modifications" ;
+    sd:statement "As the MiEdWorkforce System, I must store audit information (user and date) whenever an alias name is added or modified, ensuring data integrity." ;
+    sd:acceptanceCriteria "System stores audit data for all changes to alias names; Rapback Admin can view historical action(s) taken; audit details include Date/Time stamp and Modified by." ;
+    sd:notes "No satisfiedBy — same gap as 30.8.1/30.8.2." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No Alias/AKA concept exists anywhere in this project's graph (verified: no hits for 'Alias' anywhere under abox/mied-v3 outside this FDD's own review file). Feature 30.8 (add/maintain/audit alias names for manual identity-verification fallback) is entirely new — there is no partial match, near-miss, or related concept to point to, unlike most of this FDD's other gaps." ;
+    oa:hasTarget profp:Req_30_8_1, profp:Req_30_8_2, profp:Req_30_8_3 ; sd:impact "M" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Synthetic Requirements for Business Specifications content never promoted into the
+# Addendum's own 30.x numbering (see header note; same convention as FDD 29's own
+# Req_29_BizSpec_* pattern for the same kind of Addendum-omission finding).
+#################################################################
+
+profp:Req_30_BizSpec_MclMatching a sd:Requirement ;
+    sd:requirementId "30.BizSpec.MclMatching" ;
+    sd:title "Match Rapback records against the MDE-defined MCL code list" ;
+    sd:statement "(No user-story stem — Business Specifications prose, never promoted to a numbered Addendum story; three separate 'I do not see user story for this requirement' review comments from Punniyamoorthy, 2026-01-26, independently flag this same omission.) When the system receives a Rapback record, it is matched against the MDE-defined list of MCL codes (Rapbacks-MCLKeywords.xlsx, 833 entries). Matching ignores parentheses, spaces, and special characters, and is not case-sensitive. If an exact match is found, a record of the MCL match is stored." ;
+    sd:acceptanceCriteria "Exact-match (post-normalization) against the MCL code list; a match record is stored in the MiEdWorkforce database." ;
+    sd:notes "No satisfiedBy: no MCL-code matching concept exists anywhere in profpractice-domain.ttl (profp:ExternalBackgroundCheckAggregate has no offense-code/statute field at all). Beyond being simply unmodeled, this requirement is ALSO still open in the FDD's own review trail on the more important question of consequence: comment 1537976203 (Groom, 2026-02-09) reads 'SOM Action- need to determine what MCL matching results in/action, and result display' — i.e. even the FDD's own authors had not yet decided what an MCL match should DO (route to a worklist? block an action? just a flag?) as of the latest comment on record. This is the single most significant open question in this whole FDD, since the entire premise of Rap Back processing (matching criminal offenses to MCL-enumerated categories relevant to educator eligibility) hinges on it." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_BizSpec_IdentityMatching a sd:Requirement ;
+    sd:requirementId "30.BizSpec.IdentityMatching" ;
+    sd:title "Match Rapback record to a MiEdWorkforce identity (SSN, then FN/LN/DOB, else No Match)" ;
+    sd:statement "(No user-story stem — Business Specifications prose, never promoted to a numbered Addendum story; same 'no user story' review-comment pattern as the MCL-matching item above.) For each Rapback record (unique TCN) received, check for an identity match in MiEdWorkforce Person data: first by SSN only (status 'Matched on SSN'); if not matched, by First Name+Last Name+DOB, ignoring hyphens/spaces/apostrophes/special characters (status 'Matched on FN/LN/DOB'); else leave Unique ID null (status 'No Match'). Store the date/time each matching step completed." ;
+    sd:acceptanceCriteria "SSN-first, then-name-cascade matching against MiEdWorkforce Person data; three resulting statuses (Matched on SSN / Matched on FN-LN-DOB / No Match); match-completion timestamp stored for each attempt." ;
+    sd:satisfiedBy profp:Seq_ReceiveRapBackNotification ;
+    sd:notes "PARTIAL: profp:Seq_ReceiveRapBackNotification already performs person-matching for exactly this purpose (PIC-empty branch: 'POST /match-person (SSN, DOB, Name)' against Mi-Key, resolving to a Unique ID) — a real, confirmed match in principle. But the granularity differs: this FDD describes an explicit two-tier cascade (SSN-only match attempted FIRST, distinct from a combined FN/LN/DOB match attempted second) with three persisted, individually-named statuses, whereas the modeled sequence shows a single combined Mi-Key call with an implicit match/no-match outcome and no equivalent to the 'Matched on SSN' vs. 'Matched on FN/LN/DOB' distinction. profp:CheckMatchStatus (on ExternalBackgroundCheckAggregate) is a different concept entirely — it describes whether the check data matches an EXISTING DISCLOSURE, not person-identity resolution — and is not cited here to avoid the same kind of confusable-near-miss mislabeling this project's other domain files (e.g. profpractice-domain.ttl's own EndorsementDefinitionAggregate 'OutOfState' vs. applicant-level in-state/out-of-state, flagged in the FDD 29 pass) have already flagged elsewhere." ;
+    sd:definedIn profp:Fdd30Doc .
+
+profp:Req_30_BizSpec_SearchFilter a sd:Requirement ;
+    sd:requirementId "30.BizSpec.SearchFilter" ;
+    sd:title "Search and filter Rapback records" ;
+    sd:statement "(No user-story stem — Business Specifications/HLS-table prose, never promoted to a numbered Addendum story.) The system provides search/filter over Rapback records by TCN, SID, Offense Type, Segment, First Name, Last Name, Employment/Credential checks, and Action(s) Taken (Ready to Process / Notified School District / Referred to Professional Practice Review / Notified MSP for removal, No Action Required)." ;
+    sd:acceptanceCriteria "All listed filters are available and combinable; results reflect the filtered query." ;
+    sd:notes "No satisfiedBy — the same missing list/search ApiOperation gap already noted on profp:Req_30_1_2 (get-by-id via Op_GetExternalCheck is the only query capability that exists for ExternalBackgroundCheckAggregate). Confirmed by viewing Wireframe1's full filter panel, which matches this list of filters field-for-field, including the pre-rename 'No Action Required' label." ;
+    sd:definedIn profp:Fdd30Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Three real, wireframed/detailed Business Specifications capabilities (MCL-code matching, the SSN/name identity-matching cascade, and search/filter) were never promoted into the Addendum's own 30.1-30.8 numbering at all — independently flagged by three separate 'I do not see user story for this requirement' / 'No user story for this requirement' review comments (Punniyamoorthy, 2026-01-26), the same kind of Addendum-omission this project's FDD 29 pass already found for three of ITS OWN Business Specifications features. Modeled here with synthetic profp:Req_30_BizSpec_* IDs rather than silently folded into the numbered scheme or dropped for lacking a number." ;
+    oa:hasTarget profp:Req_30_BizSpec_MclMatching, profp:Req_30_BizSpec_IdentityMatching, profp:Req_30_BizSpec_SearchFilter ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+#################################################################
+# Cross-cutting Annotations
+#################################################################
+
+profp:Question_RapbackAdminRoleNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Every single story in this FDD (all 21 numbered stories plus the 3 synthetic Business-Specification items) is written for a 'Rapback Admin' role/permission set. No such role or permission exists anywhere in profpractice-permissions.ttl, which models only PPR Reviewer, PPR Admin, and Credentialing Admin — nor is it named in iam's role catalog. This is the single largest cross-cutting gap in this FDD: even the stories that DO have a real satisfiedBy target (e.g. 30.2.1/30.2.2, which reuse Op_GetExternalCheck/Op_RetrieveRapSheet) are gated in the actual graph by profp:Perm_RapbackView/profp:Perm_RapsheetRetrieve — PPR-Reviewer-scoped permissions per their own sd:notes ('PPR Reviewer role') — not by any Rapback-Admin-specific permission. Whether 'Rapback Admin' is meant to be a wholly new role, or PPR Reviewer/PPR Admin under a different display name for this specific workflow, is not resolved anywhere in the FDD's own text or its review-comment trail." ;
+    oa:hasTarget profp:Req_30_1_1, profp:Req_30_3_1, profp:Req_30_5_1, profp:Req_30_6_1, profp:Req_30_8_1 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn profp:Fdd30Doc .
+
+profp:Question_ManualReviewNotAutoBlock a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "Review comment 1217190634 (Caswell, 2025-12-04) asks the FDD to 'clarify that if a record is returned, the initial plan is to flag it for manual review rather than automatically blocking the application' — confirmed in-thread by comment 784063271 (Groom, 2026-02-09): 'The RapBack record will not be rejected from MiEd and will be able to be reviewed manually.' This CONFIRMS (rather than contradicts) profp:Rule_RapBackTriggeredDisclosure's own existing modeled behavior (creates a placeholder disclosure, routes to worklist for review, does not auto-block) — worth recording as a positive cross-check, not a new gap, since it independently corroborates an existing rule the same way FDD 29's pass corroborated two of its own BusinessRule citations." ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn profp:Fdd30Doc .

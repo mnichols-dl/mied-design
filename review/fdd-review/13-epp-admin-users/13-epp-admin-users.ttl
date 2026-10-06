@@ -1,0 +1,361 @@
+# FDD 13 review — "13 - Educator Preparation Providers - Admin Users" folder, which
+# contains TWO docx: "13 - EPP - Admin.docx" (Features 13.1-13.6, 13.8) and
+# "13.7 - EPP - Identity Management Integration.docx" (Feature 13.7 only). Ingested
+# together per abox/mied-v3/fdd-review/CONVENTIONS.md's cross-document-group guidance,
+# against the mied-v3 EPP graph (epp-domain.ttl / epp-permissions.ttl / epp-api.ttl /
+# epp-sequences.ttl, all loaded together) — this FDD is entirely admin-side EPP content,
+# confirming the earlier FDD 29 pass's/GAPS.md's note that "epp (Manage EPP #13)" matches
+# credentialing's own dependency claim on it.
+#
+# Source material: both docx have a pre-generated .md sibling, read first. Both .docx were
+# unzipped (unzip -q -d unpacked13 / unpacked137) for word/comments.xml and word/media.
+# "13 - EPP - Admin.docx" carries 19 real review comments (extracted via a split-on-
+# "<w:comment " + attribute-regex script, since a first attempt assuming w:id/w:author/
+# w:date attribute ORDER in the opening tag failed silently — MS Word does not guarantee
+# attribute order, so extraction must parse each attribute independently) and 23 embedded
+# images (word/media/image1.png-image23.png). "13.7...docx" carries no comments and no
+# images. Tracked changes: not scanned separately for this FDD — the comment thread history
+# already tells the load-bearing story (see below), and this FDD's structure (a short,
+# single-author-revision Addendum) gave no indication of a tracked-changes-heavy revision
+# history the way FDD 11/16's did.
+#
+# Structure of "13 - EPP - Admin.docx" and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "HIGH LEVEL SCENARIOS" paraphrase table
+#   (33 rows) both restate the same admin-page capabilities at coarser grain than the
+#   Addendum below — both skipped per CONVENTIONS.md as duplicative, same as every prior
+#   FDD pass in this series (29, 28, etc.). One piece of Business-Specifications-only
+#   content is NOT re-covered by the Addendum's own numbering at all — a "Question Sets
+#   and validations for EPP processes" admin capability (add/modify questions, decision
+#   tree, End Date) — but this maps onto the exact same "Business Specification #4 —
+#   Business Rule Management has no bounded context anywhere" gap GAPS.md already logged
+#   from the FDD 29 pass, so no synthetic Requirement is minted for it here (unlike FDD 29's
+#   own synthetic Req_29_BizSpec_* treatment of similarly-omitted content, which surfaced
+#   genuinely NEW capabilities no other pass had flagged — this one is a repeat, not new
+#   information). Noted here as an "Addendum omits Business-Spec content" observation only.
+# - The "Addendum" gives real Feature/story numbering: 13.1.1-13.1.5, 13.3.1-13.3.2,
+#   13.8.1-13.8.4 (11 real "As a/I want/so that" or "As a/I need" user stories with their
+#   own Acceptance Criteria) — the primary Requirement unit used below, modeled as
+#   sd:UserStory per the now-current Phase 2 convention (this file is a fresh pass, not one
+#   of the ones grandfathered to plain sd:Requirement).
+# - Features 13.2 (Historical Data), 13.4 (Email/Comm), 13.5 (Dashboard), 13.6 (Document
+#   upload) carry NO "As a.../I want..." stories at all — each is one short paragraph
+#   either pointing at another Business Specification/Feature (13.2, 13.4, 13.5) or
+#   explicitly declining to build something as an admin-facing feature (13.6). Modeled
+#   as plain sd:Requirement (not UserStory — they're not narrative-form) EXCEPT 13.2,
+#   which is a pure "see elsewhere, nothing new here" pointer with no content of its own
+#   (not even a scope decision) — not minted as its own Requirement node at all, per this
+#   convention's spirit that a Requirement is "one atomic, individually-satisfiable-or-
+#   rejectable" unit; its one substantive thread (a retention-period question, see below)
+#   is captured as a note instead.
+# - Feature 13.7 is the ENTIRE second document, whose own Business Specifications section
+#   states plainly: "this feature is no longer necessary" (superseded by a separate,
+#   not-yet-reviewed FDD, "Identity Management Integration (15.0)"). Modeled as one plain
+#   sd:Requirement, rejected.
+#
+# Comments (19 total, read via comments.xml; commentsExtended.xml's w15:paraIdParent links
+# were checked but added no thread structure beyond what author/date/anchor-text already
+# make obvious for this FDD's short comment set — nothing here needed the thread-linking
+# machinery FDD 29's 27-comment set required). Most are trivial and folded into notes
+# rather than promoted to their own Annotation: two "mailto:...update/add scenario"
+# assignment stubs (ids 5,7,11,13) and three "Split for scenarios" housekeeping notes
+# (ids 9,10,16) are pure HLS-table authoring mechanics (the HLS table itself is skipped,
+# so these carry no independent content); three short naming-bikeshed comments (ids 18/24,
+# and their 2026-04-03 follow-ups 1299713688/2093175/1923023007, "does 'EPP Data' sound
+# good?") are folded into epp:Req_13_1_1's notes rather than raised as their own
+# Annotation. Two threads ARE promoted:
+# - ids 19/20/21 (2026-02-18 to 2026-03-16): a retention-period question on the Historical
+#   Data language ("What retention period in this context?" -> "yet to be defined,
+#   standard across MiEdWorkforce" -> "we can remove this as it will be per the State's
+#   retention policy per the assumptions") — resolved by DELETING the AC rather than
+#   answering it. This is the same still-open retention question epp-domain.ttl's own
+#   epp:Question_EnrollmentRecordRetention (Open Question #7) already tracks for
+#   CandidateEnrollment specifically; this FDD's own resolution (silently drop the AC
+#   rather than specify a period) doesn't actually resolve that Question, so it is not
+#   re-raised as a duplicate Annotation here — just cross-referenced.
+# - ids 66/67/68 (2026-02-18 to 2026-03-16), on Feature 13.3 Worklist: "EPP Admin defines
+#   the worklists for all credentials and candidate tracking. Dont know why candidate
+#   tracking worklist alone are specified here" -> "My understanding was that worklist
+#   related to Credentials are defined by Credentialing Admin. Is that not the case?" ->
+#   "This AC is not needed due to the EPP admin choosing the existing worklist from the
+#   list to edit." This is THE single most important finding of this pass — see
+#   Question_EppWorklistAdminIsCredentialingScreen below, and epp:Req_13_3_1's own notes.
+#
+# Wireframes: 3 of the main doc's 23 images are formally captioned ("Wireframe 1/2/3"),
+# matching the 3 screens the main Business Specifications prose itself names (search
+# results; add/edit EPP; add/edit endorsement Pro Prep close dates) — extracted as
+# wireframes/wireframe-01/02/03-*.png, confirmed by viewing all three against their
+# caption text (exact field-for-field match on all three). The remaining 20 images are
+# uncaptioned, interspersed directly in the Addendum's own Feature 13.1/13.3/13.8 story
+# text (the same pattern FDD 29's own Addendum used) — 4 representative ones were viewed
+# (of the Addendum's nav-tile overview, the Feature-13.3-Worklist screen, the Feature-
+# 13.3.2 "visual indicators" screen, and a Feature-13.1/13.8-adjacent "Program Types"
+# table) and are extracted as wireframes/addendum-a/b/c/d-*.png; the other 16 (mostly
+# repeated closeups of the same Add/Edit EPP, Certificate Categories, and Worklist-edit
+# screens already covered by the captioned wireframes and by addendum-a/b/c) were not
+# individually viewed, consistent with this convention's depth-calibration guidance for
+# many similar-shaped screenshots under one running narrative.
+#
+# The single highest-value finding from actually VIEWING (not just captioning) an
+# uncaptioned image: addendum-b (word/media/image17.png), embedded directly under Feature
+# 13.3.1/13.3.2's own acceptance-criteria text, is a screenshot whose own breadcrumb reads
+# "Credentialing Data > Worklist Management" and whose visible worklist names ("Desktop
+# Credentialing Worklist", "Dashboard Full Credentialing Worklist", "Dashboard Component
+# Credentialing Worklist", "Mobile Worklist") are all Credentialing-scoped, not EPP-scoped.
+# The FDD text presents this as if it were "an administrative page to manage worklists
+# used by EPP Processing staff" (13.3.1) — but the wireframe backing it is literally a
+# capture of the CREDENTIALING admin's own Worklist Management screen. This directly
+# corroborates epp-domain.ttl's own epp:Question_WorklistAssignmentScope (Open Question
+# #11), which already flagged — from the OTHER direction, via FDD 5's Wireframe 10/Feature
+# 5.5 — that this admin capability may belong to Credentialing rather than EPP. Now
+# independently confirmed from FDD 13's own wireframe evidence, not just FDD 5's prose.
+#
+# Verification/cross-reference note: this pass's own epp:Req_13_1_2 independently
+# corroborates epp-domain.ttl's existing citation of "FDD 13.1.2" for the Reading
+# Diagnostics / Special Ed Director flags' resolution (epp:EducatorPreparationProviderAggregate's
+# own sd:notes) — CONFIRMED ACCURATE on rereading the actual story text.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix epp:   <urn:solutiondesign:instance:epp:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+epp:Fdd13Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/13 - Educator Preparation Providers - Admin Users/13  - EPP - Admin.docx" ;
+    sd:notes "Covers Features 13.1-13.6, 13.8 (document's own subtitle). Author Vidhya Punniyamoorthy (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI) 08/04/2025 per the signoff table — but comments.xml contains entries dated as late as 2026-04-03, well after that signoff date, meaning the document continued to be actively revised/reviewed after its nominal approval date. Same pattern FDD 29's own Fdd29Doc note already flagged for a different FDD; not resolved here." .
+
+epp:Fdd13_7Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/13 - Educator Preparation Providers - Admin Users/13.7 - EPP- Identity Management Integration.docx" ;
+    sd:notes "One-page pointer doc, Feature 13.7 only. No comments, no embedded images. States its own content is superseded by 'Identity Management Integration (15.0)' — a distinct FDD not itself reviewed in this pass; see this file's closing note on epp:Req_13_7." .
+
+epp:Wireframe13_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/wireframe-01-manage-epp-search-results.png" ;
+    sd:notes "Confirmed by viewing: 'Manage Educator Preparation Provider (EPP)' search screen — Code [FICE]#/Name text fields, Cert Type/Pathway dropdowns, 'Include Closed EPPs' checkbox, Search/Clear buttons; Search Results table (Code (FICE)#/Name/Cert Type/Pathway, comma-separated multi-values e.g. 'School Administrator, School Counselor, School Psychologist, School Social Worker, Teacher'), radio-select rows, Add/Edit buttons, pagination. Exact field-for-field match to the Business Specifications prose and to 13.1.1's acceptance criteria." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:Wireframe13_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/wireframe-02-add-edit-epp.png" ;
+    sd:notes "Confirmed by viewing: 'Edit Educator Preparation Provider (EPP)' form — Name/Code(FICE)#/Name(Fed)/Code(Fed)#/EPP Type dropdown/Address/City/State/Zip/Phone/Website URL fields; an inline Certificate Categories Allowed table (Certificate Type, Pathway, MDE Approval Date, Enrollment Close Date (Pro Prep), Recommend Close Date (MOECS — note: FDD prose calls this column 'MiEdWorkforce', wireframe UI itself labels it 'MOECS', a naming inconsistency between doc and UI worth flagging but not otherwise substantive), Actions/Edit); Reading Diagnostics and Special Ed Director/Supervisor checkboxes; Last Modified By/On; an inline multi-row Contact Information table (Prefix/First/Middle/Last/Title/Email/Phone/Ext/Clear); an inline Approved Endorsements table (Type/Endorsement/Status/Action). Confirms Contact Information and Approved Endorsements are both embedded directly in the single EPP edit form, not separate screens/endpoints — consistent with epp-api.ttl having no dedicated /contacts endpoint (contacts travel inside Op_CreateEppProvider/Op_UpdateEppProvider's whole-aggregate payload)." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:Wireframe13_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/wireframe-03-add-edit-endorsement-proprep-dates.png" ;
+    sd:notes "Confirmed by viewing: per-endorsement 'Initial Cert. Application' / 'Addl. Endorsement' date-pair rows (MDE Approval Date / Enrollment Close Date (Pro Prep) / Recommend Close Date (MOECS)) broken out by Grade Level+Code (PK-12, K-8, K-9, K-12, 5-12, 6-12), each with its own 'Clear Dates' action. Confirms 13.1.4's 'update dates for both Initial Certification and Additional Endorsement types' independently per grade band, matching epp:ApprovedEndorsement's per-endorsement date fields." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:WireframeAdminNavTiles a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/addendum-a-educator-prep-data-management-nav-tiles.png" ;
+    sd:notes "Confirmed by viewing: 'Educator Prep Data & Management' landing page, a 6-tile nav grid — Educator Prep Data (Providers/Pathways/Educator Prep Types/Program Levels/Program Types), Worklist Management (Worklists) [highlighted, matching 13.3's own emphasis], Communication Management (Email Templates/Notification Templates/Alert Templates), Business Rules (System Rules & Validations/Question Sets), Pages & Content (Pages), Report Management (Reports). Useful as a single overview image confirming this FDD's own Feature 13.4/13.5/13.6 pointers-elsewhere correspond to real, separately-tiled admin areas in the actual product IA, not just prose cross-references — Business Rules and Communication Management are visibly siblings of Educator Prep Data/Worklist Management in the same nav, not sub-panels of them." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:WireframeWorklistManagement a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/addendum-b-worklist-management-credentialing-data-screen.png" ;
+    sd:notes "Confirmed by viewing: breadcrumb reads 'Dashboard > Credentialing Data > Worklist Management' (NOT 'Educator Prep Data & Management'), listing 'Desktop Credentialing Worklist', 'Dashboard Full Credentialing Worklist', 'Dashboard Component Credentialing Worklist', 'Mobile Worklist' — all Credentialing-named, none EPP-named. Embedded directly under Feature 13.3.1/13.3.2's own text despite describing a Credentialing screen. See this file's header note and Question_EppWorklistAdminIsCredentialingScreen." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:WireframeCandidatesStatusList a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/addendum-c-candidates-verified-pending-status-list.png" ;
+    sd:notes "Confirmed by viewing: 'Candidates' screen, 'Verified Candidates'/'Pending Verification' tabs, a table (Unique ID/Name/Student ID/Program Level/Program(s)/Enroll Date/Status) with color-coded Status badges reading Enrolled/Student Teaching/Placed/Rejected/Inactive/Exited/Post Student Teaching — an exact match to epp:EnrState_Enrolled/StudentTeachingTrad/PlacedAlt/Rejected/Inactive/Exited/PostStudentTeachingTrad. This is the actual screen behind 13.3.2's 'visual indicators for Verified Candidates and Pending Verification items' language — a candidate-tracking list (epp:CandidateEnrollmentAggregate, epp:Seq_SearchEnrolledCandidates/Seq_SearchPendingEnrollmentVerifications), not a 'worklist' in the CredentialApplicationReview/ApprovalApplicationReview sense the rest of Feature 13.3's text uses the word for — the FDD conflates two distinct existing concepts under one 'worklist' label." ;
+    sd:definedIn epp:Fdd13Doc .
+epp:WireframeProgramTypesPlaceholder a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/13-epp-admin-users/wireframes/addendum-d-program-types-placeholder-table.png" ;
+    sd:notes "Confirmed by viewing: 'Program Types' admin list under 'Educator Prep Data & Management', column headers and cell content entirely redacted/placeholder (mock greeked bars), one visible pill-shaped status-badge column, pagination showing 6115 items. Low-fidelity/mockup-only compared to Wireframes 1-3 and addendum-a/b/c — confirms a 'Program Types' admin surface exists as a planned screen (consistent with epp:EnrollmentProgram / the public Pro Prep catalog's program-level concept already flagged as gapped in epp:Question_ProPrepPublicCatalogFieldGaps) but gives no new field-level detail beyond what's already known." ;
+    sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Requirements — Feature 13.1: Admin Screens
+#################################################################
+
+epp:Req_13_1_1 a sd:UserStory ;
+    sd:requirementId "13.1.1" ;
+    sd:title "Access EPP provider list" ;
+    sd:statement "As an EPP Admin, I want to access a list of providers on the Manage Education Preparation Provider screen, so that I can review and manage approved EPPs and their programs." ;
+    sd:acceptanceCriteria "Navigate via hamburger menu > Education Prep Data & Management > Educator Prep Data > Providers; landing page accessible to the EPP Admin role; table shows Code [FICE]#, Name, Certificate Type (comma-separated), Pathway (comma-separated); search filters for Code/Name/Certificate Type/Pathway; Include/Exclude Closed EPPs toggle; Clear restores defaults; 'No results found' message when no matches; default view lists all EPPs." ;
+    sd:satisfiedBy epp:Op_ListEppProviders, epp:EducatorPreparationProviderAggregate ;
+    sd:notes "Direct match — epp:Op_ListEppProviders (GET /epp-providers, EppProviderSummary projection: eppCode/organizationName/eppType/status/ficeCode) backs the search/list behavior; epp-api.ttl doesn't itemize this operation's query/filter parameters (sd:parameters is left unset on it), so the Certificate Type/Pathway/Closed-EPP filter fields aren't independently confirmed at the API-contract level, only at the aggregate-data level — a minor documentation gap, not a functional one. No dedicated sd:Sequence exists for 'search/browse EPP providers' in epp-sequences.ttl (all 12 of that file's sequences are for designate/update/manage-detail/candidate-tracking actions, not a plain browse flow) — Op_ListEppProviders alone is the right-sized citation here, consistent with the ontology's own preference for a Sequence 'when a relevant one exists.' Confirmed by viewing epp:Wireframe13_1. Comments 18/24/1299713688/2093175/1923023007 (a running, resolved 'does EPP Data sound good as a nav label?' naming thread from 2026-03 through 2026-04) are pure UI-copy bikeshedding on this same screen's breadcrumb label — folded in here rather than raised as their own Annotation." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_1_2 a sd:UserStory ;
+    sd:requirementId "13.1.2" ;
+    sd:title "Add new EPP via EEM lookup" ;
+    sd:statement "As an EPP Admin, I want to add a new EPP by looking up their entity information from the Educational Entity Master (EEM), so that I can establish a new provider record without manually entering core demographic data." ;
+    sd:acceptanceCriteria "'Create Education Provider' button; admin searches by Entity Name or EEM Entity Code; system auto-populates read-only Entity Name/Code/Address/Website/Phone from EEM; admin manually selects EPP Type (not stored in EEM); admin toggles 'Include Reading Diagnostics' and 'Include Special Ed Director/Supervisor' (gates certification-search dropdown inclusion); audit details (Last Modified By/On) captured on save." ;
+    sd:satisfiedBy epp:Seq_DesignateEEMOrgAsEPP, epp:Op_CreateEppProvider, epp:Rule_EPPMustReferenceValidEEMOrganization, epp:ReadingDiagnosticsFlag, epp:SpecialEdDirectorFlag ;
+    sd:notes "CITATION VERIFIED: epp:EducatorPreparationProviderAggregate's own sd:notes already cites 'FDD 13.1.2' as resolving Open Question #8 (what the Reading Diagnostics/Special Ed Director flags gate) — rereading the actual story text confirms that citation is accurate: this story states almost verbatim that these flags indicate 'if this EPP should appear in dropdowns for those specific certification searches.' Strong, direct match overall — Seq_DesignateEEMOrgAsEPP's own sequence diagram is essentially a step-by-step walkthrough of this exact story (search EEM org, retrieve read-only details, enter EPP-specific fields, submit)." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_1_3 a sd:UserStory ;
+    sd:requirementId "13.1.3" ;
+    sd:title "Manage certificate categories allowed" ;
+    sd:statement "As an EPP Admin, I want to manage the Certificate Categories (Programs) allowed for a provider, so that I can define which certificates they are authorized to offer." ;
+    sd:acceptanceCriteria "Certificate Categories Allowed table on the EPP detail/create screen; Add specifying Certificate Type, Pathway, MDE Approval Date, Enrollment Close Date (Pro Prep), Recommend Close Date (MiEdWorkforce); Edit/Delete existing entries; date-order validation (e.g. Close Date cannot precede Approval Date)." ;
+    sd:satisfiedBy epp:Seq_ManageCertificateCategoryApprovals, epp:Op_AddCertificateCategory, epp:Op_UpdateCertificateCategory, epp:Op_DeleteCertificateCategory, epp:ApprovedCertificateCategory ;
+    sd:notes "Direct match, including the date-order validation (Seq_ManageCertificateCategoryApprovals's own keyDecisions: 'MDE Approval Date must precede Enrollment Close Date and Recommend Close Date') and the deletion-protection behavior (blocked if active candidate enrollments exist) neither this story's own AC text nor the HLS table mentions explicitly, but the sequence and epp:EducatorPreparationProviderAggregate's invariants both already model it — a case of the domain model being MORE complete than this particular story's stated AC, not less. Confirmed by viewing epp:Wireframe13_2 (inline table, matching field-for-field)." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_1_4 a sd:UserStory ;
+    sd:requirementId "13.1.4" ;
+    sd:title "Manage approved endorsements" ;
+    sd:statement "As an EPP Admin, I want to manage the specific endorsements attached to a provider's approved programs, so that I can control which subject areas they are authorized to recommend." ;
+    sd:acceptanceCriteria "Approved Endorsements table (Certificate Type/Endorsement/Status) on EPP detail and Create EPP screens; admin can remove (delete) an endorsement record; Add/Edit opens a detail view with read-only Grade Level and Code (from Manage Endorsement); admin updates MDE Approval Date/Enrollment Close Date (Pro Prep)/Recommend Close Date (MiEdWorkforce) independently for Initial Certification and Additional Endorsement types." ;
+    sd:satisfiedBy epp:Seq_ManageApprovedEndorsements, epp:Op_AddEndorsement, epp:Op_UpdateEndorsement, epp:Op_DeleteEndorsement, epp:ApprovedEndorsement ;
+    sd:notes "Direct match. Confirmed by viewing epp:Wireframe13_3 (per-grade-band Initial Cert./Addl. Endorsement date-pair rows, field-for-field). Deletion-protection (blocked if active candidates pursuing the endorsement) again modeled at the sequence/aggregate level beyond this story's own stated AC, same pattern as 13.1.3." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_1_5 a sd:UserStory ;
+    sd:requirementId "13.1.5" ;
+    sd:title "Manage EPP contact information" ;
+    sd:statement "As an EPP Admin, I want to add and manage contact information for a provider in a multi-row table, so that I can maintain accurate records of key personnel for communication purposes." ;
+    sd:acceptanceCriteria "Contact table on EPP detail and Create EPP screens; Add a contact (Name, Title, Email Address, Phone); Edit/remove existing entries; Modified By/On audit fields update on save." ;
+    sd:satisfiedBy epp:Op_CreateEppProvider, epp:Op_UpdateEppProvider, epp:EPPContact ;
+    sd:notes "Satisfied, with a documented shape difference: epp-api.ttl has no dedicated /epp-providers/{eppCode}/contacts endpoint — contacts travel inside the whole-provider Create/Update payload (both operations' sd:consumesShape epp:EducatorPreparationProviderAggregate, which sd:hasEntity epp:EPPContact) rather than as their own CRUD surface. This matches epp:Wireframe13_2's own inline Contact Information table (part of the single Edit EPP form, not a separate screen) — so the API shape and the wireframe agree with each other, just not with a naive reading of 'manage contacts' as implying its own endpoint set." ;
+    sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Feature 13.2: Historical Data — pure pointer, no independent Requirement minted
+# (see this file's header note). One retention-question comment thread cross-referenced
+# to the existing epp:Question_EnrollmentRecordRetention rather than duplicated:
+#################################################################
+
+[] a sd:Annotation ; oa:motivatedBy oa:commenting ;
+    rdfs:comment "Feature 13.2's own comment thread (ids 19/20/21, 2026-02-18 to 2026-03-16) asked what retention period applies to EPP historical data (Pathways/Certificates/Endorsements) and was resolved by DELETING the acceptance criterion rather than specifying a period ('we can remove this as it will be according to the State's retention policy per the assumptions') — i.e. deferred to a project-wide assumption, not actually answered. This is the same open question epp-domain.ttl's own epp:Question_EnrollmentRecordRetention (Open Question #7) already tracks for CandidateEnrollment specifically; not re-raised as a duplicate Annotation, just cross-referenced here since it's independent evidence the retention-period question is still open project-wide, not EPP-specific." ;
+    oa:hasTarget epp:Question_EnrollmentRecordRetention ;
+    sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Requirements — Feature 13.3: Worklist
+#################################################################
+
+epp:Req_13_3_1 a sd:UserStory ;
+    sd:requirementId "13.3.1" ;
+    sd:title "Administer worklists used by EPP Processing staff" ;
+    sd:statement "As an EPP Admin, I need an administrative page to manage worklists used by EPP Processing staff so that the staff can track required tasks effectively." ;
+    sd:acceptanceCriteria "Accessible via Dashboard > Educator Prep Data & Management > Worklist Management; administrator can manage existing worklists for EPP business users." ;
+    sd:notes "No satisfiedBy: no worklist-DEFINITION/administration concept exists anywhere in epp-domain.ttl/epp-api.ttl/epp-sequences.ttl — epp's own 'worklist' concept (per epp-domain.ttl's own Ubiquitous Language entry epp:UT_CredentialApplicationWorklist) is explicitly modeled as nothing more than CredentialApplicationReview/ApprovalApplicationReview's existing filtered list endpoints, with no admin-configuration surface behind it at all. Directly corroborates epp-domain.ttl's own epp:Question_WorklistAssignmentScope (Open Question #11), which already flagged this exact gap from FDD 5's side; this pass adds a second, independent piece of evidence FDD 5's framing was right: epp:WireframeWorklistManagement (viewed, embedded directly under THIS story's own acceptance-criteria text) is a screenshot of a 'Credentialing Data > Worklist Management' screen listing only Credentialing-named worklists. See Question_EppWorklistAdminIsCredentialingScreen below." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_3_2 a sd:UserStory ;
+    sd:requirementId "13.3.2" ;
+    sd:title "Edit worklist columns; visual indicators for candidate status" ;
+    sd:statement "As an EPP Admin, I need the ability to edit predefined worklists by adding or removing data fields and columns so that I can customize the information displayed for EPP business users." ;
+    sd:acceptanceCriteria "Access the worklist-management admin page; on an 'edit' screen, add predefined data fields to the worklist's display results; add/remove existing columns, applied on Save; worklist management includes visual indicators for 'Verified Candidates' and 'Pending Verification' items." ;
+    sd:satisfiedBy epp:Seq_SearchEnrolledCandidates, epp:Seq_SearchPendingEnrollmentVerifications ;
+    sd:notes "PARTIAL: the 'visual indicators for Verified Candidates and Pending Verification items' half of this story is satisfied — epp:WireframeCandidatesStatusList (viewed, embedded directly under this story's text) is the Candidates screen's Verified/Pending-Verification tabs with color-coded status badges, an exact match to epp:EnrState_Enrolled/StudentTeachingTrad/PlacedAlt/Rejected/Inactive/Exited/PostStudentTeachingTrad already surfaced by Seq_SearchEnrolledCandidates/Seq_SearchPendingEnrollmentVerifications — i.e. this half of the story is really about the existing CandidateEnrollment list, not a 'worklist' in the CredentialApplicationReview sense. The OTHER half — a genuine column/field CUSTOMIZATION admin capability for any worklist — has no backing anywhere, same root cause as 13.3.1 (comment 68: 'This AC is not needed due to the EPP admin choosing the existing worklist from the list to edit' suggests even the reviewer wasn't confident this AC was well-formed). Also targeted by the coverage-gap Annotation below." ;
+    sd:definedIn epp:Fdd13Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 13.3's worklist-ADMINISTRATION capability (defining/configuring which worklists exist, their task-requirement-status/deadline settings, per-user/per-role access-level assignment, item-approval workflow, and column/field customization — 13.3.1 and 13.3.2's own column-editing half) has no home anywhere in the EPP domain as modeled: epp's own 'worklist' concept is purely the existing filtered-list read pattern on CredentialApplicationReview/ApprovalApplicationReview, with zero admin-configuration surface. This is the SAME gap epp-domain.ttl's own epp:Question_WorklistAssignmentScope (Open Question #11) already flagged from FDD 5's side (citing FDD 5 Wireframe 10/Feature 5.5's per-user worklist-assignment capability) — independently reconfirmed here from FDD 13's own side, and now with concrete wireframe evidence (epp:WireframeWorklistManagement's 'Credentialing Data' breadcrumb) that the screen FDD 13 itself illustrates for 'EPP worklist management' is actually a capture of Credentialing's own admin screen. Raises confidence this whole capability belongs to Credentialing (per FDD 5), not EPP, and/or needs its own cross-domain 'worklist administration' concept neither domain currently owns outright." ;
+    oa:hasTarget epp:Req_13_3_1, epp:Req_13_3_2 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn epp:Fdd13Doc .
+
+epp:Question_EppWorklistAdminIsCredentialingScreen a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "FDD 13's Feature 13.3 (Worklist) presents 'an administrative page to manage worklists used by EPP Processing staff' (13.3.1) as EPP's own admin capability, illustrated with a wireframe (word/media/image17.png, extracted as epp:WireframeWorklistManagement) whose own breadcrumb reads 'Credentialing Data > Worklist Management' and whose visible worklist names (Desktop/Dashboard Full/Dashboard Component Credentialing Worklist, Mobile Worklist) are all Credentialing-scoped. Either (a) this FDD reused a Credentialing screenshot as a placeholder without updating it for EPP's own worklist names, which would mean the ACTUAL EPP worklist-admin screen is simply undocumented, or (b) 'EPP worklist administration' and 'Credentialing worklist administration' are genuinely meant to be the SAME shared admin screen/capability (consistent with FDD 5's own framing, per epp:Question_WorklistAssignmentScope, of worklist assignment as covering EPP, School District, and Applicant worklists together under one Credentialing System Admin function) — in which case Feature 13.3 shouldn't be modeled as an EPP-owned capability at all. Not resolved here; flagged as a discrepancy worth a product-owner check rather than guessed at." ;
+    oa:hasTarget epp:Req_13_3_1 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Feature 13.4: Email/Comm — pointer paragraph, not a user story
+#################################################################
+
+epp:Req_13_4 a sd:Requirement ;
+    sd:requirementId "13.4" ;
+    sd:title "Email/Comm configuration for EPP (pointer to Business Specification #6)" ;
+    sd:statement "All underlying logic for sending, tracking, and displaying emails, alerts and notifications are derived from Business Specification #6 (Alerts, Emails & Communications). This feature is strictly limited to the configuration of these tools (defining what is sent) specifically for [this] module. Additionally, Business Specification #4 (Business Rules Management) will specify when and to whom it is sent." ;
+    sd:notes "The doc's own text literally says 'specifically for the Professional Learning module' here — a copy-paste artifact from another domain's FDD template, evidently not updated for EPP. Not itself substantive; noted as a minor authoring-quality issue, not raised as its own finding." ;
+    sd:definedIn epp:Fdd13Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Email/alert/notification configuration for EPP is explicitly deferred to Business Specification #6 (Alerts, Emails & Communications — comm:CommunicationsContext, a real converted domain, already comm:CommunicationsContext sd:subscribesTo several of epp's own DomainEvents) and Business Specification #4 (Business Rule Management — no bounded context exists for this anywhere per GAPS.md's existing FDD 29 entry). Not an EPP-side build item." ;
+    oa:hasTarget epp:Req_13_4 ; sd:status "resolved" ; sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Feature 13.5: Dashboard — pointer paragraph, not a user story
+#################################################################
+
+epp:Req_13_5 a sd:Requirement ;
+    sd:requirementId "13.5" ;
+    sd:title "Dashboard configuration for EPP (pointer to Business Specification #3)" ;
+    sd:statement "All underlying logic for the display, organization, and rendering of the dashboard is derived from Business Specification #3 (Dashboards). This feature is strictly limited to the configuration of these elements (defining which tiles and reports are available to whom) specifically for the workflow." ;
+    sd:definedIn epp:Fdd13Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Dashboard tile/report configuration for EPP is explicitly deferred to Business Specification #3 (Dashboards — dash:DashboardsContext, a stub-only bounded context per abox/mied-v3/CONVENTIONS.md's registry, same stub the FDD 29 pass's own Req_29_1_8 already deferred to). Not an EPP-side build item; no new GAPS.md entry needed since this stub is already on record." ;
+    oa:hasTarget epp:Req_13_5 ; sd:status "resolved" ; sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Feature 13.6: Document upload — explicit rejection, not a user story
+#################################################################
+
+epp:Req_13_6 a sd:Requirement ;
+    sd:requirementId "13.6" ;
+    sd:title "EPP Admin file-queue/upload-configuration management (declined as an admin feature)" ;
+    sd:statement "The requirements for the EPP Admin to manage file queues (e.g., resetting 'stuck' files) and toggle upload availability should be considered outside scope of an administrative task. These functions are considered as technical management and maintenance tasks to be handled by developers." ;
+    sd:notes "This is the FDD's own explicit, deliberate decision NOT to build file-queue management (view queue/status, Reset stuck files, Delete queued files, filter by status, view upload audit details — all listed in the main Business Specifications prose as candidate admin functionality) as an EPP-ADMIN-facing feature at all — a real decision, distinct from deferring it to another business specification. Consistent with epp-domain.ttl's own Bulk Upload sequences (epp:Op_InitiateBulkUpload/CompleteBulkUpload/BulkCreateEnrollments) already being modeled as plain internal-service/internal-user API operations with no admin-configuration surface of their own." ;
+    sd:definedIn epp:Fdd13Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "File-queue administration (view/reset/delete queued files, upload-availability toggles) for EPP's bulk-upload pipeline was considered and explicitly declined as an admin-facing feature — 'technical management and maintenance tasks to be handled by developers,' per the FDD's own words. A real decision, not a gap." ;
+    oa:hasTarget epp:Req_13_6 ; sd:status "resolved" ; sd:definedIn epp:Fdd13Doc .
+
+#################################################################
+# Feature 13.7: Identity Management Integration — separate document, explicit rejection
+#################################################################
+
+epp:Req_13_7 a sd:Requirement ;
+    sd:requirementId "13.7" ;
+    sd:title "Identity Management Integration for EPP (feature withdrawn)" ;
+    sd:statement "This feature was created to integrate the identity management functionality into the Educator Preparation Program processes. In system design, we have captured the full system requirements for identity management within Identity Management Integration (15.0), and thus this feature is no longer necessary." ;
+    sd:notes "The main FDD's own Addendum (Feature: 13.7 Identity Management Integration) independently states the same conclusion in three words: 'This feature is no longer needed.' Both documents agree. FDD 15 (Identity Management Integration) is NOT itself reviewed as part of this pass — it isn't in this session's assignment, and its content wasn't cross-checked against the real iam bounded context conversion (iam-domain.ttl/iam-api.ttl exist in mied-v3, but whether they actually cover what FDD 15 describes is unconfirmed). Worth a GAPS.md-style note that FDD 15 remains an unreviewed dependency, even though the withdrawal itself is a clean rejection, not a gap." ;
+    sd:definedIn epp:Fdd13_7Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Feature 13.7 (Identity Management Integration for EPP) is withdrawn by both of its own source documents ('no longer needed' / 'no longer necessary'), superseded by FDD 15 (Identity Management Integration), which is not itself reviewed in this pass." ;
+    oa:hasTarget epp:Req_13_7 ; sd:status "resolved" ; sd:definedIn epp:Fdd13_7Doc .
+
+#################################################################
+# Requirements — Feature 13.8: Pro Prep - Set Up and Maintenance
+# (FDD's own note: "Wireframes for this feature are not yet finalized and are currently
+# under internal review. The user stories will be refined as further design decisions
+# are completed." — i.e. these four stories are documented by the FDD itself as its
+# least-stable content in this folder.)
+#################################################################
+
+epp:Req_13_8_1 a sd:UserStory ;
+    sd:requirementId "13.8.1" ;
+    sd:title "Manage Pro Prep public page guidance text and alerts" ;
+    sd:statement "As an EPP Admin, I want to create and manage guidance text and alert messages on the Pro Prep public page, so that public users receive timely and accurate information." ;
+    sd:acceptanceCriteria "Admin page for Pro Prep public page content; add/update hyperlinks and associated text; create/manage Alert Messages; define/manage Error and Validation text; manage Search Results table configurations." ;
+    sd:satisfiedBy epp:Seq_ConfigureProPrepVisibility, epp:Op_UpdateProprepConfig, epp:Op_GetProprepConfig ;
+    sd:notes "PARTIAL: Seq_ConfigureProPrepVisibility's own steps include 'Update page text, links, announcements' — matching the hyperlinks/text half. Alert Messages, Error/Validation text, and Search Results table configuration are NOT itemized anywhere in epp-domain.ttl/epp-api.ttl's Pro Prep config shape (Op_GetProprepConfig's own sd:projection describes only 'per-program visible flags, page text, links' — no alert/error-text/search-config fields). This is the same territory Feature 13.4's own Business-Specification-#6 deferral covers for alerts specifically, so the Alert-Messages sub-piece is arguably out-of-scope-by-the-same-logic rather than a fresh EPP gap; Error/Validation text and Search Results table config remain genuinely unaccounted for either way. Not split into a separate Annotation given how thin this remaining slice is relative to the rest of the story (per this convention's depth-calibration guidance) — captured here in notes instead." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_8_2 a sd:UserStory ;
+    sd:requirementId "13.8.2" ;
+    sd:title "Define Pro Prep public page verbiage" ;
+    sd:statement "As an EPP Admin, I want to define page verbiage, including headings, announcements, and user support materials on the Pro Prep public page, so that I can control the public experience." ;
+    sd:acceptanceCriteria "Define/manage Headings; enter/update Text, Information, and Announcements; upload/link User Support materials visible to the public; rich text or standard formatting support (implied)." ;
+    sd:satisfiedBy epp:Seq_ConfigureProPrepVisibility, epp:Op_UpdateProprepConfig ;
+    sd:notes "Same 'page text, links, announcements' step as 13.8.1 covers headings/announcements loosely; uploadable/linkable 'User Support materials' as a distinct content type isn't itemized in Op_GetProprepConfig/UpdateProprepConfig's documented projection — likely the same undifferentiated 'page text, links' bucket, but not confirmed at the field level. Minor gap, not raised as a separate Annotation (same reasoning as 13.8.1)." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_8_3 a sd:UserStory ;
+    sd:requirementId "13.8.3" ;
+    sd:title "Toggle Pro Prep program visibility" ;
+    sd:statement "As an EPP Admin, I want the ability to toggle the availability of a program on the public Pro Prep screen, so that I can control what is displayed based on review status." ;
+    sd:acceptanceCriteria "Toggle/checkbox controls program visibility; unchecking hides the program from public search results immediately; default visibility follows the program's approval status unless manually overridden." ;
+    sd:satisfiedBy epp:Rule_ProPrepVisibilityBasedOnCloseDates, epp:Seq_ConfigureProPrepVisibility, epp:Op_UpdateProprepConfig ;
+    sd:notes "Direct, strong match — epp:EducatorPreparationProviderAggregate's own invariants text states almost verbatim 'an EPP Admin can also manually override visibility (hide early / extend) independent of the date rule,' and Seq_ConfigureProPrepVisibility's keyDecisions list 'Manual Override' and 'Immediate Effect' as named decisions. One of this FDD's cleanest matches." ;
+    sd:definedIn epp:Fdd13Doc .
+
+epp:Req_13_8_4 a sd:UserStory ;
+    sd:requirementId "13.8.4" ;
+    sd:title "Configure which Pro Prep information displays" ;
+    sd:statement "As an EPP Admin, I want to define which Pro Prep information, such as Active or Pending Endorsements, displays so that I can effectively manage the Pro Prep Page." ;
+    sd:acceptanceCriteria "Configure which data elements display on the Manage Education Preparation Provider screen; admin can select to display Active Endorsements; admin can select to display [Pending] Endorsements; the Manage EPP screen view updates to reflect the configuration." ;
+    sd:satisfiedBy epp:Op_GetProprepConfig, epp:Op_UpdateProprepConfig, epp:ApprovedEndorsement ;
+    sd:notes "Reasonable match via Op_GetProprepConfig/UpdateProprepConfig's 'per-program visible flags' projection and epp:ApprovedEndorsement's own Status field (plausibly Active/Pending as status values, though epp-domain.ttl never enumerates ApprovedEndorsement's Status vocabulary explicitly — a minor documentation gap in the base domain conversion, not newly introduced by this FDD). Note also this story's own AC text repeats 'display Endorsements' verbatim for what its narrative clearly means as 'Pending Endorsements' (a copy-paste-and-forgot-to-finish artifact, similar to Req_13_4's 'Professional Learning module' artifact) — read charitably as intended, not modeled as its own discrepancy." ;
+    sd:definedIn epp:Fdd13Doc .

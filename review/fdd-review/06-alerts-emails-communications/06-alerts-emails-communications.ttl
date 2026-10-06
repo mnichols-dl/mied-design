@@ -1,0 +1,416 @@
+# FDD 06 review — "6 - Alerts, Emails and Communication" (Features 6.1-6.5).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Communications
+# graph (communications-capability.ttl / communications-permissions.ttl /
+# communications-api.ttl / communications-sequences.ttl / communications-technical-design.ttl,
+# all loaded together). This FDD's own Dependencies section names ten other Business
+# Specifications; per this session's brief, this folder maps almost entirely onto the
+# already-converted `communications` bounded context (prefix comm:) — confirmed true after
+# reading the source, with two exceptions noted below that reach outside comm:'s own
+# modeled surface.
+#
+# Source material read: the primary FDD ("6 - Alerts, Emails and Communication.docx", .md
+# sibling read first for the fast pass) plus four supplementary docx the FDD's own
+# "Additional Resources" list and in-document comments point at: "Comment Logs.docx",
+# "Emails and Remarks.docx", "MOECS_CommentsScreenShot.docx" (a legacy-system reference
+# screenshot a reviewer comment explicitly says the new wireframe should mirror — see
+# comm:Wireframe1/Wireframe2 notes below), and the two Interface Design documents
+# ("...Microsoft 365 (Outlook).docx", "...SendGrid.docx"). The "101022 Email notifications
+# research (1).pptx" listed in Additional Resources was skipped per CONVENTIONS.md's
+# pptx-skip rule (nothing in the FDD text or comments names it load-bearing the way a Role
+# Matrix xlsx would be).
+#
+# Structure of the primary document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "HIGH LEVEL SCENARIOS" paraphrase table
+#   (31 rows, 2 blank/removed — Use Case 17 and 25 — one of which a live review comment
+#   ("Can #11 be removed?" / "duplicative of req #1") shows was actively being trimmed
+#   during review) restate the same content at coarser grain than the "Addendum" below —
+#   skipped per CONVENTIONS.md as duplicative.
+# - An "Addendum" with real Feature/story numbering (6.1.1-6.1.4, 6.2.1-6.2.3, 6.3.1-6.3.4,
+#   6.4.1-6.4.4, 6.5.1-6.5.3 — 18 stories) is the primary Requirement unit used below.
+# - Two substantial Business-Specifications-section capabilities were never promoted into
+#   the Addendum's numbered scheme at all (the same pattern the FDD 29 pilot pass found for
+#   three of ITS own Business-Specifications-only features): (1) the full Alert-definition
+#   admin lifecycle (create/search/modify/remove alert templates, versioning, on-demand vs.
+#   scheduled generation, Group/Title/Message/Description/Coded-Inserts/Start-End-Dates
+#   fields) — HLS rows 5-11 paraphrase it but no 6.x number exists; (2) the historical
+#   email/notification search-and-resend-with-retention-window capability, which IS well
+#   covered by existing comm:Seq_EmailHistorySearchAndDetailsView/
+#   comm:Seq_EmailResendWithRecipientOverride/comm:EmailInstanceAggregate so needed no
+#   synthetic Requirement of its own. Item (1) genuinely lacks full model backing (see
+#   Req_06_BizSpec_AlertAdmin below) so it IS modeled, with a synthetic ID
+#   (comm:Req_06_BizSpec_AlertAdmin), consistent with FDD 29's cred:Req_29_BizSpec_* pattern.
+#
+# Comments (9 total, read via comments.xml — no commentsExtended.xml thread structure was
+# needed, none of these are multi-reply threads): six are minor editorial/provenance notes
+# (an "Added assumption" / "Added details based on discussions with [a named DTMB
+# consultant]" pair on the Assumptions section; "with adjustments to req #1, this is
+# duplicative" and "Can #11 be removed?" on since-trimmed HLS rows; "Unable to see these
+# docs, can access be shared?" on the Additional Resources links) — not separately modeled,
+# folded into this header per CONVENTIONS.md's dedupe-minor-comments guidance. Three are
+# load-bearing and modeled below: "This needs to be defined" (on the "large volume" TBD
+# text — see Req_06_1_4's own notes), "Screenshot will be similar to this but for remarks"
+# (confirms comm:Wireframe1/Wireframe2's provenance from MOECS_CommentsScreenShot.docx —
+# the legacy Michigan Online Educator Certification System, not a new mockup), and "This
+# view would display the appropriate information necessary to observe how many emails were
+# sent and who received reminders" (near-verbatim restatement of 6.5.2's own acceptance
+# criteria, confirming that story's intent — see Req_06_5_2).
+#
+# Tracked changes: not inspected in detail (none of the load-bearing comments above pointed
+# at a stale-vs-corrected text situation the way FDD 11/16's/29's did) — a quick scan found
+# no w:ins/w:del spans that looked substantive.
+#
+# Wireframes: the primary FDD embeds exactly 2 images (word/media/image4.png, image5.png),
+# both CONFIRMED (via comment 2098536325, "Screenshot will be similar to this but for
+# remarks") to be screenshots copied verbatim from the reference doc
+# MOECS_CommentsScreenShot.docx (which itself embeds 3 near-identical screenshots of the
+# same legacy MORE/MOECS "Remarks History" + "Hold" action screen — one, the parent
+# "Perform Action" context screen, wasn't reused in the primary FDD). Two further
+# supplementary docx (Comment Logs.docx, Emails and Remarks.docx) each embed 1-5 more
+# screenshots of the same legacy Remarks-History/Hold-action/Approval-Worklist shape with
+# different sample data (different remark categories, different action histories) — 4 of
+# these (Comment Logs image1/image2, Emails and Remarks image1, plus the primary FDD's own
+# two) were viewed and confirmed structurally identical (Action/Status/Email
+# Sent/Modified By/Modified On columns; Hold Reasons checklist; Send Email checkbox;
+# separate Application Remarks vs. Internal Remarks text areas) to each other and to
+# MOECS_CommentsScreenShot's own three; the remaining ~3 in Comment Logs.docx were not
+# individually viewed per CONVENTIONS.md's depth-calibration guidance, since the pattern
+# was already confirmed four times over. The primary FDD's own two images are extracted to
+# wireframes/wireframe-01-remarks-history-and-hold-action.png and
+# wireframes/wireframe-02-approval-worklist-popup.png; the MOECS/Comment-Logs/
+# Emails-and-Remarks source screenshots are reference material for those two, not
+# independently re-extracted.
+#
+# Genuine new findings from reading the .docx material (not visible from the .md alone),
+# both modeled as coverage-gap/discrepancy Annotations below rather than silently folded
+# into an existing story:
+# - "Interface Design document - Microsoft 365 (Outlook).docx" describes a SECOND, wholly
+#   distinct outbound (and inbound) email channel — Microsoft Graph API
+#   (POST https://graph.microsoft.com/v1.0/me/sendMail) sending from dedicated
+#   @michigan.gov Outlook mailboxes for genuinely two-way correspondence ("as opposed to
+#   alerts or notifications") — that has NO counterpart anywhere in
+#   communications-capability.ttl/communications-api.ttl/communications-sequences.ttl,
+#   which model exactly one outbound channel (ext:SendGridSystem, one-way notification
+#   send). This also appears to sit in tension with this FDD's own Business Specifications
+#   text ("the ability to view actual email messages within the application, using an
+#   embedded viewer, WITHOUT requiring a direct or two-way integration with a Microsoft
+#   Outlook client") — the Interface Design doc's own two-way Graph API sendMail
+#   integration reads as exactly the "direct... integration" the Business Specifications
+#   text says isn't required. See ext:Microsoft365GraphSystem and
+#   Question_OutlookTwoWayChannelUnmodeled below.
+# - The Business Specifications' full Alert-definition admin lifecycle (see above) has real
+#   domain-model backing for the event-triggered alert-instance path
+#   (comm:AlertAggregate/comm:Seq_DashboardAlertCreationAndDisplay/
+#   comm:Seq_UserResolvesDashboardAlert) but NO admin-facing create/search/modify/remove
+#   API for alert TEMPLATES/definitions with versioning and on-demand-vs.-scheduled
+#   generation — communications-api.ttl's only Alert operations are
+#   comm:Op_ListAlerts/Op_CreateAlert/Op_ResolveAlert, all instance-level, not
+#   definition-level. See Req_06_BizSpec_AlertAdmin below.
+#
+# Prefixes: comm: is this FDD's own domain. ext:/rpt:/adt: are referenced, not redeclared —
+# their sd:BoundedContext/sd:ExternalSystem triples live in communications-capability.ttl
+# (ext:SendGridSystem, ext:EEMSystem, ext:CEPISystem) or their own domain's file
+# (rpt:ReportingContext, adt:AuditContext); only ext:Microsoft365GraphSystem is newly minted
+# here, per CONVENTIONS.md's "mint it under ext: with a clear name" guidance for a shared
+# external system not previously in the registry (confirmed via grep — no prior
+# Microsoft/Outlook/Graph reference anywhere in abox/mied-v3).
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix adt:   <urn:solutiondesign:instance:audit:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+comm:Fdd06Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/6 - Alerts, Emails and Communication.docx" ;
+    sd:notes "Covers Features 6.1-6.5 (document subtitle: '6.0 Alerts, Emails, Communications (6.1 - 6.5)'). Authors Vidhya Punniyamoorthy/Beth Dontje/Caitlin Groom; approved by Dontje (MDE) and Groom (CEPI) 08/01/2025 per the signoff table — but comments.xml contains entries dated through 2026-03-06, well after that signoff date, so (as with the FDD 29 pass's own finding on the same pattern) the document continued to be actively revised after its nominal approval date." .
+
+comm:Fdd06CommentLogsDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/Comment Logs.docx" ;
+    sd:notes "Example remark-category/template table (Professional Practices, Application, Account, Employment) plus 5 legacy-MORE-system screenshots of the same Remarks-History/Hold-action shape as comm:Wireframe1/Wireframe2, with different sample data. Notably shows 'Account'-level remarks visible to 'MORE workers' (broader than a single application) and flags PPR-categorized remarks as restricted to PPR-access users only — corroborates comm:CommentAggregate's org-scoped visibility model and profpractices' own PPR access-control concept, referenced here in prose only (profp: prefix not imported, no direct triple needed)." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Fdd06EmailsRemarksDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/Emails and Remarks.docx" ;
+    sd:notes "Role-based narrative (MORE Product Owner/Superuser vs. Application Evaluator) confirming the template-library-vs.-per-send-customization split (Rule_SingleActiveTemplateVersion's library sits above per-send customization) and the Hold-action-triggers-template-selection-plus-required-internal-remark flow that Req_06_4_3/comm:Wireframe1 both corroborate." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Fdd06MoecsScreenshotDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/MOECS_CommentsScreenShot.docx" ;
+    sd:notes "Legacy MOECS (Michigan Online Educator Certification System) reference screenshots — comment 2098536325 on the primary FDD confirms these are what comm:Wireframe1/Wireframe2 were copied from ('Screenshot will be similar to this but for remarks'), i.e. this doc's images are the SOURCE, not an independent confirmation." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Fdd06InterfaceOutlookDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/Interface Design document - Microsoft 365 (Outlook).docx" ;
+    sd:notes "Describes a Microsoft Graph API (POST https://graph.microsoft.com/v1.0/me/sendMail) integration for two-way email from dedicated Outlook mailboxes — see Question_OutlookTwoWayChannelUnmodeled below." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Fdd06InterfaceSendGridDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/06 - Alerts, Emails, Communications/Interface Design document - SendGrid.docx" ;
+    sd:notes "Confirms ext:SendGridSystem's own integration details (Bearer token auth, RESTful/C# library, 10k calls/sec rate limit, JSON personalization/template payload shape) already modeled in communications-capability.ttl/communications-technical-design.ttl — no new facts beyond what's already captured there." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/06-alerts-emails-communications/wireframes/wireframe-01-remarks-history-and-hold-action.png" ;
+    sd:notes "Confirmed by viewing: 'Remarks History' table (Action/Status/Email Sent/Modified By/Modified On columns, hyperlinked Action values) above a 'Hold' action form — Action dropdown, 'Hold Reasons' checklist (predefined-comment-library style options), 'Send Email?' checkbox, separate 'Application Remarks' (external, sent to applicant) and 'Internal Remarks' text areas (5000-char max each), with a note warning applicants cannot reply to the system-sent email. Direct, field-for-field match to Req_06_4_1/6_4_2/6_4_3/6_4_4. Per comment 2098536325, this is a screenshot reused from the legacy MOECS reference doc, not a purpose-built new-system mockup — corroborates the SHAPE of the feature, not a confirmed new-UI design." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/06-alerts-emails-communications/wireframes/wireframe-02-approval-worklist-popup.png" ;
+    sd:notes "Confirmed by viewing: 'Approval Worklist' popup showing read-only Application Remarks (external, applicant-facing) and Internal Remarks for one specific remarks-history row — i.e. the detail view reached by clicking an Action hyperlink in Wireframe1's table. Same MOECS-reuse provenance note as Wireframe1." ;
+    sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# New stub this file must mint (not covered by communications-capability.ttl or any
+# other domain's own file) — see file header.
+#################################################################
+
+ext:Microsoft365GraphSystem a sd:ExternalSystem ;
+    sd:hasApi true ;
+    sd:integrationNotes "Microsoft Graph API (C# native library recommended over raw SMTP, since simple auth no longer works for SMTP), POST https://graph.microsoft.com/v1.0/me/sendMail, application-registration + RBAC authentication, two-way data direction. Per 'Interface Design document - Microsoft 365 (Outlook).docx': used for sending FROM dedicated @michigan.gov mailboxes for genuinely two-way correspondence, distinct in purpose from SendGrid's one-way alert/notification channel ('as opposed to alerts or notifications'). Data classification explicitly 'Internal (should not include PII since email is not a private communication method)' — a real, load-bearing constraint on what this channel may carry, distinct from anything asserted about ext:SendGridSystem." .
+
+#################################################################
+# Requirements — Feature 6.1: Email Notification implementation
+#################################################################
+
+comm:Req_06_1_1 a sd:UserStory ;
+    sd:requirementId "6.1.1" ;
+    sd:title "Send to To:/CC: recipients on system trigger or manual action" ;
+    sd:statement "As the MiEdWorkforce System, I must support sending emails to \"To:\" and \"CC:\" recipients based on system triggers or manual admin action so that the communication framework can support both automated and manual messaging needs." ;
+    sd:acceptanceCriteria "Configure \"To:\" recipients dynamically based on User Roles (e.g. Staffing Admin, Credentialing Admin) or specific contact types; support \"CC:\" recipients for automated notifications where secondary stakeholders require visibility; allow a System Admin to manually add a \"CC:\" recipient when resending a historical email; utilize existing database fields to populate recipient information." ;
+    sd:satisfiedBy comm:Seq_EventTriggeredEmailSend, comm:Seq_ManualEmailSendWithCustomization, comm:Op_ResendEmail, comm:TemplateRecipient, comm:EmailRecipient ;
+    sd:notes "Direct, strong match: automated-trigger path via Seq_EventTriggeredEmailSend, manual path via Seq_ManualEmailSendWithCustomization, and the manual-CC-on-resend detail specifically via Op_ResendEmail's own recipientEmail+ccEmails request shape (comm:EmailResend). Role-based To: targeting matches comm:TemplateRecipient's own description ('Role-based recipient targeting configuration for a template') closely." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_1_2 a sd:UserStory ;
+    sd:requirementId "6.1.2" ;
+    sd:title "Send both internally (@michigan.gov) and externally" ;
+    sd:statement "As the MiEdWorkforce System, I must support sending emails both internally (@michigan.gov) and externally, so that communication can be done effectively with all MiEdWorkforce users." ;
+    sd:acceptanceCriteria "Successfully transmit to internal (@michigan.gov) and external (non-state domain) recipients; allow System Admins to authorize emails to both audiences without differentiation in the sending process; record both kinds of transmission in historical communication logs." ;
+    sd:satisfiedBy comm:EmailRecipient, comm:Seq_EventTriggeredEmailSend, comm:Seq_ManualEmailSendWithCustomization, comm:EmailInstanceAggregate ;
+    sd:notes "comm:EmailRecipient's recipient_type (User|External) is a plausible but not exact match: it distinguishes an internal system-user reference from an external contact, not specifically an @michigan.gov vs. non-state EMAIL DOMAIN — the story's 'no differentiation in the sending process' criterion is satisfied either way (the send path genuinely doesn't branch on domain), but the domain-based classification itself isn't a separately modeled field. Minor terminology-level gap, not raised as its own Annotation." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_1_3 a sd:UserStory ;
+    sd:requirementId "6.1.3" ;
+    sd:title "Interface with SendGrid API" ;
+    sd:statement "As the MiEdWorkforce System, I must interface with the SendGrid API, so that the email notification service can be reliably executed." ;
+    sd:acceptanceCriteria "Integrate directly with the SendGrid API for dispatch of all system-generated emails; authenticate successfully with SendGrid; create batches for transmission if the number of emails exceeds SendGrid-defined thresholds." ;
+    sd:satisfiedBy ext:SendGridSystem, comm:TP_SendGridCircuitBreaker, comm:TP_SendGridWebhookProcessing ;
+    sd:notes "Strong match, including the batching-on-threshold criterion specifically: communications-technical-design.ttl's comm:TP_SendGridWebhookProcessing documents the confirmed 10,000 req/sec SendGrid account tier and an in-memory queue processing at 9,500 req/sec (5% safety margin) with Service Bus backpressure — this IS the threshold-driven batching this story describes, not merely a related detail. Interface Design document - SendGrid.docx corroborates the same rate limit and Bearer-token auth independently." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_1_4 a sd:UserStory ;
+    sd:requirementId "6.1.4" ;
+    sd:title "Send large-volume/mass emails by criteria, restricted to State Admins" ;
+    sd:statement "As the MiEdWorkforce System, I must support sending a large volume of emails, so that communication can be sent to a wide group of users based on defined criteria." ;
+    sd:acceptanceCriteria "Allow the System Admin to select recipient groups for mass emails based on specific criteria or user types (e.g. data from the EEM); support processing/sending \"large volume\" blasts per defined performance standards; restrict mass/bulk-email initiation to State System Administrators, excluding District-level staff; provide a confirmation mechanism before sending; successfully send to group examples such as \"all lead admins that have alternative ed programs.\"" ;
+    sd:notes "No satisfiedBy: no operation or sequence anywhere in communications-api.ttl/communications-sequences.ttl lets an admin select an EEM-sourced recipient GROUP BY CRITERIA and send one message to it. The two closest existing mechanisms are both a different shape: comm:Op_SendManualEmail sends to one explicit recipient (or comm:Op_CreateAlert's targetUserIds, an explicit ID list, not a criteria filter), and comm:Seq_MassEmailWithConsolidation batches many already-individual PER-RECIPIENT events into one email per recipient (consolidation), not one email fanned out to a criteria-selected group. comm:Perm_EmailSendAdhoc ('System Admin only... bypasses the template framework') is the closest PERMISSION match for the State-Admin-only restriction, but nothing gates a criteria-based-mass-send operation specifically since no such operation exists. Comment 921997058 ('This needs to be defined') sits directly on this FDD's own '\"Large volume\" will be defined' placeholder text, confirming even the FDD's own authors left the volume threshold undefined at review time. Genuine coverage gap — see the Annotation below." ;
+    sd:definedIn comm:Fdd06Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No modeled operation or sequence lets an admin select a criteria-filtered recipient group (e.g. 'all lead admins with alternative ed programs', sourced from EEM) and send a single mass-email blast to it, restricted to State/System Administrators. comm:Seq_MassEmailWithConsolidation is architecturally different (many individual triggering events consolidated per-recipient, not an admin-initiated group broadcast), and comm:Op_SendManualEmail/comm:Op_CreateAlert both target explicit individuals/ID-lists, not a criteria filter. The FDD's own review comments show even the 'large volume' threshold itself was still undefined ('This needs to be defined') as of the latest comment (2025-12-23)." ;
+    oa:hasTarget comm:Req_06_1_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# Requirements — Feature 6.2: Email Notification - Coded Inserts (variables)
+#################################################################
+
+comm:Req_06_2_1 a sd:UserStory ;
+    sd:requirementId "6.2.1" ;
+    sd:title "Insert coded data-field variables into templates" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to insert coded data fields (e.g. <<applicationNumber>>, <<denialReason>>) into email templates so that the generated emails contain specific, relevant details for the recipient." ;
+    sd:acceptanceCriteria "Dynamically filter the available Coded Inserts list by the Email Template Group/Type; support tags including but not limited to <<applicationNumber>>, <<denialReason>>, <<holdReason>>, <<fee>>, <<paymentLink>>, <<firstName>>, <<lastName>>, <<accountLogin>>; parse tags at generation time and replace with actual record data; let the admin define the merge order of name fields; allow saving template-structure changes." ;
+    sd:satisfiedBy comm:Op_GetAvailableVariables, comm:TemplateVariable, comm:TP_VariableResolution, comm:Rule_EventPayloadStructureAndVariableResolution, comm:Op_CreateTemplateVersion ;
+    sd:notes "Strong match for insertion/parsing/replacement/save (Op_GetAvailableVariables' per-event-type variable-family list is exactly the dynamically-filtered-by-Group/Type mechanism this story describes; TP_VariableResolution's resolver-registry design is the parse-and-replace mechanism). The 'admin defines merge order' criterion is NOT separately modeled — see the coverage-gap Annotation shared with Req_06_2_2 below, which describes the identical gap more specifically." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_2_2 a sd:UserStory ;
+    sd:requirementId "6.2.2" ;
+    sd:title "Define database-field merge order for template variables" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to define the order of database fields merged into email templates so that recipient names and details are formatted correctly." ;
+    sd:acceptanceCriteria "Utilize existing database records to populate recipient information; let the Admin define merge order for name fields (Prefix, First Name, Last Name, Suffix); ensure merged data corresponds accurately to the specific recipient entity (e.g. District Code, District Name); support merging data across functional areas (Staffing, Credentialing) where required." ;
+    sd:satisfiedBy comm:TP_VariableResolution ;
+    sd:notes "Cross-functional-area merging is well matched (TP_VariableResolution's resolver-registry pattern is explicitly per-event-type, and event types span every functional area). The field-ORDER configuration itself (an admin-settable sequence, not just which fields exist) has no modeled counterpart — comm:TemplateVariable 'only captures a placeholder's name/mandatory flag' per communications-api.ttl's own file-header note, not an order. See the shared coverage-gap Annotation below." ;
+    sd:definedIn comm:Fdd06Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Business Specifications and both 6.2.1/6.2.2 explicitly call out admin-configurable MERGE ORDER for name/entity fields (Prefix, First Name, Last Name, Suffix; District Code, District Name) as its own capability, distinct from which variables exist. Nothing in communications-capability.ttl/communications-api.ttl models a field-order concept — comm:TemplateVariable captures name+mandatory-flag only, and comm:Op_GetAvailableVariables' EventTypeVariables response has no ordering field either. A real, if narrow, gap called out twice in the same FDD." ;
+    oa:hasTarget comm:Req_06_2_1, comm:Req_06_2_2 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_2_3 a sd:UserStory ;
+    sd:requirementId "6.2.3" ;
+    sd:title "Merge action-item details into templates" ;
+    sd:statement "As the MiEdWorkforce System, I need to include details of action items when merging database fields into an email template." ;
+    sd:acceptanceCriteria "Identify specific action items associated with the user's current status/application; merge action-item details (e.g. missing documents, required verifications) directly into the email template; ensure the action-item details included match what's displayed to the user in the system interface." ;
+    sd:satisfiedBy comm:TP_VariableResolution, comm:Rule_TemplateVariableMandatoryResolution ;
+    sd:notes "Plausible but not confirmed exact match: TP_VariableResolution's worked example variable families (Applicant, Certificate, Application, Approver) don't explicitly name an 'action item' family the way this story implies; the consistency criterion ('matches what's displayed to the user') is architecturally supported by Rule_EventPayloadStructureAndVariableResolution's single-resolver-per-event-type design (one source of truth for formatting) but not independently confirmed against any specific action-item data source. Not raised as its own Annotation — a plausible extension of the existing resolver pattern, not a demonstrated absence." ;
+    sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# Requirements — Feature 6.3: Edit Email Templates
+#################################################################
+
+comm:Req_06_3_1 a sd:UserStory ;
+    sd:requirementId "6.3.1" ;
+    sd:title "Search and modify templates within functional area" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to search for and modify email templates within my functional area so that I can maintain the standard communication content used by the system." ;
+    sd:acceptanceCriteria "Provide a search interface to filter templates by Template Name, Group, or Status; allow editing Template Title, Description, Version, Effective Date, Urgency, and Frequency; restrict modification/deletion to System Administrators assigned to the specific Functional Area (e.g. a Staffing Admin cannot edit Credentialing templates)." ;
+    sd:satisfiedBy comm:Op_ListTemplates, comm:Op_UpdateTemplate, comm:Op_DeleteTemplate, comm:EmailTemplateAggregate ;
+    sd:notes "Functional-area isolation is a strong, direct match (comm:EmailTemplateAggregate's own invariants plus the functional-area-scoped Permission alternatives on every Template operation in communications-api.ttl). The specific Title/Group/Status search-FILTER parameters aren't independently asserted on comm:Op_ListTemplates (sd:parameters is unset there) — a minor documentation gap, not raised separately. 'Urgency'/'Frequency' as editable template fields also have no direct counterpart on comm:TemplateVersion/comm:EmailTemplateAggregate beyond the general template-metadata shape — folded into this same minor-gap note rather than a separate Annotation." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_3_2 a sd:UserStory ;
+    sd:requirementId "6.3.2" ;
+    sd:title "Rich text/HTML editor with image insertion and ADA font restriction" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want a rich text editor for the email body that supports standard formatting and images while enforcing ADA-compliant font standards so that I can create professional, accessible communications." ;
+    sd:acceptanceCriteria "Provide a rich text editor for the Message Body supporting Bold, Italics, Lists, Cut, Copy, Paste; support HTML input for advanced formatting; allow insertion of Images (e.g. MDE/CEPI letterheads); restrict font selection to a pre-defined set of ADA-compliant system fonts." ;
+    sd:satisfiedBy comm:TP_TemplateStorageAndEditing ;
+    sd:notes "ARCHITECTURE CONTRADICTION, not a simple partial match: communications-technical-design.ttl's comm:TP_TemplateStorageAndEditing explicitly documents that template content authoring uses MARKDOWN with a narrow server-controlled extension allowlist (:::alert{}, :::button{}) and explicitly states raw HTML input and a WYSIWYG editor were BOTH considered and REJECTED ('for XSS complexity and noisy version diffs'), with 'raw HTML blocks, custom CSS/JS... all disallowed.' This story's own acceptance criteria ask for exactly what was rejected: an HTML-capable rich text editor, image insertion (for letterheads), and font-selection UI — none of which the Markdown-plus-allowlist design supports. See Question_TemplateEditorArchitectureContradiction below; this is a live, unresolved discrepancy between this FDD and the technical design, not folded silently into either." ;
+    sd:definedIn comm:Fdd06Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "6.3.2 asks for an HTML-capable rich text editor with image insertion (MDE/CEPI letterhead support) and font-selection UI. communications-technical-design.ttl's comm:TP_TemplateStorageAndEditing instead documents a Markdown-with-limited-extension-allowlist authoring format that explicitly rejects raw HTML, a WYSIWYG editor, custom CSS, and (by omission) any image-insertion or font-selection mechanism — the design's own stated rationale (XSS elimination, clean version diffs) is a deliberate, reasoned choice, not an oversight, which makes this a genuine architecture-vs-FDD contradiction rather than a simple gap. Unresolved which source should govern: the FDD's own letterhead/rich-text requirement, or the technical design's security-motivated Markdown-only decision." ;
+    oa:hasTarget comm:Req_06_3_2, comm:TP_TemplateStorageAndEditing ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_3_3 a sd:UserStory ;
+    sd:requirementId "6.3.3" ;
+    sd:title "Validate templates for duplication on save" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want the system to validate email templates for duplication upon saving so that redundant templates are not created." ;
+    sd:acceptanceCriteria "On saving a new or modified template, check for existing templates with the same Title or Subject within the same Group; if a duplicate is detected, prevent the save and display an error message." ;
+    sd:satisfiedBy comm:Op_CreateTemplate, comm:Op_CreateTemplateVersion, comm:EmailTemplateAggregate ;
+    sd:notes "Business-Specifications-level duplicate-validation intent is present ('Validating for duplicate email templates'), but the PRECISE definition of 'duplicate' this story specifies (same Title OR Subject within the same Group) is exactly what communications-capability.ttl's own comm:Question_TemplateDuplicateDefinition (Open Question #5, already on record) flags as unresolved — reused here rather than re-raised as a new Annotation, since this story doesn't resolve that open question, it just restates one candidate definition among the ones still under discussion." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_3_4 a sd:UserStory ;
+    sd:requirementId "6.3.4" ;
+    sd:title "View template audit details" ;
+    sd:statement "As a MiEdWorkforce System Admin, I want to view audit details for email templates so that I can trace who modified a template and when it was active." ;
+    sd:acceptanceCriteria "Capture and display Modified Date and Modified By for each template version; store Version Begin Date and Version End Date for each version; make these details viewable in a Template History/Audit log." ;
+    sd:satisfiedBy comm:TemplateVersion, comm:EmailTemplateCreatedEvent, comm:EmailTemplateActivatedEvent, comm:EmailTemplateVersionCreatedEvent ;
+    sd:notes "Strong match: the exact field set requested (Modified Date/By, Version Begin/End) is the field set communications-capability.ttl's own Business Rules/Aggregate design already documents for this purpose, and adt:AuditContext subscribes to both EmailTemplateCreatedEvent and EmailTemplateActivatedEvent (not EmailTemplateVersionCreatedEvent, which communications-capability.ttl's own file header already notes has no documented consumers anywhere — a pre-existing, not newly found, gap)." ;
+    sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# Requirements — Feature 6.4: Email external comments for credential and staffing
+# processing to the applicant or data submitter
+#################################################################
+
+comm:Req_06_4_1 a sd:UserStory ;
+    sd:requirementId "6.4.1" ;
+    sd:title "Enter comments within workflows" ;
+    sd:statement "As a MiEdWorkforce Admin/Business User, I want to enter comments within various workflows (e.g. Rapbacks) so that I can flag items or provide specific context for the record." ;
+    sd:acceptanceCriteria "Provide text-entry capability for comments within defined user workflows; allow saving narrative text to flag items requiring attention; associate the entered comment with the specific record/transaction being processed." ;
+    sd:satisfiedBy comm:Op_CreateComment, comm:CommentAggregate ;
+    sd:notes "Good general match. The story's own example, 'Rapbacks', is FDD 30 (Data Collection & Compliance area) — not yet converted anywhere in mied-v3 (see STATUS.md's 'not yet done' list) — so comm:CommentAggregate's invariant enumerating valid process-item types (CredentialApplication, StaffingRecord, EPPEnrollment) doesn't yet include a Rapback-shaped process item; not itself a Communications-side gap (the generic Comment mechanism is domain-item-agnostic), just downstream of Rapbacks itself not existing yet. Not raised as a separate Annotation here since it's really an FDD-30-side gap, not a Communications one." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_4_2 a sd:UserStory ;
+    sd:requirementId "6.4.2" ;
+    sd:title "Mark comments as Internal" ;
+    sd:statement "As a MiEdWorkforce Admin/Business User, I want to mark comments as \"Internal\" so that the remarks are visible only to authenticated internal users and hidden from the applicant." ;
+    sd:acceptanceCriteria "Provide an input field specifically labeled for \"Internal Remarks\"; restrict display of \"Internal\" comments to authorized internal users only." ;
+    sd:satisfiedBy comm:Op_CreateComment, comm:Perm_CommentsCreateInternal, comm:Perm_CommentsViewInternal, comm:CommentAggregate ;
+    sd:notes "Direct match, corroborated by comm:Wireframe1/Wireframe2's own explicit, separately-labeled 'Internal Remarks' field." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_4_3 a sd:UserStory ;
+    sd:requirementId "6.4.3" ;
+    sd:title "Enter external remarks and email them to the applicant" ;
+    sd:statement "As a MiEdWorkforce Admin/Business User, I want to enter remarks and email, so that I can provide specific instructions or feedback to the applicant." ;
+    sd:acceptanceCriteria "Allow the user to enter \"External Remarks\" (comments intended for the applicant); provide an option (e.g. \"Send Email\" button/checkbox) to include these remarks in a notification to the user; allow sending external remarks independent of a status change if configured for that workflow." ;
+    sd:satisfiedBy comm:Op_CreateComment, comm:Perm_CommentsCreateExternal, comm:Rule_ExternalCommentInclusionRequiresSelection, comm:Op_SendManualEmail ;
+    sd:notes "Excellent match — this story is essentially a restatement of comm:Rule_ExternalCommentInclusionRequiresSelection's own worked example almost verbatim (explicit selection required, never automatic inclusion). Directly corroborated by comm:Wireframe1's 'Send Email?' checkbox next to the Application Remarks (external) field, and by Emails and Remarks.docx's own narrative of the Hold-action flow (template selected for application remarks, optionally also sent as an email, with a separate mandatory internal remark on the same screen)." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_4_4 a sd:UserStory ;
+    sd:requirementId "6.4.4" ;
+    sd:title "View remarks/action history" ;
+    sd:statement "As a MiEdWorkforce Admin, I want to view a history of remarks and actions on a record so that I can track who modified the record and if an email was sent to the user." ;
+    sd:acceptanceCriteria "Display a \"Remarks History\"/\"Action History\" table with columns: Action, Status, Email Sent (Yes/No), Modified By, Modified On; preserve the text of remarks entered at the time of the action in the history log." ;
+    sd:satisfiedBy comm:Op_ListComments, comm:CommentEmailHistory ;
+    sd:notes "Exact wireframe match: comm:Wireframe1 (and its MOECS/Comment-Logs/Emails-and-Remarks source screenshots, 4 of which were independently viewed) all show precisely this Action/Status/Email Sent/Modified By/Modified On column set. comm:CommentEmailHistory's own description ('tracking of which sent emails included a given comment') is the exact backing entity for the 'Email Sent (Yes/No)' column specifically." ;
+    sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# Requirements — Feature 6.5: Reports
+#################################################################
+
+comm:Req_06_5_1 a sd:UserStory ;
+    sd:requirementId "6.5.1" ;
+    sd:title "Integrate historical communication data with the reporting platform" ;
+    sd:statement "As the MiEdWorkforce System, I want historical communication data to be integrated with the reporting platform, so that communication trends and volumes can be analyzed." ;
+    sd:acceptanceCriteria "Integrate historical communication data directly with the reporting platform; make historical communication logs available for trend analysis; ensure integrated data includes key details such as date and type of communication." ;
+    sd:satisfiedBy comm:EmailInstanceAggregate, comm:Perm_ReportsView ;
+    sd:notes "Partial satisfaction — see the coverage-gap Annotation shared with 6.5.2/6.5.3 below: communications-capability.ttl asserts rpt:ReportingContext sd:subscribesTo only ONE event (comm:EmailTemplateCreatedEvent), not any of the actual send/delivery events (EmailSent, EmailDelivered, EmailBounced, etc.) that would carry 'communication trends and volumes' data. The domain-model data this story needs to see in Reporting (comm:EmailInstanceAggregate's own history) exists; the asserted event-subscription pipeline into Reporting does not cover it." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_5_2 a sd:UserStory ;
+    sd:requirementId "6.5.2" ;
+    sd:title "Reporting platform shows email-sent counts and reminder recipients" ;
+    sd:statement "As a System Admin, I want the reporting platform to display data on how many emails were sent and who received reminders, so that I can satisfy audit and business review requirements." ;
+    sd:acceptanceCriteria "Display the aggregate number of emails sent; identify the specific users who received reminder notifications; present this data to satisfy audit/business review requirements; allow the Admin to view details on 'who needed reminders' as part of the report data." ;
+    sd:satisfiedBy comm:EmailInstanceAggregate, comm:Perm_ReportsView ;
+    sd:notes "Comment 814829069 on the primary FDD ('This view would display the appropriate information necessary to observe how many emails were sent and who received reminders') is a near-verbatim restatement of this story's own acceptance criteria, confirming reviewer intent lines up with the written text — not a new finding, just corroboration. Same underlying gap as 6.5.1/6.5.3: the reporting-platform-facing data pipeline (event subscriptions into rpt:ReportingContext) doesn't yet carry EmailSent-level data, only template-creation events. comm:Perm_ReportsView's own description ('Send counts, frequency, trigger analysis') is aspirationally the right permission but has no backing operation/sequence exposing that aggregation." ;
+    sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_5_3 a sd:UserStory ;
+    sd:requirementId "6.5.3" ;
+    sd:title "Integrate historical alerts and notifications with the reporting framework" ;
+    sd:statement "As the MiEdWorkforce System, I need to integrate historical alerts and notifications with the reporting framework, so that I can support comprehensive business analysis." ;
+    sd:acceptanceCriteria "Integrate historical alerts and notifications, in addition to emails, with the reporting framework; ensure the integration supports audit and business needs; include relevant audit details (Modified By, Modified On) within the integrated data." ;
+    sd:satisfiedBy comm:AlertAggregate ;
+    sd:notes "Weakest of the three Reports stories: communications-capability.ttl asserts NO rpt:ReportingContext subscription to ANY Alert-related event (comm:DashboardAlertCreatedEvent/comm:DashboardAlertResolvedEvent are both subscribed only by adt:AuditContext) — Alerts have literally zero modeled path into Reporting, compared to Emails' one narrow (template-creation-only) path. See the shared coverage-gap Annotation below." ;
+    sd:definedIn comm:Fdd06Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "All three Feature 6.5 stories describe a working communications-to-reporting data pipeline (send counts, reminder recipients, alert/notification history, audit trend analysis), but communications-capability.ttl's own asserted sd:subscribesTo edges into rpt:ReportingContext cover only comm:EmailTemplateCreatedEvent — none of the actual send/delivery lifecycle events (EmailSent, EmailDelivered, EmailBounced, EmailDeferred, EmailDropped, EmailResent) and none of the Alert lifecycle events (DashboardAlertCreated, DashboardAlertResolved) are subscribed by Reporting at all (only Audit subscribes to most of those). The underlying data (comm:EmailInstanceAggregate, comm:AlertAggregate) exists and is well-modeled; what's missing is the asserted integration path that would actually get it into the reporting platform this feature describes. High impact since all three of 6.5.1/6.5.2/6.5.3 depend on it." ;
+    oa:hasTarget comm:Req_06_5_1, comm:Req_06_5_2, comm:Req_06_5_3 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn comm:Fdd06Doc .
+
+#################################################################
+# Synthetic Requirements — substantial Business Specifications content never promoted to
+# Addendum numbering (see file header) and/or drawn from a supplementary Interface Design
+# doc rather than a numbered story. Same modeling pattern as FDD 29's cred:Req_29_BizSpec_*.
+#################################################################
+
+comm:Req_06_BizSpec_AlertAdmin a sd:Requirement ;
+    sd:requirementId "6.BizSpec.Alerts" ;
+    sd:title "Full alert-definition admin lifecycle (create/search/modify/remove, versioning, on-demand vs. scheduled)" ;
+    sd:statement "(No user-story stem given — this is Business Specifications prose, never promoted to its own Addendum feature number, unlike every other capability area in this FDD.) MiEdWorkforce System Administrators, by functional area, will be able to create, modify, and remove defined alerts with versioning control. Alerts may be informational or configured as Action Items requiring user resolution. Create new alert templates (Group: Staffing/Credentialing/EPP/Professional Learning; Alert Title; Alert Message; Alert Description; Coded Inserts; Start/End Dates; on-demand or scheduled). Search for existing alerts. Modify existing alerts (on-demand or scheduled). Remove existing alerts (on-demand or scheduled)." ;
+    sd:acceptanceCriteria "Per HLS rows 8-11 (Ref 3): System Admin can search for existing defined alerts by functional area; create defined alerts with versioning control by functional area; modify defined alerts with versioning control; remove defined alerts with versioning control — each independently available on-demand or scheduled." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:Op_CreateAlert, comm:Op_ListAlerts ;
+    sd:notes "Partial satisfaction only, and this is the real point of modeling this synthetic requirement: the EVENT-TRIGGERED alert-instance path (an alert created automatically and shown to a targeted user, then resolved) is well modeled (comm:Seq_DashboardAlertCreationAndDisplay, comm:Seq_UserResolvesDashboardAlert), but the ADMIN-FACING alert-DEFINITION lifecycle this requirement actually describes — search existing alert definitions, modify a definition, remove a definition, versioning control over definitions, on-demand-vs-scheduled GENERATION of alerts (as opposed to instance targeting) — has no API counterpart: communications-api.ttl's only Alert operations are comm:Op_ListAlerts (lists a CALLING USER's own alert INSTANCES, not searchable alert DEFINITIONS), comm:Op_CreateAlert (creates one instance targeted at explicit user IDs, no versioning, no Group/Title/Description/Coded-Inserts authoring fields), and comm:Op_ResolveAlert. No Op_UpdateAlert, Op_DeleteAlert, Op_SearchAlertDefinitions, or Op_ListAlertDefinitions exists anywhere. See the coverage-gap Annotation below." ;
+    sd:definedIn comm:Fdd06Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "The Business Specifications section devotes substantial text to a full CRUD-with-versioning admin lifecycle for ALERT DEFINITIONS (create/search/modify/remove, Group/Title/Message/Description/Coded-Inserts/Start-End-Date fields, on-demand vs. scheduled generation) — paraphrased again in HLS rows 8-11 — but this was never given its own Addendum feature number (unlike Templates, which got the equivalent treatment as Feature 6.3), and communications-api.ttl's Alert operations only cover instance-level create/list/resolve, not definition-level search/update/delete/versioning. This is a comparable gap in shape to the admin-facing Alert Template management side of comm:AlertAggregate that Templates (comm:EmailTemplateAggregate) already has full API coverage for." ;
+    oa:hasTarget comm:Req_06_BizSpec_AlertAdmin ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn comm:Fdd06Doc .
+
+comm:Req_06_Interface_Outlook a sd:Requirement ;
+    sd:requirementId "6.Interface.Outlook" ;
+    sd:title "Two-way email via Microsoft 365 / Outlook Graph API" ;
+    sd:statement "(Drawn from 'Interface Design document - Microsoft 365 (Outlook).docx', a supplementary interface-design document in this FDD's own folder, not a numbered Addendum story.) MiEdWorkforce can send emails from dedicated email addresses intended for two-way communication, as opposed to alerts or notifications — using the Microsoft Graph API (POST https://graph.microsoft.com/v1.0/me/sendMail) rather than direct SMTP." ;
+    sd:acceptanceCriteria "Per the Interface Design document: application-registration-plus-RBAC authentication to Microsoft Graph; HTTPS POST to the Graph sendMail endpoint; supports To/CC/BCC recipients, attachments, and a message body; PROD and UAT (Testing) environments; internal data classification (no PII, since email is not considered a private communication channel)." ;
+    sd:notes "No satisfiedBy: this is a wholly separate integration from ext:SendGridSystem (the only outbound email channel modeled anywhere in communications-capability.ttl/communications-api.ttl), used for genuinely two-way correspondence from dedicated mailboxes rather than one-way system-generated notifications. Nothing in comm:'s domain model, API, or sequences references Microsoft 365/Graph/Outlook at all. See Question_OutlookTwoWayChannelUnmodeled below for the additional contradiction this raises against the primary FDD's own Business Specifications text." ;
+    sd:definedIn comm:Fdd06InterfaceOutlookDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "A second, wholly distinct outbound (and inbound) email channel — Microsoft Graph API sendMail from dedicated Outlook mailboxes, for two-way correspondence — is described in this FDD folder's own 'Interface Design document - Microsoft 365 (Outlook).docx' but has no counterpart anywhere in communications-capability.ttl/communications-api.ttl/communications-sequences.ttl (ext:Microsoft365GraphSystem is minted fresh in this ingestion pass, with no existing model to link it into). This also sits in apparent tension with the primary FDD's own Business Specifications text: 'The system will provide the ability to view actual email messages within the application, using an embedded viewer, WITHOUT requiring a direct or two-way integration with a Microsoft Outlook client' — language that reads as explicitly declining exactly the two-way Graph integration the Interface Design document then goes on to specify in full technical detail (auth flow, endpoint, sample code). Not resolved here which document should govern; flagged as a genuine, unaddressed contradiction between two source documents in the same FDD folder, worth surfacing prominently since it also represents unmodeled infrastructure (impact H)." ;
+    oa:hasTarget comm:Req_06_Interface_Outlook, comm:CommunicationsContext ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn comm:Fdd06InterfaceOutlookDoc .

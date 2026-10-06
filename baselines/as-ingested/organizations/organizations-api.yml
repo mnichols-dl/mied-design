@@ -1,0 +1,626 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Organizations API
+  version: 1.0.0
+  description: |
+    Read-only platform capability providing organization data sourced from EEM via
+    the CEPI CEDS JSON-LD API. Serves org search, detail, hierarchy resolution,
+    Lead Admin lookup, and org type catalog to all consuming domains.
+
+    This API is internal-only. It is NOT exposed through APIM.
+    All service-to-service calls are protected by Istio mTLS.
+
+    Consumers are expected to cache responses per the canonical caching strategy
+    documented in the Organizations Capability doc. Cache TTL defaults to 60 minutes
+    for org detail and hierarchy; 15 minutes for search results.
+
+servers:
+  - url: http://organizations-api.platform.svc.cluster.local/api/v1
+    description: Internal AKS cluster (platform namespace)
+
+paths:
+
+  # ============================================================================
+  # ORGANIZATIONS
+  # ============================================================================
+
+  /organizations/search:
+    get:
+      summary: Typeahead search for organizations
+      operationId: searchOrganizations
+      tags: [Organizations]
+      description: |
+        Returns organizations matching a partial name query. Minimum 2-character query
+        required. Returns Active organizations only by default.
+
+        Results are limited to 20 per call. This is a typeahead endpoint; callers
+        should refine queries rather than paginate.
+
+        Requires: `organizations.organization.search` permission.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Partial name match (minimum 2 characters)
+          schema:
+            type: string
+            minLength: 2
+        - name: type
+          in: query
+          description: Filter to a specific organization type
+          schema:
+            $ref: '#/components/schemas/OrganizationType'
+        - name: status
+          in: query
+          description: Filter by status. Defaults to Active.
+          schema:
+            $ref: '#/components/schemas/OrganizationStatus'
+            default: Active
+        - name: limit
+          in: query
+          description: Maximum results to return (default 10, max 20)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        '200':
+          description: Matching organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationSummary'
+                  query:
+                    type: string
+                    description: Echo of the submitted query for client-side validation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /organizations/{organizationCode}:
+    get:
+      summary: Get organization details
+      operationId: getOrganization
+      tags: [Organizations]
+      description: |
+        Returns full organization detail including grade band, Lead Administrator
+        (name and masked email), type, status, and direct parent.
+
+        Inactive organizations are returned with status=Inactive. Callers are
+        responsible for deciding how to handle inactive orgs in their context.
+
+        Requires: `organizations.organization.view` permission.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationCode'
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /organizations/{organizationCode}/hierarchy:
+    get:
+      summary: Get materialized ancestor chain (internal — IAM only)
+      operationId: getOrganizationHierarchy
+      tags: [Organizations]
+      description: |
+        Returns the ordered ancestor chain for an organization, from root to
+        direct parent (e.g., [ISD-50, District-10] for Building-123 under District-10
+        under ISD-50).
+
+        Used exclusively by IAM for transitive permission evaluation. Restricted
+        at the Istio layer to IAM's service account principal.
+
+        Requires: `organizations.hierarchy.view` permission.
+        Internal service endpoint — not for user-facing calls.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationCode'
+      responses:
+        '200':
+          description: Ancestor chain for the organization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizationCode:
+                    type: string
+                  ancestors:
+                    type: array
+                    description: |
+                      Ordered from root to direct parent.
+                      Empty array if this organization has no parents (e.g., a root ISD).
+                    items:
+                      $ref: '#/components/schemas/OrganizationSummary'
+                  depth:
+                    type: integer
+                    description: Distance from root (ISD=0, District=1, Building=1 or 2)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /organizations/by-lead-admin:
+    get:
+      summary: Get organizations by Lead Administrator email (internal — IAM only)
+      operationId: getOrganizationsByLeadAdmin
+      tags: [Organizations]
+      description: |
+        Returns all Active organizations where the provided email address is
+        designated as Lead Administrator in EEM.
+
+        Used by IAM for authorization approval routing and Lead Admin bootstrap.
+        Returns full Lead Administrator detail (unmasked email) since this
+        endpoint is restricted to IAM's service account only.
+
+        Restricted at the Istio layer to IAM's service account principal.
+
+        Requires: `organizations.lead-admin.view` permission.
+        Internal service endpoint — not for user-facing calls.
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: Email address to look up as Lead Administrator
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: |
+            Organizations where the provided email is Lead Administrator.
+            Returns an empty array (not 404) if no organizations match.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    format: email
+                    description: Echo of the queried email
+                  organizations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationWithLeadAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ============================================================================
+  # ORGANIZATION TYPES
+  # ============================================================================
+
+  /organization-types:
+    get:
+      summary: List active organization types
+      operationId: listOrganizationTypes
+      tags: [OrganizationTypes]
+      description: |
+        Returns all active organization type codes and display names.
+        Used to populate type filter dropdowns across the application.
+
+        Results are stable between sync cycles; callers may cache with a 24-hour TTL.
+
+        Requires: `organizations.org-types.view` permission.
+      parameters:
+        - name: participatesInHierarchy
+          in: query
+          description: |
+            If true, return only types that participate in the ISD > District > Building
+            hierarchy (Building, District, ISD). If false, return only standalone types
+            (EPP, Nonpublic, PLS). Omit to return all types.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Active organization types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizationTypes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrganizationTypeSummary'
+
+  # ============================================================================
+  # ADMIN JOB TRIGGERS
+  # ============================================================================
+
+  /admin/jobs/sync:
+    post:
+      summary: Trigger manual organization sync run (System Admin / Synapse)
+      operationId: triggerOrgSync
+      tags: [AdminJobs]
+      description: |
+        Initiates an out-of-schedule sync from the CEPI API. Intended for
+        emergency use (post-failure recovery, initial seeding) only.
+        Normal sync is pipeline-driven on a nightly schedule.
+
+        Also called by the Synapse pipeline itself on scheduled runs to
+        initiate the sync process within the API layer.
+
+        Requires: `organizations.sync.trigger` permission (System Admin only).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Optional reason for manual trigger (audit log)
+      responses:
+        '202':
+          description: Sync initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncJobResult'
+        '409':
+          description: Sync already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/jobs/sync/complete:
+    post:
+      summary: Mark sync complete and publish change events (Synapse only)
+      operationId: completeSyncJob
+      tags: [AdminJobs]
+      description: |
+        Called by the Synapse pipeline after all database writes are committed.
+        The API layer uses this notification to identify high-impact changes
+        (deactivations, Lead Admin changes) and publish the appropriate events
+        to Service Bus.
+
+        This keeps event publishing responsibility in the API layer rather
+        than in the Synapse pipeline, consistent with the system-wide principle
+        that domain logic lives in APIs.
+
+        Restricted at the Istio layer to the Synapse managed identity only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [syncLogId, status]
+              properties:
+                syncLogId:
+                  type: string
+                  format: uuid
+                  description: Sync log record ID created at start of pipeline run
+                status:
+                  type: string
+                  enum: [Succeeded, PartialSuccess, Failed]
+                recordsCreated:
+                  type: integer
+                recordsUpdated:
+                  type: integer
+                recordsDeactivated:
+                  type: integer
+                failureReason:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Completion acknowledged; events published
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /admin/sync-log:
+    get:
+      summary: View sync execution history (System Admin / Platform Ops)
+      operationId: getSyncLog
+      tags: [AdminJobs]
+      description: |
+        Returns sync execution history ordered most recent first.
+        Used by platform operations to diagnose sync failures and verify freshness.
+
+        Requires: `organizations.sync-log.view` permission.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Running, Succeeded, Failed, PartialSuccess]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Sync log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SyncLogEntry'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    OrganizationCode:
+      name: organizationCode
+      in: path
+      required: true
+      description: EEM-assigned stable organization identifier
+      schema:
+        type: string
+
+  schemas:
+
+    # --------------------------------------------------------------------------
+    # Enums
+    # --------------------------------------------------------------------------
+
+    OrganizationStatus:
+      type: string
+      enum:
+        - Active
+        - Inactive
+      description: Whether the organization is currently active in EEM
+
+    OrganizationType:
+      type: string
+      enum:
+        - Building
+        - District
+        - ISD
+        - EPP
+        - Nonpublic
+        - PLS
+      description: |
+        Classification of the organization as defined in EEM.
+        Building, District, and ISD participate in the hierarchical structure.
+        EPP, Nonpublic, and PLS are standalone (no parent-child hierarchy).
+
+    # --------------------------------------------------------------------------
+    # Value Objects
+    # --------------------------------------------------------------------------
+
+    GradeBand:
+      type: object
+      description: |
+        The range of grades an organization is authorized to serve.
+        Null if grade band is not applicable or not configured in EEM for this org type.
+      properties:
+        lowGrade:
+          type: string
+          description: Lowest grade served (e.g., "KG", "01", "09")
+        highGrade:
+          type: string
+          description: Highest grade served (e.g., "05", "08", "12")
+
+    LeadAdministratorMasked:
+      type: object
+      description: Lead Administrator contact with masked email for UI display
+      properties:
+        displayName:
+          type: string
+          nullable: true
+          description: Display name if available from EEM; null if not provided
+        maskedEmail:
+          type: string
+          description: |
+            Email address with local part partially masked for display
+            (e.g., j***@district5.edu). Never exposes full email to UI consumers.
+
+    LeadAdministratorFull:
+      type: object
+      description: |
+        Lead Administrator contact with unmasked email. Returned only on
+        internal-service endpoints restricted to IAM.
+      properties:
+        displayName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+
+    # --------------------------------------------------------------------------
+    # Organization Schemas
+    # --------------------------------------------------------------------------
+
+    OrganizationSummary:
+      type: object
+      description: Lightweight representation for search results and ancestor chains
+      properties:
+        organizationCode:
+          type: string
+          description: Stable EEM-assigned identifier
+        name:
+          type: string
+        organizationType:
+          $ref: '#/components/schemas/OrganizationType'
+        status:
+          $ref: '#/components/schemas/OrganizationStatus'
+
+    OrganizationDetail:
+      allOf:
+        - $ref: '#/components/schemas/OrganizationSummary'
+        - type: object
+          description: Full organization detail for single-record lookups
+          properties:
+            gradeBand:
+              $ref: '#/components/schemas/GradeBand'
+              nullable: true
+            leadAdministrator:
+              $ref: '#/components/schemas/LeadAdministratorMasked'
+              nullable: true
+              description: Null if no Lead Administrator is designated in EEM
+            directParent:
+              $ref: '#/components/schemas/OrganizationSummary'
+              nullable: true
+              description: |
+                Immediate parent organization. Null for root ISDs and standalone
+                org types (EPP, Nonpublic, PLS).
+            lastSyncedAt:
+              type: string
+              format: date-time
+              description: Timestamp of the most recent sync cycle that updated this record
+
+    OrganizationWithLeadAdmin:
+      allOf:
+        - $ref: '#/components/schemas/OrganizationSummary'
+        - type: object
+          description: |
+            Organization detail returned on the by-lead-admin endpoint.
+            Includes unmasked Lead Administrator email (IAM internal use only).
+          properties:
+            gradeBand:
+              $ref: '#/components/schemas/GradeBand'
+              nullable: true
+            leadAdministrator:
+              $ref: '#/components/schemas/LeadAdministratorFull'
+
+    # --------------------------------------------------------------------------
+    # Organization Type Schemas
+    # --------------------------------------------------------------------------
+
+    OrganizationTypeSummary:
+      type: object
+      properties:
+        typeCode:
+          type: string
+          description: Stable type identifier (e.g., "Building", "District")
+        displayName:
+          type: string
+          description: Human-readable label for UI display
+        participatesInHierarchy:
+          type: boolean
+          description: |
+            True for Building, District, ISD — these have parent-child relationships.
+            False for EPP, Nonpublic, PLS — these are standalone.
+
+    # --------------------------------------------------------------------------
+    # Admin / Sync Schemas
+    # --------------------------------------------------------------------------
+
+    SyncJobResult:
+      type: object
+      properties:
+        syncLogId:
+          type: string
+          format: uuid
+          description: ID of the sync log record created for this run
+        startedAt:
+          type: string
+          format: date-time
+        estimatedCompletionAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SyncLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        syncStartedAt:
+          type: string
+          format: date-time
+        syncCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [Running, Succeeded, Failed, PartialSuccess]
+        recordsProcessed:
+          type: integer
+        recordsCreated:
+          type: integer
+        recordsUpdated:
+          type: integer
+        recordsDeactivated:
+          type: integer
+        failureReason:
+          type: string
+          nullable: true
+        pipelineRunId:
+          type: string
+          nullable: true
+          description: Azure Synapse pipeline run correlation ID
+
+    # --------------------------------------------------------------------------
+    # Shared
+    # --------------------------------------------------------------------------
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        validationErrors:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Organization not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            organizations:read: Read organization data
+
+security:
+  - MiLogin:
+      - organizations:read

@@ -1,0 +1,300 @@
+# FDD 25 review — "25 - Educator Preparation Providers - User" (Features 25.1-25.4),
+# ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 EPP graph
+# (epp-domain.ttl / epp-permissions.ttl / epp-api.ttl / epp-sequences.ttl, all loaded
+# together — EPP has no *-technical-design.ttl in this batch, so none is referenced).
+#
+# Source: two docx, read together as one logical FDD 25 (the folder's own convention,
+# same pattern CONVENTIONS.md documents for FDD 16/11 and FDD 17):
+# - "25.1, 25.3 - Worklist and Recommendation.docx" — Feature 25.1 (worklist search) and
+#   25.3 (Hold/Deny/Cancel/Recommend actions, both the standard credential worklist and
+#   the Approval worklist).
+# - "25.2, 25.4 - EPP - Candidate Tracking.docx" — Feature 25.2 (Candidate Tracking:
+#   Pending Verification / Verified Candidates worklists, accept/reject, status update,
+#   program management) and 25.4 (bulk candidate-tracking file upload).
+# Both read via their .md sibling first, then unzipped for word/comments.xml,
+# commentsExtended.xml (thread structure), and word/media wireframes. The "HIGH LEVEL
+# SCENARIOS" paraphrase tables in both docs (25 rows in the Worklist doc, 34 in the
+# Candidate Tracking doc) restate the same content as the Addendum's numbered stories at
+# coarser grain and are skipped per CONVENTIONS.md — every item in both HLS tables traces
+# to one of the 11 Addendum stories modeled below; nothing in either HLS table describes
+# behavior absent from the Addendum.
+#
+# Requirement unit: the Addendum's own numbering — 25.1.1-25.1.2, 25.3.1-25.3.2 (Worklist
+# doc); 25.2.1-25.2.6, 25.4.1 (Candidate Tracking doc). 11 stories total, all in genuine
+# "As a <role>, I want <goal>, so that <benefit>" form — modeled as sd:UserStory
+# throughout, no bare NFR or non-narrative item found in either Addendum.
+#
+# THIS FDD IS UNUSUALLY WELL PRE-COVERED: unlike several other FDD passes in this batch,
+# epp-domain.ttl/epp-sequences.ttl/epp-api.ttl were themselves converted directly from
+# epp-domain.md/epp-sequences.md/epp-api.yml, which already describe almost exactly the
+# same worklist-search / hold-deny-cancel-recommend / candidate-tracking / bulk-upload
+# functionality this FDD's Addendum spells out narratively. As a result this pass reads
+# largely as CONFIRMATORY (matching credentialing's own precedent for FDD 09 against an
+# already-FDD-aware profpractice-domain.ttl) rather than exploratory — 9 of 11 stories are
+# fully or near-fully satisfied by nodes already in the v3 graph, with only small,
+# genuinely new gaps surfacing (an unmodeled "download search results as Word/Excel/PDF"
+# export, an unmodeled cross-domain "Educator Profile" composite page, and one narrower
+# "bulk Add Program across multiple candidates" operation gap alongside the already-bulk
+# "Status Update" operation).
+#
+# RESOLVES FDD 29's OPEN GAPS.md ITEM ("Candidate Tracking and Recommendation (25)... FDD
+# 25 itself wasn't reviewed as part of this pass, so it's unconfirmed whether
+# epp:Seq_BulkUploadCandidateTrackingData actually covers what FDD 29's Dependencies
+# section is pointing at"): CONFIRMED, with minor caveats. Feature 25.4.1 ("As an EPP User
+# or MiEdWorkforce System Admin user, I want to upload a bulk file for reporting teacher
+# candidate tracking...") describes exactly the CSV-upload / Unique-ID-validation /
+# program-approval-validation / partial-success / downloadable-error-report shape that
+# epp:Seq_BulkUploadCandidateTrackingData (and its epp:Op_InitiateBulkUpload /
+# epp:Op_CompleteBulkUpload / epp:Op_BulkCreateEnrollments / epp:BulkUploadCompletedEvent
+# backing) already models end-to-end, right down to the "reject records where the student
+# has not yet established a MiEdWorkforce account/Unique ID" validation step matching the
+# sequence's own "Validate Unique IDs exist in IAM" / "Skip row, include in error report"
+# error scenario. Two caveats, neither large enough to justify a fresh coverage-gap
+# Annotation on their own: (1) 25.4.1's own requirement that the audit log "distinguish
+# actions taken by an admin on behalf of an EPP and the EPP user" is finer-grained than
+# the sequence's generic "Capture audit trail with bulk upload job ID" — the uploader's
+# identity is captured (uploadedBy in the initiate payload) but the admin-vs-EPP-user
+# distinction isn't called out as its own field anywhere; (2) HLS Use Case 34 ("System
+# Admin downloads and extracts the submitted data") has no dedicated modeled operation,
+# but is a plausible fit for the already-generic docs:Op_DownloadDocument against the
+# staging container — not a hard gap. See epp:Req_25_4_1's own sd:notes.
+#
+# Comments (21 in the Worklist doc, 30 in the Candidate Tracking doc, read via
+# comments.xml + commentsExtended.xml): almost all are resolved clarification threads
+# (terminology definitions — "what is Approval Type/Category", "define duplicate" — and
+# UI corrections already folded into the final Addendum text) with no live contradiction
+# on the scale of FDD 29's cover-letter thread. One thread surfaced a genuine, still-live
+# finding, modeled below as Question_MissingCertEndorsementProviderStories: a reviewer
+# asks "Where does 'Certifications & Endorsements' and 'Provider Details & Contacts' user
+# stories will be?" and is told "Missing user stories" / "Working on getting wireframes
+# for this so that the user stories can be revised" — i.e. the FDD's own landing-page
+# wireframe (see below) shows navigation cards for these two areas that were never
+# written up as numbered stories anywhere in either document. Tracked changes: doc1 has
+# none; doc2 has 25 w:ins/12 w:del spans, not reconstructed as a diff per CONVENTIONS.md
+# (nothing found in a manual scan that isn't already reflected in the final Addendum text
+# or the comment-thread corrections already folded into sd:notes below).
+#
+# Wireframes: doc1 has 13 images (5 numbered "Wireframe N" captions covering 6 embeds —
+# Wireframe 1 appears twice, "Option 1"/"Option 2" — plus 7 further uncaptioned
+# higher-fidelity "Addendum" screenshots); doc2 has 20 images (10 numbered "Wireframe N"
+# captions, 1:1 with embeds 1-10, plus 10 further uncaptioned Addendum screenshots).
+# Captions in both documents immediately FOLLOW their image (confirmed by checking
+# embed/caption byte-offsets in document.xml directly, not assumed) — same order FDD
+# 29's own pass found, opposite of FDD 11/16's caption-before-image pattern; a reminder
+# this is genuinely per-document and worth re-checking each time, not a fixed rule.
+# Of 33 total images, 12 were individually viewed and extracted (listed below); the
+# remainder were sampled across both documents' span (early/mid/late in the Addendum
+# sections) and confirmed to be further screens of the same worklist/candidate-tracking/
+# application-review flows already covered by the ones extracted, not a distinct
+# undocumented feature area, per CONVENTIONS.md's depth-calibration guidance for
+# near-duplicate image sets.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix epp:   <urn:solutiondesign:instance:epp:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+epp:Fdd25WorklistDoc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/25 - Educator Preparation Providers - User/25.1, 25.3 - Worklist and Recommendation.docx" ;
+    sd:notes "Covers Features 25.1 (worklist search) and 25.3 (Hold/Deny/Cancel/Recommend actions). Authors Vidhya Punniyamoorthy and Beth Dontje (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 per the signoff table — but comments.xml carries dated entries through 2026-03-10, after that nominal approval date, the same 'still revised after signoff' pattern FDD 29's own review noted for its document." .
+
+epp:Fdd25CandidateTrackingDoc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/25 - Educator Preparation Providers - User/25.2, 25.4 - EPP - Candidate Tracking.docx" ;
+    sd:notes "Covers Features 25.2 (Candidate Tracking worklist) and 25.4 (bulk file upload). Authors Vidhya Punniyamoorthy, Beth Dontje, and Caitlin Groom (DTMB); same approvers/signoff date as Fdd25WorklistDoc. comments.xml carries dated entries through 2026-04-03." .
+
+#################################################################
+# Wireframes
+#################################################################
+
+epp:Wireframe25_Worklist1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/worklist-01-teaching-search-results.png" ;
+    sd:notes "Confirmed by viewing: 'Worklist' page with tabs (Teaching/School psychologist/School counselor/School administrator/School social worker/Addl. endorsements/Approval/Candidate tracking), search/filter panel (Certificate type, Status, First/Last name, Application number, SSN, Student ID, Unique ID, Use alternative pass, Has conviction), and a results table with 'Has Conviction' Yes rows rendered in red — direct visual match for Req_25_1_1 and epp:Rule_ConvictionFlagManualReview." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+epp:Wireframe25_Worklist3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/worklist-03-recommend-teacher-application.png" ;
+    sd:notes "Confirmed by viewing: application detail with Personal/Application/MTTC Information, Remarks history, an Action dropdown set to 'Modify/Recommend', and an Endorsements table (Recommend checkbox, Endorsement name, Code, Grade Band, Action by applicant, inline Edit, 'Add Endorsement') — direct match for Req_25_3_1's Recommend flow and epp:Seq_RecommendCandidateForCredential." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+epp:Wireframe25_Worklist4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/worklist-04-deny-teacher-application.png" ;
+    sd:notes "Confirmed by viewing: same detail screen with Action set to 'Deny', a 'Send Email?' checkbox (checked), required Application remarks, an Email footer block (address/website, sent alongside remarks when Send Email is checked), and optional Internal remarks. The Send-Email toggle is a genuine detail beyond the Addendum's own text ('Collect the Application Remarks to send the email to the respective applicant - Optional') — the email is opt-in per action, not automatic; folded into Req_25_3_1's notes rather than a separate Annotation, since Communications' own template/send mechanics are already out of EPP's scope." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+epp:Wireframe25_AddendumEducationPrepLanding1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-a-education-prep-landing-doc1.png" ;
+    sd:notes "Confirmed by viewing: 'Education Prep' landing page with four navigation cards — Candidates, Certificate Applications, Certificates & Endorsements, Provider Details & Contacts. The latter two cards have no corresponding numbered story anywhere in either FDD 25 document — see Question_MissingCertEndorsementProviderStories below. A near-identical (not byte-identical) version of this same screen also appears in the Candidate Tracking document — see Wireframe25_AddendumEducationPrepLanding2." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+epp:Wireframe25_AddendumApplicationReviewDetail a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-b-application-review-detail.png" ;
+    sd:notes "Confirmed by viewing: higher-fidelity 'Application # 1234567' review screen with Details/Internal Remarks/History tabs, Personal/Application/MTTC Information panels, and an Actions panel (Modify/Recommend action, License Type, endorsement table with Recommend checkboxes) — direct match for Req_25_1_2's Details/Internal Remarks/Audit Log tab structure and epp:Seq_ViewCredentialApplicationDetailForReview." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+
+epp:Wireframe25_CandTrack1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/candidate-tracking-01-worklist-selection.png" ;
+    sd:notes "Confirmed by viewing: 'Candidate Tracking Worklist' with a required 'Select Candidate Tracking Worklist' dropdown offering Pending Verification / Verified Candidates — direct match for Req_25_2_1's tab-switch requirement." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_CandTrack9 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/candidate-tracking-09-individual-status-update.png" ;
+    sd:notes "Confirmed by viewing: individual candidate screen with 'View Candidate Enrollment History' / 'Update Candidate Enrollment Information' / 'View ... from all EPPs' radio options, an Action Taken (Program Update/Status Update) sub-choice, and a Status dropdown listing exactly the Traditional-route status set (Enrolled, Student Teaching (Trad), Post Student Teaching (Trad), Inactive, Rejected, Exited — no Placed (Alt)) — direct visual corroboration of epp:Rule_EnrollmentStatusStateMachine's route-restricted status sets, independent of FDD 29's own corroboration of the same rule." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_CandTrack10 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/candidate-tracking-10-view-enrollment-all-epps.png" ;
+    sd:notes "Confirmed by viewing: read-only cross-EPP table (Student ID/Provider/Program Level/Program(s)/Submitted Date/Status/Enroll Date/Exit Date/Exit Reason) — direct match for epp:Seq_ViewCrossEPPEnrollmentHistory and Req_25_2_5's 'toggle between viewing internal enrollment data and enrollment data from other providers'." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_AddendumEducationPrepLanding2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-c-education-prep-landing-doc2.png" ;
+    sd:notes "Confirmed by viewing: same four-card 'Education Prep' landing layout as Wireframe25_AddendumEducationPrepLanding1 (Candidates, Certificate Applications, Certificates & Endorsements, Provider Details & Contacts), reused across both documents — not byte-identical (different rendering/scale) but the same design, reinforcing that this is one shared landing page, not two independent screens." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_AddendumEducatorProfileEducationTab a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-d-educator-profile-education-tab.png" ;
+    sd:notes "Confirmed by viewing: 'Educator Profile' page (candidate name as header) with Demographic Information/Credentials/Employment/Professional Development/Education tabs; the Education tab shows Enrollment Information (Enrolled Date, Status, Program Level, EPP Provider, Exit Date/Reason) and a Program(s) table with Edit/Delete/Add Program — this is the 'Name hyperlink -> Educator Profile page' destination referenced repeatedly in both FDD 25 documents (25.1.2, and implicitly wherever a candidate/applicant name is a hyperlink). No aggregate/operation anywhere in the graph corresponds to this composite, multi-domain profile page as a first-class thing — see Question_EducatorProfilePageNotModeled below." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_AddendumAcceptEnrollmentReview a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-e-accept-enrollment-review.png" ;
+    sd:notes "Confirmed by viewing: individual Pending Verification candidate screen with an 'Unverified Enrollment' banner, an 'Enrollment Review' panel (Program Type read-only, an 'Accept Enrollment'/'Reject Enrollment' action dropdown, Enrollment Start Date), and an editable Program(s) table with 'Add Program' — direct match for Req_25_2_6's individual-level accept/reject-with-program-review flow." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+epp:Wireframe25_AddendumCandidatesVerifiedAddStudent a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/25-epp-user/wireframes/addendum-f-candidates-verified-add-student-download.png" ;
+    sd:notes "Confirmed by viewing: 'Candidates' page (Verified Candidates/Pending Verification tabs), a search bar, a filter icon, a download icon, and a prominently highlighted 'Add Student' dropdown button — this is the Req_25_4_1 bulk-upload entry point ('click on Add Student Dropdown > Upload') and directly corroborates epp:Seq_BulkUploadCandidateTrackingData's UI trigger. The adjacent download icon is the only visual evidence found anywhere for HLS Use Case 34's 'System Admin downloads and extracts the submitted data' — no distinct caption or acceptance-criteria text describes what it downloads, consistent with Req_25_4_1's own notes on that gap." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+#################################################################
+# Requirements — Feature 25.1: EPP workflow search (worklist)
+#################################################################
+
+epp:Req_25_1_1 a sd:UserStory ;
+    sd:requirementId "25.1.1" ;
+    sd:title "Search and filter the EPP credential application worklist" ;
+    sd:statement "As a MiEdWorkforce user with Education Preparation Provider (EPP) permissions, I want to search and filter the worklist of credential applications, so that I can locate specific applications or groups of applications requiring my review." ;
+    sd:acceptanceCriteria "Navigate to the worklist via hamburger menu > Certificate Applications; freeform search bar (default text 'Type to search'); results table sorted ascending by Submitted Date with columns Application Number (hyperlink), First/Last Name, Student ID, Unique ID, Certificate Type, Has Conviction? (red font if Yes), Status, Submitted Date, Last Modified By, Summary (hyperlink, opens read-only); dropdown filters per the main Business Specifications list (Certificate Type, Status, Application #, First/Last Name, SSN, Unique ID, Student ID, Uses Alternative Pass? for Teacher only, plus Approval Category/Type for the Approval tab); Clear button restores defaults; 'No results found' messaging." ;
+    sd:satisfiedBy epp:Op_SearchApplicationReviews, epp:Op_SearchApprovalApplicationReviews, epp:Perm_ApplicationsView, epp:Perm_ApprovalsView, epp:Rule_ConvictionFlagManualReview, epp:Seq_SearchCredentialApplicationsForReview ;
+    sd:notes "Direct match: Op_SearchApplicationReviews's own ApplicationReviewSummary projection explicitly carries hasConviction/usesAlternativePass flags for exactly this red-font/Teacher-only-filter behavior. The Approval tab's own Approval Category/Type filter values (Teacher, Administrator, Other, Educated out-of-state Special Education Admin, Educated out-of-state School Social Worker, Permit) match epp:ApprovalCategory's description almost verbatim. Wireframe25_Worklist1 (confirmed by viewing) directly corroborates the tabbed worklist layout." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+
+epp:Req_25_1_2 a sd:UserStory ;
+    sd:requirementId "25.1.2" ;
+    sd:title "Navigate from the worklist to application detail and the Educator Profile" ;
+    sd:statement "As an EPP user reviewing a specific application, I need hyperlinks on the Application Number, so that I can view the detailed application status screen and the comprehensive Educator Profile page." ;
+    sd:acceptanceCriteria "Clicking an Application Number opens the detailed review screen; the Applicant Name on that screen is a hyperlink to the Educator Profile page (current and historical demographic info); the review screen has a Details tab (Personal Information, Application Information, MTTC Information: Endorsement Name/Test Code/Has Passed?/Date Passed/Exam Date), an Internal Remarks tab (Comment/Created By/Date Created), and an Audit Log tab (User ID, date/time of status change, Previous Status, New Status)." ;
+    sd:satisfiedBy epp:Op_GetApplicationReview, epp:Op_GetInternalRemarks, epp:Op_AddInternalRemark, epp:Op_GetRemarksHistory, epp:Seq_ViewCredentialApplicationDetailForReview ;
+    sd:notes "Direct match for the Details/Internal Remarks/Audit Log tab structure (epp-sequences.ttl's own sequence names these tabs 'Details / MTTC Information / Internal Remarks / Audit Log' almost verbatim, and Op_GetRemarksHistory's projection is exactly the action/actionBy/actionAt shape the Audit Log tab needs). Wireframe25_AddendumApplicationReviewDetail (confirmed by viewing) directly corroborates this. The 'Educator Profile page' destination itself, however, is NOT modeled anywhere in this graph as a first-class thing — see Question_EducatorProfilePageNotModeled below (this is the first FDD 25 story to reference it, but not the first FDD in the batch to reference an 'Educator Profile' screen at all; FDD 17's own school-admin wireframe search flow references the same destination by name)." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "The 'Educator Profile' page — a composite, multi-domain screen with Demographic Information/Credentials/Employment/Professional Development/Education tabs, confirmed by viewing Wireframe25_AddendumEducatorProfileEducatorTab — is referenced by name repeatedly across this FDD (25.1.2's Applicant Name hyperlink; the Approval-tab worklist's own Name hyperlink; the Candidate Tracking worklist's First Name hyperlink in 25.2.5) and, per FDD 17's own school-admin wireframe, at least one other already-reviewed FDD. No aggregate, ApiOperation, or Sequence anywhere in the mied-v3 graph models this page as a first-class thing — each tab's underlying data IS separately modeled (iam:Op_GetUser for demographics, cred:Op_GetEducatorCredentials for Credentials, presumably proflearning/profpractice feed the Professional Development/other tabs, epp itself feeds the Education tab), but nothing represents the composite profile page/navigation shell itself. Likely belongs to a cross-cutting capability (Dashboards, or a dedicated 'Educator Profile' feature) rather than any single domain — flagged here rather than forced onto EPP specifically, and worth a GAPS.md entry given it now recurs across two independently-reviewed FDDs (17 and 25)." ;
+    oa:hasTarget epp:Req_25_1_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn epp:Fdd25WorklistDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Comment thread 19/20/21 in the Worklist document (Punniyamoorthy: 'Where does \"Certifications & Endorsements\" and \"Provider Details & Contacts\" user stories will be?' / Dontje: 'Missing user stories' / Sinha: 'Working on getting wireframes for this so that the user stories can be revised') confirms the two rightmost navigation cards on the shared 'Education Prep' landing page (Wireframe25_AddendumEducationPrepLanding1/2, confirmed by viewing) were never written up as numbered stories in EITHER FDD 25 document — an acknowledged gap in the FDD's own paper trail, not something missed by this review. These two areas (EPP certificate-category/endorsement approvals, and EPP provider/contact details) are exactly epp:EducatorPreparationProviderAggregate's own territory and are already covered by FDD 13 ('EPP - Admin'), which epp-domain.ttl's own Open Question #11 note already cites and which is being reviewed concurrently by a separate pass in this same session — out-of-scope for FDD 25 specifically, not a gap in the EPP domain model as a whole (epp:Seq_ManageCertificateCategoryApprovals / epp:Seq_ManageApprovedEndorsements / epp:Seq_UpdateEPPConfiguration already cover this territory)." ;
+    oa:hasTarget epp:EducatorPreparationProviderAggregate ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn epp:Fdd25WorklistDoc .
+
+#################################################################
+# Requirements — Feature 25.3: Recommending Candidates
+#################################################################
+
+epp:Req_25_3_1 a sd:UserStory ;
+    sd:requirementId "25.3.1" ;
+    sd:title "Hold, Deny, Cancel, or Recommend a credential application under EPP review" ;
+    sd:statement "As a MiEdWorkforce user with Education Preparation Provider (EPP) permissions, I want to perform specific actions (Hold, Deny, Cancel, or Recommend) on a candidate's detailed application screen, so that I can validate their endorsements against test scores and progress the application through the approval workflow." ;
+    sd:acceptanceCriteria "Single-select Action dropdown (Select/Hold/Deny/Cancel/Recommend); Hold/Deny/Cancel collect Application Remarks (optional per this story's own text) and optional Internal Remarks, then set status accordingly; Recommend collects License Type and an endorsement table (Recommend checkbox, Endorsement Name, Code, Grade Band, Action by applicant, inline Edit/Delete, Add Endorsement), validates at least one endorsement is added/recommended, and on Submit routes in-state applicants to 'Pending Payment' or out-of-state applicants directly to the OEE/State Credential Admin worklist." ;
+    sd:satisfiedBy epp:Op_HoldApplication, epp:Op_DenyApplication, epp:Op_CancelApplication, epp:Op_RecommendApplication, epp:Seq_PlaceCredentialApplicationOnHold, epp:Seq_DenyCredentialApplication, epp:Seq_CancelCredentialApplicationReview, epp:Seq_RecommendCandidateForCredential, epp:Rule_EPPRecommendationTriggersPaymentOrOEEReview, epp:Rule_EPPRecommendationRequiresMTTCPass, epp:Rule_EPPProgramApprovalScope ;
+    sd:notes "Excellent, near-exhaustive match: this story is essentially the narrative source epp-domain.md's Rule_EPPRecommendationTriggersPaymentOrOEEReview was itself built from (in-state -> Pending Payment / out-of-state -> OEE routing, worded almost identically). Wireframe25_Worklist3 (Recommend) and Wireframe25_Worklist4 (Deny) both confirmed by viewing. One genuine new detail: Wireframe25_Worklist4 shows a 'Send Email?' checkbox on the Deny action, matching this story's own 'Optional' framing for sending the Application Remarks email — the toggle itself isn't separately modeled anywhere (Communications owns the actual send mechanics), not raised as its own gap since it's a small UI/Communications-boundary detail, not an EPP-domain one." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+
+epp:Req_25_3_2 a sd:UserStory ;
+    sd:requirementId "25.3.2" ;
+    sd:title "Deny an Approval application and return it to the requesting ISD/School District" ;
+    sd:statement "As an EPP User, I want to deny an Approval application that does not meet program requirements, so that the system automatically notifies the requesting ISD/School District and returns the application to their worklist for resolution." ;
+    sd:acceptanceCriteria "Deny is a selectable Action option on Approval-tab applications; Remarks are required (submission blocked if blank); on submission, status updates to Deny, an email is sent to the originating ISD/School District, the application is removed from the EPP worklist and reassigned to the ISD/School District worklist, and the action (status change, remarks, Modified By, Action Date) is captured in the Approval Application History." ;
+    sd:satisfiedBy epp:Op_DenyApprovalApplication, epp:Seq_DenyApprovalApplication, epp:Rule_ApprovalApplicationDenialReturnsToISD ;
+    sd:notes "Exact match, down to the required-remarks validation and the History-capture fields — epp:Seq_DenyApprovalApplication's own error scenario ('Missing required remarks > Validation error') and event flow ('EventBus--)CredService: Return application to ISD/School District', 'EventBus--)CommService: Trigger notification to ISD with denial remarks') mirror this story almost verbatim. This story is also, in effect, the narrative source for Rule_ApprovalApplicationDenialReturnsToISD." ;
+    sd:definedIn epp:Fdd25WorklistDoc .
+
+#################################################################
+# Requirements — Feature 25.2: Track Candidates
+#################################################################
+
+epp:Req_25_2_1 a sd:UserStory ;
+    sd:requirementId "25.2.1" ;
+    sd:title "Switch between Pending Verification and Verified Candidates worklists" ;
+    sd:statement "As an EPP user, I need to easily switch between Pending Verification and Verified Candidates lists on the Candidate Tracking worklist, so that I can efficiently manage candidates based on their enrollment status." ;
+    sd:acceptanceCriteria "Navigate via Dashboard > Education Prep > Candidates; two tabs (Pending Verification, Verified Candidates); each tab has a freeform search bar, a results table (per-tab column set matching the Business Specifications section), the same filter set (Program Level, Program Type [Teacher/School Administrator only], First/Last Name, Student ID, Unique ID, plus Status and date ranges on the Verified tab), 'No results found' messaging, and the ability to download the worksheet as Word/Excel/PDF." ;
+    sd:satisfiedBy epp:Op_SearchCandidateEnrollments, epp:Seq_SearchPendingEnrollmentVerifications, epp:Seq_SearchEnrolledCandidates ;
+    sd:notes "Search/filter/tab-switch behavior is a direct match (Wireframe25_CandTrack1 confirmed by viewing). The Word/Excel/PDF worksheet-download capability, however, has no counterpart anywhere in this graph: epp-api.ttl exposes only JSON list endpoints, documents-api.ttl has no table-export operation, and reporting-capability.ttl's own Rule_NotEveryDashboardIsAPowerBIReport explicitly argues this kind of simple UI-level table export should be a native in-domain component rather than a Reporting-capability concern — meaning it isn't Reporting's gap to fill either. See the coverage-gap Annotation below." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "25.2.1 requires the Pending Verification and Verified Candidates worklist tables to be downloadable in Word, Excel, and PDF formats. No export/download operation for a search-results table exists anywhere in epp-api.ttl, documents-api.ttl, or reporting-api.ttl — and reporting-capability.ttl's own Rule_NotEveryDashboardIsAPowerBIReport (Power BI embedding is for complex/cross-domain/scheduled-refresh reporting, not simple UI-level table exports) argues this specific capability was never meant to live in the Reporting bounded context either. A genuine, small, EPP-side gap: nothing in the converted domains currently supports it." ;
+    oa:hasTarget epp:Req_25_2_1 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+epp:Req_25_2_2 a sd:UserStory ;
+    sd:requirementId "25.2.2" ;
+    sd:title "Bulk Accept or Reject enrollment on multiple Pending Verification candidates" ;
+    sd:statement "As an EPP user, I need to perform a bulk Accept or Reject Enrollment action on multiple candidates simultaneously from the Pending Verification list, to save time during verification." ;
+    sd:acceptanceCriteria "Select one or multiple Pending Verification records; Accept Enrollment and Reject Enrollment options become available; Reject sets status to Rejected and sends a templated notification email; Accept prompts for Enrollment Start Date/Program Level/Program(s)/Program Type then sets status to Enrolled and sends a notification email; both actions capture audit details (Modified By, Modified Date)." ;
+    sd:satisfiedBy epp:Op_BulkAcceptEnrollments, epp:Op_BulkRejectEnrollments, epp:Seq_AcceptCandidateEnrollment, epp:Seq_RejectCandidateEnrollment, epp:CandidateEnrollmentVerifiedEvent, epp:CandidateEnrollmentRejectedEvent ;
+    sd:notes "Direct, complete match — epp:Seq_AcceptCandidateEnrollment/Seq_RejectCandidateEnrollment already model exactly this bulk shape, including the notification-email trigger via comm:CommunicationsContext's subscription to both events." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+epp:Req_25_2_3 a sd:UserStory ;
+    sd:requirementId "25.2.3" ;
+    sd:title "Prevent duplicate enrollment records when accepting enrollment" ;
+    sd:statement "As an EPP user, when accepting enrollment, the system must check for duplicate record creation upon saving, preventing accidental double entry." ;
+    sd:acceptanceCriteria "On Save during Accept Enrollment, validate for duplicates defined as same Student/Unique ID + same EPP + same Program Level + same Program Type; block creation and display a clear error message if a duplicate is detected." ;
+    sd:satisfiedBy epp:Seq_AcceptCandidateEnrollment ;
+    sd:notes "Matches epp:Seq_AcceptCandidateEnrollment's own key decision ('Duplicate Check: Prevents duplicate enrollment records for same candidate/EPP/program') and error scenario. Comment thread 18/20/21 in the source document shows the exact duplicate definition (Same EPP + Student/Unique ID + Program Level + Program Type for enrollment-level duplicates, distinct from Same Program + Grade Band for the program-level duplicate check in Rule_DuplicateProgramPrevention) was clarified during review — both concepts are present in this domain's model, just under different rules; not itself a gap." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+epp:Req_25_2_4 a sd:UserStory ;
+    sd:requirementId "25.2.4" ;
+    sd:title "Bulk Add Program and Status Update on Verified Candidates" ;
+    sd:statement "As an EPP user, I need the ability to Add Program and perform a Status Update (including Enrolled, Student Teaching, Placed, Exited) in bulk on the Verified Candidates list, to update large groups of candidates as they progress through the program." ;
+    sd:acceptanceCriteria "Verified Candidates worklist offers View/Add Program/Status Update radio options (View default); selecting one or multiple records + Add Program lets the user choose Program + Grade Band from dropdowns with Edit/Confirm/Delete before saving, blocking duplicates (same EPP + Student/Unique ID + Program + Grade Band); selecting Status Update changes status for multiple candidates to the route-appropriate set (Traditional: Enrolled/Student Teaching/Post Student Teaching/Inactive/Rejected/Exited; Alt Route: Enrolled/Placed/Inactive/Rejected/Exited), validates at least one program exists when moving to a placement status, and requires Exit Reason/Date on Exited or Program Detail/Enrollment Start Date on Rejected-to-Enrolled." ;
+    sd:satisfiedBy epp:Op_BulkUpdateCandidateStatus, epp:Seq_UpdateCandidateEnrollmentStatus, epp:Rule_EnrollmentStatusStateMachine, epp:Rule_CandidateProgramAssignmentRequiredForPlacement, epp:Rule_DuplicateProgramPrevention ;
+    sd:notes "Status Update half is a direct, complete match (epp:Op_BulkUpdateCandidateStatus's own projection already conditionally requires exitDate/exitReason or enrollmentDate/programLevel/programType exactly as this story describes). The Add Program half is only PARTIALLY satisfied: epp-api.ttl's program-management operations (epp:Op_AddCandidateProgram et al.) all operate on a single enrollmentId — there is no bulk-add-program-to-multiple-candidates counterpart to Op_BulkUpdateCandidateStatus's bulk-status pattern. Wireframe25_CandTrack9 (confirmed by viewing) independently corroborates the route-restricted status set. See the coverage-gap Annotation below." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "25.2.4 describes 'Add Program' as a bulk action applicable to one or multiple selected Verified Candidates in a single operation, parallel to the already-bulk Status Update action (epp:Op_BulkUpdateCandidateStatus). No bulk-add-program operation exists in epp-api.ttl — epp:Op_AddCandidateProgram/Op_UpdateCandidateProgram/Op_DeleteCandidateProgram (used by epp:Seq_ManageCandidatePrograms) all operate on one enrollmentId at a time. A narrower, lower-impact analogue of the same 'bulk vs. single' asymmetry the ontology already tolerates elsewhere (e.g. Reject Enrollment has no per-candidate remarks requirement unlike single-application denial) — worth a small addition (a bulk variant of Op_AddCandidateProgram) rather than a redesign." ;
+    oa:hasTarget epp:Req_25_2_4 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+epp:Req_25_2_5 a sd:UserStory ;
+    sd:requirementId "25.2.5" ;
+    sd:title "View and edit a Verified Candidate's detailed enrollment and program record" ;
+    sd:statement "As an EPP User, I want to see a detailed view of a Verified Candidate, so that I can review their current enrollment status, program history, and toggle between viewing internal enrollment data and enrollment data from other providers." ;
+    sd:acceptanceCriteria "Clicking a candidate's name opens the individual profile on the Education tab (Enrolled Date, Program Level, EPP Provider, Status, Exit Date/Reason); an Edit modal allows changing Enrollment Date/Program Level/EPP Provider/Status (with Exit Date/Reason required for Exited, and Program Detail/Enrollment Start Date required for Rejected-to-Enrolled, plus the same at-least-one-program validation for placement statuses); a Program(s) table (Program Name/Type/Grade Band/Modified By/Modified Date) supports add/edit/delete via a modal." ;
+    sd:satisfiedBy epp:Seq_ViewCandidateEnrollmentDetail, epp:Op_GetCandidateEnrollment, epp:Op_UpdateCandidateStatus, epp:Seq_ManageCandidatePrograms, epp:Op_AddCandidateProgram, epp:Op_UpdateCandidateProgram, epp:Op_DeleteCandidateProgram, epp:Seq_ViewCrossEPPEnrollmentHistory ;
+    sd:notes "Direct, complete match across both the detail-view and edit-modal halves of this story; Op_UpdateCandidateStatus's own projection (conditional exitDate/exitReason or enrollmentDate/programLevel/programType fields) matches this story's edit-modal validation exactly. Wireframe25_AddendumEducatorProfileEducationTab and Wireframe25_CandTrack10 (both confirmed by viewing) directly corroborate the Education tab layout and the cross-EPP toggle respectively." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+epp:Req_25_2_6 a sd:UserStory ;
+    sd:requirementId "25.2.6" ;
+    sd:title "View and act on an individual Pending Verification candidate" ;
+    sd:statement "As an EPP User, I want to see a detailed view of a Pending Verification Candidate, so that I can review their current enrollment status to either Accept or Reject their Enrollment." ;
+    sd:acceptanceCriteria "Clicking a Pending Verification candidate opens their profile with an 'Unverified Enrollment' alert; displays Program Type and a single-select action dropdown (Accept Enrollment / Reject Enrollment); Accept collects Enrollment Start Date + Program Level/Type (with duplicate check), sets status to Enrolled, and emails the candidate; Reject sets status to Rejected and emails the candidate; both save audit details; the screen also supports adding/editing/deleting programs (same duplicate rule as elsewhere: same Program + Grade Band)." ;
+    sd:satisfiedBy epp:Op_BulkAcceptEnrollments, epp:Op_BulkRejectEnrollments, epp:Seq_AcceptCandidateEnrollment, epp:Seq_RejectCandidateEnrollment, epp:Op_AddCandidateProgram ;
+    sd:notes "Functionally this is the same accept/reject/program-management behavior as Req_25_2_2/25_2_4, exercised at the individual-candidate level rather than from a bulk-selected list — the existing bulk operations (accepting/rejecting an array of one candidateId) already cover this cleanly; no dedicated single-candidate accept/reject endpoint is needed and none is modeled separately. Wireframe25_AddendumAcceptEnrollmentReview (confirmed by viewing) directly corroborates this individual-level screen, including the editable Program(s) table alongside the Accept/Reject dropdown." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .
+
+#################################################################
+# Requirements — Feature 25.4: Document upload
+#################################################################
+
+epp:Req_25_4_1 a sd:UserStory ;
+    sd:requirementId "25.4.1" ;
+    sd:title "Bulk-upload a file for reporting/updating candidate tracking data" ;
+    sd:statement "As an EPP User or MiEdWorkforce System Admin user, I want to upload a bulk file for reporting teacher candidate tracking, so that I can efficiently enroll multiple verified candidates into my program and update their statuses without manual entry for each individual." ;
+    sd:acceptanceCriteria "Navigate Dashboard > Education Prep > Candidates, click Add Student dropdown > Upload; the system accepts files only matching the defined type/size/template; processes rows by the student's Unique ID, rejecting rows for students without an established MiEdWorkforce account/Unique ID; if the file includes Program Type/Level, validates the EPP is approved to offer those specific programs and errors on unapproved-program rows; on completion, provides a summary of successful updates plus a downloadable list of errors (e.g. 'Unique ID not found'); captures the uploader's Unique ID and upload timestamp in the audit log, distinguishing admin-on-behalf-of-EPP actions from EPP-user actions." ;
+    sd:satisfiedBy epp:Seq_BulkUploadCandidateTrackingData, epp:Op_InitiateBulkUpload, epp:Op_CompleteBulkUpload, epp:Op_BulkCreateEnrollments, epp:BulkUploadCompletedEvent, epp:Perm_EnrollmentBulkUpload ;
+    sd:notes "THIS IS THE STORY THAT RESOLVES the open question left in GAPS.md's FDD 29 entry ('Candidate Tracking and Recommendation (25)... unconfirmed whether epp:Seq_BulkUploadCandidateTrackingData actually covers what FDD 29's Dependencies section is pointing at'): CONFIRMED — epp:Seq_BulkUploadCandidateTrackingData's own error scenarios ('Unique ID not found in IAM > Skip row, include in error report'; 'Program not approved for EPP > Skip row, include in error report') and its Synapse-pipeline validate-then-partial-success-then-error-report flow match this story's acceptance criteria closely, feature for feature. Two minor, non-blocking gaps, neither large enough to warrant its own Annotation: (1) the modeled audit trail ('Capture audit trail with bulk upload job ID', plus 'uploadedBy' in the initiate payload) does not explicitly distinguish an admin acting on behalf of an EPP from the EPP user acting directly, which this story calls for; (2) HLS Use Case 34 ('System Admin downloads and extracts the submitted data') has no dedicated modeled operation — Wireframe25_AddendumCandidatesVerifiedAddStudent shows a download icon on the same screen as the Add Student upload trigger, a plausible fit for docs:Op_DownloadDocument against the staging container, but this is inferred, not confirmed by any caption or acceptance-criteria text." ;
+    sd:definedIn epp:Fdd25CandidateTrackingDoc .

@@ -1,0 +1,321 @@
+# FDD 24 review — "24 - Data Collection & Compliance - Request for ID Collection".
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md.
+#
+# BOUNDED CONTEXT DETERMINATION: "ID Collection" here means identity/Unique-ID
+# matching-and-assignment for a NEW EMPLOYEE being added to a district's Employee
+# Roster, via Michigan's Mi-Key master-identity service — NOT a document/credential
+# upload feature (that reading was ruled out on the first read of the source). The
+# document's own Dependencies section names its actor as "the Staffing Data
+# Administrator (Data Collection & Compliance- Staffing Administration 10.0)" and its
+# own workflow as "utiliz[ing] the established Employee Roster." Both the staffing and
+# iam mied-v3 domain conversions already model this exact flow in detail — staffing
+# owns the Staffing-facing UI/API surface (Employee Roster, Add Employee, Person
+# Search) and iam owns the Mi-Key matching/Near-Match/Identity-Administrator-worklist
+# engine underneath it (staffing-domain.ttl's own words: "Staffing does not call Mi-Key
+# directly; IAM owns the matching integration and Identity Administrator worklist
+# entirely"). Concretely: staff:Seq_AddNewEmployee and staff:Seq_UpdateEmployeeDemographics
+# (staffing-sequences.ttl) are near-verbatim matches for this FDD's own narrative, and
+# iam:Seq_BusinessUserRequestNewId / iam:Seq_IdentityAdministratorResolveRequest
+# (iam-sequences.ttl) are near-verbatim matches for its Near-Match-resolution Addendum
+# stories (24.3.x) and admin-outcome-notification story (24.5.2). Requirements below are
+# modeled as cred:-free staff:/iam: satisfiedBy targets accordingly — this FDD is
+# confirmatory of an already-well-modeled cross-domain flow, not exploratory (same
+# pattern FDD 09's review noted for profpractices). NOTE, correcting a stale comment
+# found in staffing-domain.ttl's own header (line ~188, "see iam-sequences.md (not yet
+# converted into mied-v3)"): iam-sequences.ttl in fact HAS been converted and contains
+# exactly the sequences that comment says are missing — a documentation-staleness finding
+# in an existing Phase 1 file, not something this pass corrects there, just flagged here.
+#
+# Source: "24 - Collection & Compliance - Request for ID.docx" (.md sibling read first).
+# Unzipped for word/comments.xml (4 comments total — unusually light; see below),
+# word/document.xml (drawing order/captions), word/_rels/document.xml.rels (image
+# relationship IDs), word/media (13 images, image1.png-image13.png).
+#
+# Requirement unit used: the FDD's own "Addendum" section is the only place with real
+# story numbering (24.2.1, 24.2.2, 24.3.1-24.3.3, 24.4.1-24.4.2, 24.5.1-24.5.3 — ten
+# stories total). The "HIGH LEVEL SCENARIOS" table (11 rows) is skipped per
+# CONVENTIONS.md as a duplicative paraphrase of the same content at coarser grain.
+# However — same situation FDD 29's pass already documented for its own "Business
+# Specifications" prose — the FDD's PRIMARY functional content (the actual "search for
+# existing identity, or create new, submit to Mi-Key, get Match/No-Match/Near-Match,
+# proceed to employment reporting" happy path, and the separate "Update Demographics"
+# workflow) is described in full, wireframed detail in the un-numbered Business
+# Specifications prose section but was NEVER itself promoted into the Addendum's
+# numbered scheme (the Addendum jumps straight to edge-case/AC-bearing stories:
+# read-only-lock, duplicate check, Near-Match resolution sub-steps, file/API upload
+# validation, and alerting — never the base "add employee" or "update demographics"
+# stories themselves). Modeled below as two synthetic Requirements
+# (staff:Req_24_BizSpec_1, staff:Req_24_BizSpec_2) rather than silently left ungraphed,
+# consistent with FDD 29's cred:Req_29_BizSpec_* precedent for the exact same situation.
+#
+# Comments (4 total, via comments.xml): two are a stale-hyperlink correction (not
+# load-bearing, folded into the SourceDocument note only). The other two (IDs 35/36,
+# Caswell -> Groom "Confirmed") are substantive and drove the coverage-gap Annotation
+# on Feature 24.4 below (bulk-update-of-existing-IDs and direct-district-to-Mi-Key API
+# scope are both still explicitly undefined in the FDD's own text, and the reviewer
+# comment thread confirms rather than resolves that). No tracked changes found worth
+# reconstructing.
+#
+# Wireframes: 13 images total. The 5 individually captioned ones (image1.png-image5.png,
+# confirmed in document order immediately following their own drawing anchor, then
+# followed by the caption paragraph — verified by viewing all 5, not assumed) are
+# extracted as wireframes/wireframe-01 through -05. The remaining 8 (image6.png-image13.png,
+# embedded directly in the Addendum's acceptance-criteria bullets with no caption text at
+# all) were ALL individually viewed given the small total count (13, well under FDD
+# 11/16 or 29's image volumes) — extracted as wireframes/wireframe-06 through -13.
+#
+# NOTABLE CROSS-CHECK FINDING: wireframe-06 ("ID Management Requests" list) and
+# wireframe-08/09/10 (the three Near-Match resolution action variants: Create New ID,
+# Match & Link IDs, Deny Request) all carry a "< Back to Rapbacks" breadcrumb and the
+# screen title "ID Collection Request #122456" — i.e. the actual product UI files this
+# FDD's own Identity-Administrator worklist screens under a "Rapbacks" navigation
+# section. Neither this FDD's own text nor iam-domain.ttl/iam-sequences.ttl ever uses
+# the word "Rapback" anywhere — FDD 30 (Rapbacks) is itself still unreviewed (per
+# fdd-review/STATUS.md's "not yet done" list). This is left as an open discrepancy
+# Annotation rather than assumed to mean anything definite about FDD 30's scope, since
+# FDD 30 hasn't been reviewed to confirm or deny the connection.
+#
+# Verification-in-passing: wireframe-11/12 (Upload Employee Roster modal + its "Line 12
+# - No UID / Line 23 - No UID / Line 137 - Duplicate UID" error result) are a striking,
+# independent visual confirmation of staffing-permissions.ttl's own already-documented
+# staff:Perm_EmployeeRosterBulkUpload gap (a Permission that exists with NO backing
+# sd:ApiOperation anywhere in staffing-api.ttl) — this FDD's own 24.4.1 describes
+# exactly the validation behavior the wireframe shows, reinforcing rather than
+# resolving that pre-existing, real coverage gap. See Req_24_4_1 below.
+#
+# CONFIRMED CROSS-FDD OVERLAP WITH FDD 15.2 (per the concurrently-completed FDD 15
+# review's own flag): FDD 24's own Business Specifications prose literally cites "15.2 -
+# Business User Request for ID Requirements.docx" as the workflow spec it follows ("The
+# system will follow the workflow requirements between MiEdWorkforce and Mi-Key as
+# defined: 15.2..."), and fdd-review/15-identity-management-integration.ttl's own
+# iam:Req_15_2_1 note independently flags a source-document reviewer comment
+# cross-referencing "24.2.1" (this FDD) as a live duplicate-effort risk. Having now
+# reviewed both: the overlap is REAL and BY DESIGN, not an error — FDD 15.2 is IAM's own
+# detailed inbound spec for the identical "search-or-create, submit to Mi-Key, Match/
+# No-Match/Near-Match" mechanics that FDD 24 re-describes from the Staffing-side UI/
+# business-process perspective. Concretely, staff:Req_24_BizSpec_1 (this file) and
+# iam:Req_15_2_1/15_2_2/15_2_3 (the FDD 15 file) are near-verbatim restatements of the
+# same underlying capability, and both independently resolve to the SAME satisfiedBy
+# targets (iam:Seq_BusinessUserRequestNewId, iam:Op_SubmitBusinessUserIdentityRequest,
+# iam:IdentityResolutionCompletedEvent) — genuine convergent confirmation from two
+# separately-authored source FDDs, not duplicated graph nodes (each keeps its own FDD's
+# own requirementId per CONVENTIONS.md; no attempt is made here to merge or supersede
+# either file). One difference worth flagging for whoever next touches FDD 15's own
+# Person-Search gap (iam:Question_PersonSearchNotModeled, per that file's own Req_15_2_1
+# note): FDD 24's wireframe 1 (this file) shows a real, wireframed Person Search screen
+# with a broader field set (Unique ID/First/Last/Email/Credential number/Application
+# number/DOB/SSN) than FDD 15.2's own AC text describes (Unique ID exact-match or Name/
+# SSN/CLN) — additional wireframe-only evidence for that same still-open gap, not itself
+# closing it.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix iam:   <urn:solutiondesign:instance:iam:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd24Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/24 - Data Collection & Compliance - Request for ID Collection/24 - Collection & Compliance - Request for ID.docx" ;
+    sd:notes "Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025. comments.xml carries two later dated entries (2025-12-04, 2026-02-03) — a stale-SharePoint-link fix and a scope-clarification exchange on Feature 24.4 (see Question_BulkUpdateAndDirectMiKeyApiScopeUndefined) — so, as with FDD 29, the signoff date isn't 'nothing changed after this.'" .
+
+staff:Wireframe24_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-01-person-search-results.png" ;
+    sd:notes "Confirmed by viewing: 'Personnel search' page with a multi-field search form (Unique ID, First/Last name, Email, Credential number, Application number, DOB, SSN) and a results table (Unique ID/First/Last/Email/DOB/SSN) with a 'Compare' action. Directly corroborates staff:Op_SearchEmployees and Req_24_BizSpec_1's search-before-add step." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-02-add-employee-no-match.png" ;
+    sd:notes "Confirmed by viewing: blank 'Add Employee' form (Unique ID field disabled/blank with a 'Personnel Search' link, all demographic fields required) plus an attestation checkbox and Submit/Cancel. Matches the FDD's own 'blank Add Employee form ... Unique ID field being blank and does not allow input' text exactly." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-03-add-employee-success.png" ;
+    sd:notes "Confirmed by viewing: same Add Employee form pre-populated from a search match, with a 'Success! Match found for John Smith <<Unique ID>>' banner. Directly corroborates the pre-population/Match-outcome path of Req_24_BizSpec_1." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-04-update-demographics-selected.png" ;
+    sd:notes "Confirmed by viewing: 'Edit Employee' screen, Personal Information tab, with a 'Personal information history' audit table (Legal name/DOB/SSN/Sex/Status/Modified date/Modified by/Authorized by). Status column shows 'Created' — this is the pre-update state the FDD's own 'Update Demographics button has been selected' caption describes." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-05-update-demographics-success-history.png" ;
+    sd:notes "Confirmed by viewing: same 'Edit Employee' screen with a 'Success! Details updated XXXX <<Unique ID>>' banner and a second history row (Status 'Approved', Authorized by 'Business'), added below the original 'Created' row. Directly corroborates the update-history-tracking half of Req_24_BizSpec_2 and staff:Seq_UpdateEmployeeDemographics's 'Store demographic update in history' step." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_6 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-06-id-management-requests-list.png" ;
+    sd:notes "Confirmed by viewing: 'ID Management Requests' list (Unresolved/Resolved tabs; Unique ID/Last/First/Requested By/Received/Type/Status columns; Type values New ID, Link IDs, Split ID, Retire ID; Status values Needs Review, On Hold). Strong match for iam:IdentityResolutionRequestAggregate's request-type/status vocabulary and iam:Op_ListIdentityResolutionRequests. Breadcrumb reads '< Back to Rapbacks' — see this file's header note on Question_RapbacksBreadcrumbDiscrepancy." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_7 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-07-employee-demographic-detail.png" ;
+    sd:notes "Confirmed by viewing: an individual's full Demographic Information detail (name/DOB/SSN/gender/race/tribal affiliation, address, contact, 'Account Information History' table, 'Apply for Certificate' link). Broader detail view than any single Addendum story describes; general corroboration of staff:EmployeeRecord's field shape, not tied to one Requirement." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_8 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-08-near-match-resolution-create-new.png" ;
+    sd:notes "Confirmed by viewing: 'ID Collection Request #122456' Near Match Resolution screen — side-by-side Submitted Record vs. two Potential Matches (90%/83% match scores), differing fields highlighted, an Action dropdown defaulted to 'Create as New ID'. Directly corroborates Req_24_3_1's side-by-side/highlight/match-score acceptance criteria and Req_24_3_3's 'Request New ID' path." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_9 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-09-near-match-resolution-match-link.png" ;
+    sd:notes "Confirmed by viewing: same screen, Action set to 'Match and Link ID's' with a Primary-ID selector, a checkbox to also link the second potential match, and a required justification textarea. Directly corroborates Req_24_3_2's 'select an existing record' / 'Use this Potential' acceptance criteria — the actual control is a Match-and-Link action, closer to iam's LinkId request type than a bare single-selection, a nuance the FDD's own prose doesn't spell out (see Req_24_3_2's notes)." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_10 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-10-near-match-resolution-deny.png" ;
+    sd:notes "Confirmed by viewing: same screen, Action set to 'Deny Request' with a required justification textarea — the fraudulent/invalid-submission path mentioned in the screen's own intro text ('deny their request if you believe it is fraudulent'), which none of the FDD's own numbered Addendum stories describe explicitly. See Req_24_3_3's notes." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_11 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-11-upload-employee-roster-modal.png" ;
+    sd:notes "Confirmed by viewing: 'Upload Employee Roster' modal, drag-and-drop, 1MB max, .doc/.docx/.pdf only (NOTE: file types listed here are document formats, not the tabular/CSV-like schema Req_24_4_1's 'validate against the schema' AC implies — an internal inconsistency in the source design, not resolved here)." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_12 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-12-upload-employee-roster-errors.png" ;
+    sd:notes "Confirmed by viewing: 'Upload Complete!' result listing rejected rows by line number and reason ('Line 12 - No UID', 'Line 23 - No UID', 'Line 137 - Duplicate UID'). Direct, independent visual confirmation of Req_24_4_1's acceptance criteria AND of staffing-permissions.ttl's pre-existing staff:Perm_EmployeeRosterBulkUpload gap (permission exists, no backing sd:ApiOperation) — see Req_24_4_1's notes." ;
+    sd:definedIn staff:Fdd24Doc .
+staff:Wireframe24_13 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/24-request-for-id-collection/wireframes/wireframe-13-notifications-dropdown.png" ;
+    sd:notes "Confirmed by viewing: generic notification-bell dropdown ('There are 2 new Professional Practice disclosures...', Temporary Credential Application alerts) — a template/placeholder screen (literal '{First_Name} {Last_Name}' text unreplaced) illustrating the alert-delivery MECHANISM generally, not a Near-Match-specific alert example. Used as general corroboration for Req_24_5_1's dashboard-alert mechanism, not as direct evidence of Near-Match-specific alert content." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Requirements — core flow (un-numbered Business Specifications prose,
+# never promoted into the Addendum's own numbering — see file header)
+#################################################################
+
+staff:Req_24_BizSpec_1 a sd:UserStory ;
+    sd:requirementId "24.BizSpec.1" ;
+    sd:title "Add New Employee: search-or-create, Mi-Key assignment, proceed to employment reporting" ;
+    sd:statement "As a Staffing Authorized User with authorized access to an educating organization, I want to add a new employee to my Employee Roster by first searching for their existing identity and, if found, reusing their Unique ID (or, if not found, entering their demographics fresh), so that a Unique ID is correctly matched or assigned via Mi-Key before I report the employee's assignment details." ;
+    sd:acceptanceCriteria "A link to 'Add New Employee' is available on the Staffing Authorized User dashboard. Selecting it navigates to a Person Search page; entering search criteria and selecting a matching result pre-populates the Add Employee form including the Unique ID field (Unique ID becomes non-editable once pre-populated). No matching result navigates to a blank Add Employee form with the Unique ID field blank and non-editable. The user reviews/completes required data, agrees to an attestation, and submits; the system validates the data (per 'Identity Validations.xlsx', not itself reviewed in this pass) before submitting to Mi-Key. Mi-Key returns Match (existing Unique ID returned), No Match (new Unique ID created), or Near Match (Requires Resolution, handled per Req_24_3_1-24_3_3). On a successful Match or No-Match outcome the user may proceed with reporting Employment Data details (FDD 21.0); if the resulting Unique ID already has associated employment/credential data, it is displayed; if it's associated with a Citizen User account, that account is notified (Req_24_5_3)." ;
+    sd:satisfiedBy staff:Seq_AddNewEmployee, staff:Op_SearchEmployees, staff:Op_AddEmployee, staff:EmployeeRosterAggregate, iam:Seq_BusinessUserRequestNewId ;
+    sd:notes "Strong, near-verbatim match on both the Staffing side (staff:Seq_AddNewEmployee's mermaid content follows this exact search/pre-populate-or-blank/validate/submit shape) and the IAM side (iam:Seq_BusinessUserRequestNewId's Match/No-Match/Near-Match branching is worded almost identically to this FDD's own 'probabilistic match result of Match, No Match ... or Near Match ... with the match score'). Corroborated by wireframes 1-3. The FDD's own 'Feature 24.1: Create New Collection' aside (school-year rollover / data-cleansing deferred to Identity Admin FDD 15.9) is a scoping note, not itself a testable acceptance criterion, and isn't separately modeled. CONFIRMED CROSS-FDD OVERLAP: this Requirement is a near-verbatim restatement of fdd-review/15-identity-management-integration.ttl's iam:Req_15_2_1/15_2_2/15_2_3 (Feature 15.2, the doc this FDD's own text names as its own workflow spec) — both independently resolve to the same satisfiedBy targets; see this file's header note." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_BizSpec_2 a sd:UserStory ;
+    sd:requirementId "24.BizSpec.2" ;
+    sd:title "Update Demographics for an existing roster employee, synchronized through Mi-Key" ;
+    sd:statement "As a Staffing Authorized User, I want to select an employee from my Employee Roster and update their demographic data through an 'Update Demographics' action, so that changes are synchronized with the Mi-Key master identity record and reflected in the employee's history." ;
+    sd:acceptanceCriteria "From the Employee Roster, viewing 'Personal Information' and selecting 'Update Demographics' presents an editable demographic form; submission is synchronized with Mi-Key (per '15.1 - Business User Update Demographics Record Requirements.docx', not itself reviewed in this pass); a successful update is reflected in a visible update-history log." ;
+    sd:satisfiedBy staff:Seq_UpdateEmployeeDemographics, staff:Op_GetEmployeeDemographics, staff:Op_UpdateEmployeeDemographics ;
+    sd:notes "Direct match; staff:Seq_UpdateEmployeeDemographics's own history-storage step and cross-notification pattern (citizen notified of district updates, district notified of citizen updates) is a strict superset of what this un-numbered prose describes. Corroborated by wireframes 4-5." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Requirements — Addendum 24.2: post-assignment demographic handling
+#################################################################
+
+staff:Req_24_2_1 a sd:UserStory ;
+    sd:requirementId "24.2.1" ;
+    sd:title "Lock demographic fields to read-only once a Unique ID is assigned" ;
+    sd:statement "As a Staffing Authorized User, I want the demographic data fields to become read-only once a Unique ID is successfully assigned, so that the identity data remains synchronized with the master record." ;
+    sd:acceptanceCriteria "Upon successful Unique ID assignment (Match or New Creation), demographic fields lock to read-only; an 'Update Demographics' button remains available for intentional future updates; the Unique ID is stored and associated with the employing entity; the ID assignment (user, date, time) is logged in the audit logs." ;
+    sd:satisfiedBy staff:Op_UpdateEmployeeDemographics, staff:EmployeeRosterAggregate ;
+    sd:notes "Partial: the separate GET-view/PATCH-update operation split (staff:Op_GetEmployeeDemographics vs. staff:Op_UpdateEmployeeDemographics) is consistent with a read-view-then-explicit-update UX, but no explicit 'demographics become read-only after ID assignment' invariant is asserted anywhere on staff:EmployeeRosterAggregate itself — an implicit, not explicit, match. The audit-logging half of this AC has no dedicated audit-log entity in staffing-domain.ttl beyond the update-history table shown in wireframe 5 (Modified date/Modified by/Authorized by columns) — treated as sufficient coverage of 'user, date, time' logging, not raised as a separate gap." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_2_2 a sd:UserStory ;
+    sd:requirementId "24.2.2" ;
+    sd:title "Prevent duplicate employment records for an already-rostered Unique ID" ;
+    sd:statement "As a Staffing Authorized User, I want the system to check if the Unique ID I am attempting to add is already associated with my district, so that I do not create duplicate employment records for the same individual." ;
+    sd:acceptanceCriteria "On entering a Unique ID (via search or manual entry), the system checks the current Employee Roster for the logged-in entity; if the Unique ID already exists in that roster, an error message is displayed and submission of a new 'Request for ID' for that individual is prevented." ;
+    sd:satisfiedBy staff:Seq_AddNewEmployee, staff:Op_AddEmployee ;
+    sd:notes "Direct, literal match: staff:Seq_AddNewEmployee's own sd:errorScenarios reads 'Unique ID already in entity roster > 409 Conflict, user selects existing record instead' — same rule, same outcome." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Requirements — Addendum 24.3: Near Match resolution (Add path)
+#################################################################
+
+staff:Req_24_3_1 a sd:UserStory ;
+    sd:requirementId "24.3.1" ;
+    sd:title "View potential-match details when a Near Match is returned" ;
+    sd:statement "As a Staffing Authorized User, I want to view the details of potential existing records when a 'Near Match' is returned, so that I can determine if the employee I am adding already exists in the system." ;
+    sd:acceptanceCriteria "Given a 'Near Match' result, display a resolution screen showing submitted data side-by-side with the potential match(es); highlight differing fields; mask sensitive data in potential-match results according to user permissions; display the match score/confidence level for each potential match." ;
+    sd:satisfiedBy iam:Seq_BusinessUserRequestNewId, iam:IdentityResolutionRequestAggregate ;
+    sd:notes "Strong match, corroborated field-for-field by wireframe 8 (90%/83% match scores shown, differing fields highlighted in the same yellow-highlight style this AC describes). One AC clause has no confirmed backing: 'mask sensitive data ... according to user permissions' — no field-level, permission-conditional masking rule for Near Match candidate data is asserted anywhere in iam-domain.ttl (iam does have an unrelated masking precedent for Lead Admin email and citizen SSN-last-4 elsewhere in iam-sequences.ttl, but nothing scoped to Near-Match candidate records specifically). Minor, not raised as its own Annotation given how narrow it is." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_3_2 a sd:UserStory ;
+    sd:requirementId "24.3.2" ;
+    sd:title "Select an existing potential match to resolve a Near Match" ;
+    sd:statement "As a Staffing Authorized User, I want to select an existing record from the potential matches, so that I can use the existing Unique ID for my employee instead of creating a duplicate." ;
+    sd:acceptanceCriteria "A 'Use this Potential' (or similar) action is available per displayed potential match; selecting it updates the employee record with the selected Unique ID; an option to update the master record if submitted data differs is presented; on confirmation, a resolution message is sent back to Mi-Key to confirm the link." ;
+    sd:satisfiedBy iam:Op_SelfResolveIdentityRequest, iam:Rule_BusinessUserNearMatchSelfResolution, staff:Op_ResolveNearMatch ;
+    sd:notes "Matches iam:Rule_BusinessUserNearMatchSelfResolution and iam:Seq_BusinessUserRequestNewId's self-resolve branch well for the core 'select and confirm' action. However, wireframe 9 (the actual 'Match and Link ID's' control) shows something a bit richer than this story's own text implies: a Primary-ID selector PLUS an optional second-candidate link checkbox and a required justification field — closer in shape to iam's separate LinkId request type (iam:Seq_BusinessUserRequestLinkId) than to a bare single-candidate self-resolve. Not modeled as a discrepancy Annotation since the underlying capability (self-resolve to an existing Unique ID) is genuinely present either way — flagged here as a UX/granularity nuance worth a second look if LinkId's own FDD is reviewed." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_3_3 a sd:UserStory ;
+    sd:requirementId "24.3.3" ;
+    sd:title "Request a new ID when no potential match is correct" ;
+    sd:statement "As a Staffing Authorized User, I want to request a new ID if none of the potential matches represent the employee I am adding, so that a correct, new identity record is created." ;
+    sd:acceptanceCriteria "A 'Request New ID' action is available on the Near Match resolution screen; selecting it requires the user to provide a justification for rejecting the potential matches; the request routes to the Identity Administrator worklist for review and approval; the user is shown a notification that the request is pending administrative review." ;
+    sd:satisfiedBy iam:Op_EscalateIdentityRequest, iam:IdentityResolutionRequiresReviewEvent, staff:Op_RequestNewId ;
+    sd:notes "Direct match: iam:Op_EscalateIdentityRequest's own summary is literally 'Escalate a business-user New ID Near Match for Identity Administrator review', and iam:Seq_BusinessUserRequestNewId's escalate branch requires justificationText and emits IdentityResolutionRequiresReview, matching this story end-to-end. Wireframe 10's 'Deny Request' action (also present on the same resolution screen, for suspected fraud) is NOT described anywhere in this story or any other numbered Addendum item — a real product capability with no corresponding FDD 24 user story at all. Not raised as its own Annotation (the underlying capability — an Identity Administrator denying a request — is separately covered by Req_24_5_2/iam:IdentityRequestDeniedEvent), but worth noting as an FDD-completeness gap in the source document itself, distinct from a solution-design coverage gap." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Requirements — Addendum 24.4: Data Input via API and File Upload
+#################################################################
+
+staff:Req_24_4_1 a sd:Requirement ;
+    sd:requirementId "24.4.1" ;
+    sd:title "Reject bulk-upload records lacking a valid Unique ID" ;
+    sd:statement "As a Staffing Data Administrator, I want the file upload process to reject records that do not include a valid Unique ID, so that users are forced to use the match process for new ID creation to prevent duplicates." ;
+    sd:acceptanceCriteria "Uploaded employee roster files are validated against the schema; a record missing a Unique ID is rejected with an error message; a record whose Unique ID does not exist in the system is rejected; the upload proceeds only for records with valid, existing Unique IDs." ;
+    sd:notes "No satisfiedBy: this story's own rule direction ('bulk upload cannot create new IDs, only update using an existing valid Unique ID') is independently CONFIRMED as already-resolved in staffing-domain.ttl's own Open Question #3 ('resolved... bulk-upload create-vs-update'), and wireframe 12 is a striking, independent visual confirmation of the exact validation behavior described here ('Line 12 - No UID', 'Line 137 - Duplicate UID'). But the actual implementing surface does not exist: staffing-permissions.ttl's own header already documents staff:Perm_EmployeeRosterBulkUpload as a Permission with NO backing sd:ApiOperation anywhere in staffing-api.ttl ('the bulk/file-upload pipeline ... is likewise entirely absent from the API surface'). This FDD reinforces that pre-existing, real gap with independent wireframe evidence rather than resolving it — genuine coverage gap, not fabricated as satisfied. See the coverage-gap Annotation below." ;
+    sd:definedIn staff:Fdd24Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Bulk/file-upload processing for the Employee Roster (staff:Perm_EmployeeRosterBulkUpload) has no backing sd:ApiOperation anywhere in staffing-api.ttl — a pre-existing gap from the Phase 1 staffing conversion, now independently reinforced by this FDD's own 24.4.1 acceptance criteria and by wireframes 11-12 (an Upload Employee Roster modal and its per-row 'No UID'/'Duplicate UID' rejection result), which describe the exact validation behavior with no implementing endpoint to attach it to. Separately, this FDD's own prose under 'Feature 24.4' raises two more open questions with NO resolution anywhere in the graph: (1) whether users can bulk-update an EXISTING Unique ID's associated data via file upload (distinct from 24.4.1's reject-on-missing-ID rule for NEW records) — the FDD's own text says 'Need to determine if users are able to perform updates to the Unique ID in bulk/file upload... File types, schema and processing are to be defined,' and a reviewer comment thread (Caswell asking for clarification, Groom replying 'Confirmed' without adding the missing detail) confirms this is still genuinely open, not settled off-page; and (2) whether/how external local-HR-system API connections might interact with Mi-Key directly rather than through MiEdWorkforce — the FDD's own text: 'This may include interactions directly with Mi-Key, which will need to interface with MiEdWorkforce. The specifications and service implementation plans are to be defined.' Also note wireframe 11's own file-type list (.doc/.docx/.pdf) is itself inconsistent with 'validate against the schema' implying a structured/tabular format — an internal FDD inconsistency, not resolved here." ;
+    oa:hasTarget staff:Req_24_4_1 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_4_2 a sd:UserStory ;
+    sd:requirementId "24.4.2" ;
+    sd:title "Submit staffing data via API from a local HR system" ;
+    sd:statement "As a School District, I want my local HR system to be able to submit staffing data via API, so that I can streamline the reporting of employees without manual entry." ;
+    sd:acceptanceCriteria "The system exposes an API endpoint to receive staffing data; the API validates that the incoming record contains a Unique ID; a new-employee request with no Unique ID is rejected with an error code indicating ID creation must go through the UI or a dedicated ID-creation service; valid records are parsed and stored into the Employee Roster." ;
+    sd:satisfiedBy staff:Op_AddEmployee ;
+    sd:notes "Partial: staff:Op_AddEmployee's own notes confirm the external-caller shape this story needs ('x-access: [internal-user, external-client] — callable ... by external HR/SIS systems submitting on behalf of a district'), and the endpoint exists. But the specific restriction this story's AC asks for — reject an API-submitted new-employee request that has no Unique ID, distinct from the UI path which DOES allow blank-Unique-ID submission for new-record creation — is not explicitly confirmed anywhere in staff:Op_AddEmployee's converted notes; the operation as documented doesn't distinguish caller type when deciding whether a missing Unique ID is allowed. Consistent in spirit with the confirmed bulk-upload restriction (Req_24_4_1's notes) but not itself confirmed for this specific operation — not raised as a separate Annotation given how narrow the gap is, but not claimed as fully confirmed either." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Requirements — Addendum 24.5: Alerts & Notifications
+#################################################################
+
+staff:Req_24_5_1 a sd:UserStory ;
+    sd:requirementId "24.5.1" ;
+    sd:title "Alert the user when Add Employee produces a Near Match requiring review" ;
+    sd:statement "As a Staffing Authorized User, I want to receive a system alert when an 'Add Employee' request results in a 'Near Match' that requires administrative review, so that I know the record is in a pending status." ;
+    sd:acceptanceCriteria "An alert generates on the user's dashboard when a submitted record returns a 'Near Match' status requiring ID Admin intervention; the alert indicates which employee record requires resolution; the employee record is not created in the active roster until resolution completes." ;
+    sd:satisfiedBy iam:IdentityResolutionRequiresReviewEvent, comm:CommunicationsContext ;
+    sd:notes "The event and its Communications subscription are real and well-matched (iam:IdentityResolutionRequiresReviewEvent -> comm:CommunicationsContext); the 'not created in active roster until resolution completes' half matches staff:Seq_AddNewEmployee's own 202-Accepted-pending-resolution branch. The specifically DASHBOARD-rendered form of the alert (as opposed to email) isn't separately modeled as a UI widget anywhere in Communications or a Dashboards capability (dash:DashboardsContext remains a stub-only context per mied-v3/CONVENTIONS.md, same as FDD 29's own 29.1.8/29.1.10 findings) — wireframe 13's generic notification-bell dropdown is used as general corroboration that SOME on-screen alert mechanism exists, not confirmation that a Near-Match-specific dashboard alert is itself built. Kept as Satisfied (the underlying event/notification plumbing is real) rather than a gap, consistent with how comparable dashboard-presentation nuances were treated in the FDD 29 pass." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_5_2 a sd:UserStory ;
+    sd:requirementId "24.5.2" ;
+    sd:title "Notify the user of the Identity Administrator's approve/deny decision on a New ID request" ;
+    sd:statement "As a Staffing Authorized User, I want to be notified when the Identity Administrator approves or denies my request for a New ID (following a Near Match), so that I can proceed with reporting the employee's assignment data." ;
+    sd:acceptanceCriteria "If approved: send a notification/email (per preferences) containing the new Unique ID, stating the record is active. If denied: send a notification/email stating the request was denied, including the Administrator's justification/rejection reason. Either notification links back to the relevant record in the Employee Roster." ;
+    sd:satisfiedBy iam:Seq_IdentityAdministratorResolveRequest, iam:IdentityResolutionCompletedEvent, iam:IdentityRequestDeniedEvent ;
+    sd:notes "Direct, strong match: iam:Seq_IdentityAdministratorResolveRequest's own mermaid content includes 'IAM->>Notification: Notify requester of outcome (email + on-screen)' immediately after both the approve and deny branches, and iam:IdentityRequestDeniedEvent's own payloadHighlights include 'denialReason' — exactly the 'Admin's justification/rejection reason' this story asks for." ;
+    sd:definedIn staff:Fdd24Doc .
+
+staff:Req_24_5_3 a sd:UserStory ;
+    sd:requirementId "24.5.3" ;
+    sd:title "Notify a Citizen User when a district adds their Unique ID to its roster" ;
+    sd:statement "As a Citizen User, I want to receive an email notification when a district adds my Unique ID to their Employee Roster, so that I am aware of changes to my employment record in the state system." ;
+    sd:acceptanceCriteria "When a Staffing Authorized User successfully adds an employee who has an associated Citizen Account, an email triggers to that account's address, stating the specific entity (school district name) added them as an employee, using the Identity Administrator's defined email template." ;
+    sd:satisfiedBy staff:EmployeeAddedToRosterEvent, comm:CommunicationsContext ;
+    sd:notes "Direct match: staff:EmployeeAddedToRosterEvent is already subscribed to by comm:CommunicationsContext in staffing-domain.ttl, and this is exactly the citizen-notification behavior this FDD's own Business Specifications prose describes ('If the Unique ID is associated with a Citizen User account, the citizen account will receive notification that the record has been added to a new employing school district')." ;
+    sd:definedIn staff:Fdd24Doc .
+
+#################################################################
+# Cross-cutting discrepancy Annotation
+#################################################################
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Four of this FDD's own embedded wireframes (wireframe-06, -08, -09, -10 — the 'ID Management Requests' list and all three Near-Match resolution action screens) carry a '< Back to Rapbacks' breadcrumb and title their content 'ID Collection Request #NNNNNN'. Neither this FDD's own text nor iam-domain.ttl/iam-sequences.ttl (which model this exact Identity-Administrator-review workflow as iam:IdentityResolutionRequestAggregate / iam:Seq_IdentityAdministratorResolveRequest, using only 'identity resolution'/'Near Match' terminology) ever use the word 'Rapback' anywhere. FDD 30 (Rapbacks) is itself still unreviewed as of this pass (fdd-review/STATUS.md's 'not yet done' list). Left open rather than assumed: it's plausible the product literally nests this whole worklist under a broader 'Rapbacks' section of the Identity Administrator's UI, but that can't be confirmed or ruled out until FDD 30 itself is reviewed." ;
+    oa:hasTarget staff:Wireframe24_6, staff:Wireframe24_8, staff:Wireframe24_9, staff:Wireframe24_10 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd24Doc .

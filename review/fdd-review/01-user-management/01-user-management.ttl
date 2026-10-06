@@ -1,0 +1,478 @@
+# FDD 01 review — "1 - User Management (1.0-1.8)" — ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 IAM (Identity & Access
+# Management) graph (iam-domain.ttl / iam-permissions.ttl / iam-api.ttl /
+# iam-sequences.ttl / iam-technical-design.ttl, all loaded together). This FDD folder
+# maps cleanly onto the single existing iam:IamContext bounded context — no
+# cross-domain split was needed (Feature 1.7's own text explicitly defers to a
+# different FDD/domain — Reporting — and is handled as an out-of-scope Annotation
+# below, not modeled here).
+#
+# Source material read:
+# - "1 - User Management.docx" (primary; .md sibling read first for a fast pass, then
+#   the .docx unzipped for word/comments.xml, word/commentsExtended.xml, and
+#   word/document.xml). The numbered "Addendum" section (Features 1.1-1.8, each with
+#   "As a <role>, I want..." stories + Acceptance Criteria) is the Requirement unit used
+#   below. The document's own "HIGH LEVEL SCENARIOS" table (84 rows) restates the same
+#   ~27 Addendum items at coarser grain and is skipped per CONVENTIONS.md.
+# - "MiLogin Interface/1.1 - MiLogin Citizen and Business/1.1 - MiLogin {Business,
+#   Citizen} IDD.docx" and "MiLogin Interface/1.2 - MiLogin Worker/1.2 - MiLogin Worker
+#   IDD.docx" — technical interface specs (OIDC endpoints per environment, sample JWT
+#   claims). No numbered user stories; read for context only, corroborating
+#   ext:MiLoginSystem's existing sd:integrationNotes in iam-domain.ttl (same OIDC claim
+#   set: email, uniqueSecurityName, userType, realmName, tenantId, etc.). Not separately
+#   modeled as sd:SourceDocument nodes — nothing here is load-bearing beyond what
+#   iam-domain.ttl's ext:MiLoginSystem already states.
+# - "MiLogin Interface/MILogin Helpdesk Guide for all User types_V2.6.docx" — a generic,
+#   MiLogin-platform-wide (16-agency) Level-1 help-desk operations manual (search/
+#   suspend/restore/merge accounts, MFA enrollment, ID-proofing, consent management).
+#   Entirely about MiLogin's own external, State-of-Michigan-wide admin tooling, not
+#   MiEdWorkforce-specific — no numbered stories, nothing to model here. Read for
+#   awareness only.
+# - "MiEdWorkforce Role Matrix-Revised.xlsx" — the one confirmed exception to the
+#   skip-workbooks rule (explicitly named "Role Matrix" and cited by the FDD's own
+#   business-spec text: "User Roles and permissions are defined MiEdWorkforce Role
+#   Matrix.xlsx"). Its "All User Roles" sheet has 19 real rows shaped MiLogin Type |
+#   Group | Role | Functions(access-level-per-function) — see the "No User Group
+#   Layer" contradiction below: this reference artifact itself is organized entirely
+#   around the "Group" concept the domain explicitly decided not to build.
+# - "Working/User Groups and Roles.xlsx" — a cross-FDD Epic/Feature index (all 32 FDD
+#   epics, not User-Management-specific); used only to confirm Feature 1.7's own
+#   deferral to Feature 2.1 (Reporting Framework Implementation) and that no other Epic
+#   claims User Management's numbering. Not itself a source of Requirements.
+# - "Business User Auth Flow.vsdx" and "Person Info by Role.vsdm" — skipped per
+#   CONVENTIONS.md (Visio files excluded unless load-bearing and named as reference
+#   data; neither is).
+#
+# Review comments (17 total, via comments.xml + commentRangeStart/End anchoring in
+# document.xml): most are short, resolved, single-reply threads folded into the
+# relevant Requirement's own sd:notes below (id 5/6: ambiguous naming for the
+# "update roles/permissions" landing-page action, resolved by 2026 to "Update
+# Profile/Access" or similar, not yet finalized in the visible text; id 7/8: a reviewer
+# flagged that the public, unauthenticated Authorized-User-Removal form looked like it
+# let anyone remove anyone's access, confirmed-in-thread to already require Lead Admin
+# approval/routing per the visible spec; id 10: open question on whether a
+# removed-then-regranted user resumes their prior worklist state, folded into
+# Req_01_removal's notes; id 15/16: confirms the Worker security form is a different,
+# paper-based form from the Business e-form, flowing through a different (offline)
+# approval pathway — directly informs the Feature 1.2 discrepancy below; id 22/23/52/62:
+# a recurring "Role Matrix is still evolving, subject to change" caveat recorded once
+# here rather than on every affected Requirement). Two comment threads are treated as
+# standalone findings below because of their scale/significance:
+# - id 144560476/42 (2026-04-15, Doherty/Dontje): explains WHY Feature 1.2's own
+#   story 1.2.1 has no "As a..." stem in the visible text (just a bare AC) — it was
+#   rewritten mid-review to describe a manual, paper-form-only Worker onboarding
+#   process, and a companion comment clarifies the "Pending Access" surface is a page,
+#   not a paper form itself. See Question_WorkerOnboardingNotFullyModeled below — the
+#   rewritten intent still isn't what iam-sequences.ttl's login-routing sequence
+#   actually implements.
+# - id 2058739645/189499350/397120832 (2026-04-15, Doherty, re: the 1.4.1/1.5.2 area):
+#   explains that this FDD deliberately REUSES generic search/list wireframes across
+#   unrelated features "to maintain design consistency and speed up development" —
+#   directly confirmed by viewing wireframe-05 below (a Staffing "Positions" screen
+#   embedded as the illustration for 1.5.2's Role-creation story). Folded into
+#   Req_01_5_2's own notes rather than a separate Annotation — it's an explanation, not
+#   an open question.
+#
+# Wireframes: 30 embedded images total (word/media/image1.png-image30.png, plus one
+# oddly-pathed top-level /media/image1f.png — the same "/media/imageN.jpg" packaging
+# quirk already seen in the FDD 29 pass, not a modeling concern). None are individually
+# captioned "Wireframe N" the way FDD 29's were; position in the document was used to
+# associate each with its nearest story, cross-checked via r:embed/document-order
+# mapping against word/_rels/document.xml.rels. Per CONVENTIONS.md's depth-calibration
+# guidance, 6 of the 30 were actually viewed (enough to span the doc and to confirm or
+# refute the two structural contradictions found below); the rest were not
+# individually opened. The 6 viewed are extracted to wireframes/ below:
+# - wireframe-01: the Business-user security-form + Lead-Admin-approval swimlane
+#   diagram (word/media/image1.png) — corroborates Seq_BusinessUserInitialAuthorizationRequest
+#   and Seq_LeadAdministratorBootstrap well.
+# - wireframe-02: MiLogin's own "Michigan Online Registry for Citizens" login page
+#   (word/media/image6.png) — MiLogin-platform chrome, not a MiEdWorkforce screen;
+#   corroborates 1.1.1's "auto-directed on selecting the application" framing only
+#   loosely (MiLogin's login screen precedes app selection, doesn't depict it).
+# - wireframe-03: the "Welcome {First_Name} {Last_Name}" citizen demographic/account-
+#   creation form (top-level /media/image1f.png) — positioned in the DOCUMENT at the
+#   Feature 1.2 (Worker) 1.2.1 acceptance-criteria location (immediately after "The
+#   system validates the authentication token originates specifically from the MiLogin
+#   for Workers platform"), but its actual content is a CITIZEN account-creation form,
+#   unrelated to Workers. Confirmed by viewing, not assumed — this is exactly the
+#   caption/image mismatch CONVENTIONS.md warns about (cf. FDD 11/16's precedent) and is
+#   itself evidence for Question_WorkerOnboardingNotFullyModeled below: there is no
+#   genuine Worker-specific wireframe anywhere in this document.
+# - wireframe-04: the "Groups" admin screen (word/media/image16.png, embedded at
+#   1.3.1) — a fully-realized Create/Edit/Delete-Group CRUD screen. Directly
+#   strengthens Question_NoUserGroupLayerContradiction below: this isn't a vague
+#   textual reference to "Groups," it's a wireframed admin CRUD surface for a concept
+#   the domain model explicitly decided not to build.
+# - wireframe-05: a Staffing "Positions" list screen (word/media/image22.png, embedded
+#   at 1.5.2 "create a new Role"), i.e. visibly the WRONG feature's screen reused as a
+#   placeholder — direct visual confirmation of the reused-wireframe comment thread
+#   above.
+# - wireframe-06: the citizen-record "View System as User" link (word/media/image29.png,
+#   embedded at 1.8.1) — direct visual confirmation that this FDD specifies exactly the
+#   read-only-impersonation capability iam-technical-design.ttl's own
+#   iam:Question_UserImpersonationOmission already documents as deliberately EXCLUDED
+#   from the initial implementation. See Question_ImpersonationFeatureContradictsOmission
+#   below.
+#
+# Two structural, cross-cutting discrepancies dominate this pass more than any
+# individual story-level gap (both flagged as sd:Annotation, findingType
+# "contradiction", targeting every affected Requirement rather than being repeated
+# per-story):
+# 1. "No User Group Layer" (iam:RoleDefinitionAggregate's own sd:notes, decided
+#    2026-08-14, "pending final client concurrence") directly contradicts this FDD's
+#    Feature 1.3 (a full User-Group admin CRUD feature), and threads through 1.4.2/
+#    1.4.3/1.5.1's own acceptance criteria, the main Business Specifications section's
+#    "User Groups will include: System Administrator, Credential, Staffing, EPP,
+#    Professional Learning, Data Quality, Citizen" list, and even the reference Role
+#    Matrix workbook's own column structure. This FDD is live, recent (comments through
+#    2026-04), and unambiguous about wanting Groups as a first-class, separately
+#    assignable, admin-manageable layer — the strongest evidence yet (stronger than the
+#    domain doc's own "pending client concurrence" hedge suggests) that the "Role +
+#    Scope only" decision may need to be revisited, not that this FDD is simply stale.
+# 2. iam:Perm_UserImpersonate / iam:Question_UserImpersonationOmission already document
+#    that impersonation ("View As") was designed, evaluated, and deliberately EXCLUDED
+#    from the initial IAM implementation. This FDD's Feature 1.8 describes exactly that
+#    capability in detail (search, view-as, read-only enforcement, role-based
+#    restriction on who can impersonate whom) as a should-build feature, with its own
+#    wireframe. Same three-way discrepancy the IAM domain files already flagged,
+#    now reinforced by a fourth, independent document.
+#
+# Every one of the 27 numbered stories below (26 real "As a..." stories across Features
+# 1.1-1.6 and 1.8, plus one synthetic item for Feature 1.7's own deferral paragraph,
+# which has no numbered sub-story) is accounted for as Satisfied, Out-of-scope, or a
+# genuine coverage-gap — see the per-story sd:satisfiedBy / Annotation below.
+#
+# Note on the Business Specifications prose (not separately promoted to Requirement
+# nodes, unlike FDD 29's precedent of minting synthetic IDs for un-numbered-but-wireframed
+# BizSpec content): this document's own prose describes several capabilities never given
+# their own Addendum number — self-service and admin-initiated authorization removal, the
+# public unauthenticated removal-request form, automated inactivity deactivation, standard/
+# custom/ad-hoc reports, and an Email Template admin screen. Unlike FDD 29's three omitted
+# BizSpec features (which had no backing model at all), every one of these already has a
+# strong, direct match in iam-sequences.ttl/iam-api.ttl (Seq_BusinessUserSelfRemoveAuthorization,
+# Seq_ExternalPartyRequestRemoval + Seq_SystemAdminReviewsRemovalRequest, Op_RevokeAuthorization,
+# Seq_AutomatedInactivityDeactivation + InactivityPolicyAggregate, Op_GetNewUsersReport/
+# Op_GetDeniedRequestsReport/Op_GetInactivityReport) except the Email Template admin screen,
+# which is squarely Communications/Alerts territory per this FDD's own Dependencies section
+# ("...using the framework within the Alerts, Emails and Communications (6)") — the same kind
+# of scope boundary the FDD 29 pass already documented for Credentialing. Given how well-covered
+# (or clearly out-of-scope) all of these already are, minting synthetic Requirement nodes for
+# un-numbered prose here would add ceremony without changing any coverage conclusion, so none
+# were minted — noted here rather than silently passed over.
+
+@prefix sd:      <urn:solutiondesign:ontology:> .
+@prefix oa:      <http://www.w3.org/ns/oa#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix iam:     <urn:solutiondesign:instance:iam:> .
+@prefix orgs:    <urn:solutiondesign:instance:organizations:> .
+@prefix staff:   <urn:solutiondesign:instance:staffing:> .
+@prefix ext:     <urn:solutiondesign:instance:external:> .
+@prefix scope:   <urn:solutiondesign:instance:shared:scope:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+iam:Fdd01Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/01 - User Management/1 - User Management.docx" ;
+    sd:notes "Covers Features 1.1-1.8 (User Management: MiLogin Citizen/Business/Worker integration, User Group Management, User Search, User Roles, Account Registration, User Authorization Reports (deferred), and 'Emulate system for specific users and entities'/impersonation). Authors Beth Dontje, Caitlin Groom, Vidhya Punniyamoorthy, Molly Chapman (creation 5/9/2025); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI) 08/08/2025 per the signoff table — but comments.xml contains dated entries through 2026-04-15/2026-04-27, well after that signoff date, meaning the document continued to be actively revised after its nominal approval (same pattern already noted in the FDD 29 pass)." .
+
+iam:Fdd01RoleMatrixDoc a sd:SourceDocument ;
+    sd:docType "brd" ;
+    sd:section "functional-design-docs/01 - User Management/MiEdWorkforce Role Matrix-Revised.xlsx" ;
+    sd:notes "The one confirmed workbook exception per CONVENTIONS.md — explicitly named and cited by the FDD's own business-spec text. 'All User Roles' sheet: 19 rows, columns MiLogin Type | Group | Role | ~35 per-function access levels (Read/Edit/No). Review comments elsewhere in the FDD (ids 22/23/52/62) repeatedly caveat that this matrix is 'up-to-date but subject to change after upcoming role matrix discussions' and 'will evolve' — treated here as a live, not-yet-final reference artifact, not an authoritative source to reconcile role-by-role against iam:Entity_Role. Its own column structure (a 'Group' column distinct from 'Role') is corroborating evidence for Question_NoUserGroupLayerContradiction below." ;
+    sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.1: MiLogin Citizen and Business for Third party
+#################################################################
+
+iam:Req_01_1_1 a sd:UserStory ;
+    sd:requirementId "1.1.1" ;
+    sd:title "Citizen auto-directed to account creation or dashboard" ;
+    sd:statement "As a MiLogin for Citizens User, I want to be automatically directed to the specific MiEdWorkforce account creation or dashboard page upon selecting the application, so that I can establish my identity or view my credentials without manual approval of my system access request." ;
+    sd:acceptanceCriteria "The system detects the authentication request originating from the MiLogin for Citizens platform. The system auto-approves the user's request for access to MiEdWorkforce upon selection from the MiLogin Systems/Applications menu. If the user has not yet established a Unique ID, the system navigates the user to the 'Account Creation Landing Page'. If the user has a Unique ID assigned, the system navigates the user to the Dashboard." ;
+    sd:satisfiedBy iam:Seq_MiLoginAuthenticationIntegration, iam:Seq_CitizenInitialSignIn, iam:Rule_CitizenAutoApproval ;
+    sd:notes "Direct, strong match: Seq_MiLoginAuthenticationIntegration's own routing alt-branch ('No authorizations AND MiLogin type = Citizen' -> has Unique ID ? dashboard : identity resolution) is this story almost verbatim, and Seq_CitizenInitialSignIn covers the identity-resolution path in full detail. wireframe-03 (viewed) shows the actual Account Creation Landing Page form referenced here, though it is misplaced in the document at the Feature 1.2 (Worker) location — see Question_WorkerOnboardingNotFullyModeled." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_1_2 a sd:UserStory ;
+    sd:requirementId "1.1.2" ;
+    sd:title "Business user directed to security access forms" ;
+    sd:statement "As a MiLogin for Business User, I want to be directed to the security access forms upon selecting the application, so that I can associate my account with a specific educational entity." ;
+    sd:acceptanceCriteria "The system detects the authentication request originating from the MiLogin for Business platform. The system navigates the user directly to the security access forms to establish user roles and entity permissions. The system allows the user to access the security forms without a pre-established Unique ID." ;
+    sd:satisfiedBy iam:Seq_MiLoginAuthenticationIntegration, iam:Seq_BusinessUserInitialAuthorizationRequest, iam:Op_SubmitAuthorizationRequest ;
+    sd:notes "Direct match: the sequence's Business/Worker branch (no existing authorizations, not a Lead Admin) routes to exactly this form. wireframe-01 (viewed) corroborates the full security-form + Lead-Admin-approval swimlane." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_1_3 a sd:UserStory ;
+    sd:requirementId "1.1.3" ;
+    sd:title "Public landing page shows distinct Citizen/Business login options, no Worker option" ;
+    sd:statement "As a Member of the public, I want to view distinct login options for Citizens and Business users on the MiEdWorkforce public landing page, so that I am redirected to the correct MiLogin portal for my user type." ;
+    sd:acceptanceCriteria "The MiEdWorkforce public landing page displays a distinct link or button for 'MiLogin for Citizens'. The MiEdWorkforce public landing page displays a distinct link or button for 'MiLogin for Business'. The system does not display a login option for 'MiLogin for Workers' on the public landing page. Clicking a specific link redirects the user to the corresponding MiLogin platform URL." ;
+    sd:satisfiedBy ext:MiLoginSystem ;
+    sd:notes "Partial: the underlying three-portal-separation fact (Citizen/Business/Worker are genuinely separate MiLogin URLs, confirmed independently by the three MiLogin Interface IDDs read for this pass) is real and matches ext:MiLoginSystem's own integrationNotes. But which links a public MiEdWorkforce landing page itself displays is a front-end/portal-content concern with no corresponding node anywhere in iam-domain.ttl/iam-api.ttl (no ApiOperation or Sequence models 'the public landing page'); this is a minor, UI-only gap not worth its own Annotation given how narrow it is — noted here rather than escalated." ;
+    sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.2: MiLogin Common (Worker-specific)
+#################################################################
+
+iam:Req_01_2_1 a sd:UserStory ;
+    sd:requirementId "1.2.1" ;
+    sd:title "Worker authentication token validated as MiLogin-for-Workers-originated" ;
+    sd:statement "(No 'As a...' stem is present in the visible document text for this item — see this file's header note on comment 144560476/42: the story was rewritten mid-review to describe a manual, paper-form-only Worker onboarding process, but the visible AC was left as a single bare validation statement.)" ;
+    sd:acceptanceCriteria "The system validates the authentication token originates specifically from the MiLogin for Workers platform." ;
+    sd:notes "No satisfiedBy asserted. See Question_WorkerOnboardingNotFullyModeled below — grouped with 1.2.2/1.2.3 since all three describe the same Worker-specific post-authentication handling that iam-sequences.ttl's Seq_MiLoginAuthenticationIntegration does not actually implement as described." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_2_2 a sd:UserStory ;
+    sd:requirementId "1.2.2" ;
+    sd:title "No automatic permission granting for Worker accounts" ;
+    sd:statement "As a System Administrator, I want the system to prevent automatic permission granting for Worker accounts, so that state employees only access data after the offline approval process is complete." ;
+    sd:acceptanceCriteria "Upon successful login by a new Worker user, the system defaults the account to having zero functional permissions/roles. The system prevents the Worker user from accessing any functional dashboards, search tools, or data entry screens until a role is explicitly assigned by an administrator. The system bypasses the 'Security Authorization Form' workflow used by Business users (Worker authorization is handled via offline paper forms)." ;
+    sd:notes "No satisfiedBy asserted: iam-sequences.ttl's Seq_MiLoginAuthenticationIntegration routes a Worker with no existing authorizations and no Lead Admin status to the SAME 'authorization request form' branch as a Business user with no special-casing for 'bypass the e-form entirely, land on a zero-permission Pending Access state instead' — this is exactly what the FDD asks for and exactly what the currently-modeled sequence does not do. See Question_WorkerOnboardingNotFullyModeled." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_2_3 a sd:UserStory ;
+    sd:requirementId "1.2.3" ;
+    sd:title "Admin locates and manually assigns permissions to Worker accounts" ;
+    sd:statement "As a MiEdWorkforce Admin, I want to be able to locate accounts established via MiLogin for Workers, so that I can manually assign the specific permissions approved via the offline security process." ;
+    sd:acceptanceCriteria "The system makes the newly authenticated Worker account visible in the User Account search. The system allows the Admin to identify the user specifically as a 'MiLogin for Workers' type. The system allows the Admin to assign worker-specific groups and roles to the account. The system captures audit details (Modified By/Date) when the Worker's permissions are updated from the pending state." ;
+    sd:satisfiedBy iam:Op_SearchUsers, iam:Seq_SystemAdminManualGrant, iam:Op_ManualGrantAuthorization ;
+    sd:notes "Reasonably satisfied, unlike 1.2.1/1.2.2: Op_SearchUsers (scope-sensitive admin search) plus Seq_SystemAdminManualGrant (admin directly grants an Authorization, bypassing approval, with a required justification/audit trail — 'Record manual grant in audit log') together implement the search + manual-assign + audit-capture behavior asked for here. 'identify the user specifically as MiLogin for Workers' is implicit in VO_MiLoginIdentity's type field, not a documented distinct search filter on Op_SearchUsers — a minor gap. 'worker-specific groups' repeats the Group-layer terminology covered by Question_NoUserGroupLayerContradiction; the Role-assignment half of this story is what's actually satisfied." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_2_4 a sd:UserStory ;
+    sd:requirementId "1.2.4" ;
+    sd:title "Worker initiates session via MiLogin for Workers only" ;
+    sd:statement "As a State of Michigan Worker, I want to initiate my session directly through the MiLogin for Workers platform, so that I am authenticated securely without a public login link." ;
+    sd:acceptanceCriteria "The system does not display a 'MiLogin for Workers' link/button on the public-facing MiEdWorkforce landing page. The Worker logs into the external MiLogin for Workers platform to view their available State of Michigan applications. When a worker selects 'MiEdWorkforce' from the MiLogin for Workers application list, the system accepts the redirection and validates the authentication token." ;
+    sd:satisfiedBy iam:Seq_MiLoginAuthenticationIntegration, ext:MiLoginSystem ;
+    sd:notes "The core OIDC redirect-and-validate flow is a direct match to Seq_MiLoginAuthenticationIntegration's generic 'any user (Citizen/Business/Worker)' description. The 'no public landing-page link for Workers' half shares Req_01_1_3's minor UI-only gap, not re-raised separately." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Question_WorkerOnboardingNotFullyModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 1.2.1/1.2.2 describe a Worker-specific post-authentication path that is materially different from Business: zero permissions by default, no e-form, a distinct 'Pending Access' page pointing the user at an offline paper process, with admin-side manual assignment (1.2.3, which IS reasonably satisfied). iam-sequences.ttl's Seq_MiLoginAuthenticationIntegration currently routes 'No authorizations AND MiLogin type = Business/Worker' through one shared branch (Lead-Admin check, else 'redirect to authorization request form') with no Worker-specific fork to a zero-permission Pending Access state — the same e-form path a Business user gets. Corroborating evidence this gap is real, not just an FDD-numbering artifact: (a) comment 144560476/42 shows the visible 1.2.1 text was deliberately rewritten mid-review specifically to describe this manual/paper-only process, meaning the requirement is a live, considered decision, not a stale draft; (b) the wireframe positioned at this exact spot in the document (wireframe-03, viewed) is not a Worker screen at all but a misplaced/reused Citizen account-creation form — i.e. no Worker-specific UI exists anywhere in this FDD either, reinforcing that this path was never fully designed end-to-end on either side." ;
+    oa:hasTarget iam:Req_01_2_1, iam:Req_01_2_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.3: User Group Management
+#################################################################
+
+iam:Req_01_3_1 a sd:UserStory ;
+    sd:requirementId "1.3.1" ;
+    sd:title "View list of defined user groups" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to access an administrative page to view a list of all defined user groups, so that I can monitor the high-level categorization of users within the system." ;
+    sd:acceptanceCriteria "The system displays a searchable list of existing user groups. The list displays the associated MiLogin type (Citizen, Business, or Worker) for each group. The system allows the administrator to filter the list by MiLogin type. The system restricts access to this page to users with the MiEdWorkforce System Administrator role." ;
+    sd:notes "No satisfiedBy asserted — see Question_NoUserGroupLayerContradiction below. wireframe-04 (viewed) shows this exact 'Groups' admin list screen (Group Name/Group Description, with Create/Edit/Delete), embedded at this precise location in the document — a fully wireframed feature for a concept the domain explicitly decided not to model." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_3_2 a sd:UserStory ;
+    sd:requirementId "1.3.2" ;
+    sd:title "Add or edit user groups" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to add new user groups or edit existing ones, so that I can adapt the system structure if organizational needs change (e.g., splitting an admin group into two)." ;
+    sd:acceptanceCriteria "The system provides an option to 'Create Group'. When creating or editing a group, the system requires the administrator to define the Group Name and associate it with a specific MiLogin Type (Citizen, Business, or Worker). The system allows the administrator to edit the name of an existing group. The system logs all creation and modification of user groups with the user ID and timestamp for audit purposes." ;
+    sd:notes "No satisfiedBy asserted — see Question_NoUserGroupLayerContradiction below." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_3_3 a sd:UserStory ;
+    sd:requirementId "1.3.3" ;
+    sd:title "Enforce MiLogin type consistency for user groups" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want the system to enforce MiLogin type consistency for user groups, so that users are only organized into groups compatible with their authentication method." ;
+    sd:acceptanceCriteria "The system prevents a user group from being associated with more than one MiLogin type. The system allows a user to be assigned to multiple groups only if all assigned groups belong to the same MiLogin type. The system prevents the assignment of a group to a user if the group's MiLogin type does not match the user's account type." ;
+    sd:satisfiedBy iam:VO_ApplicableMiLoginTypes, iam:Rule_MiLoginContextEnforcement ;
+    sd:notes "Partially satisfied by an analogous-but-different mechanism: iam:VO_ApplicableMiLoginTypes on Role (not on a Group layer) already enforces 'this Role may only be assigned under these MiLogin identity types' at grant time, and Rule_MiLoginContextEnforcement enforces the same boundary at query time. The underlying intent (don't let a Business-only construct attach to a Citizen account) is achieved via Role, exactly as iam:RoleDefinitionAggregate's own notes describe as the deliberate replacement for a Group layer — this Requirement is satisfied in spirit but the FDD's own 'group' vocabulary doesn't exist. Also targeted by Question_NoUserGroupLayerContradiction below for that terminology mismatch." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Question_NoUserGroupLayerContradiction a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "contradiction" ;
+    rdfs:comment "iam:RoleDefinitionAggregate's own sd:notes record a 2026-08-14 domain decision: 'No User Group Layer... an earlier FDD draft described a User Group concept whose one enforced constraint never carried behavior that Role + Scope couldn't already express. Confirmed direction is Role + Scope only... Pending final client concurrence.' This FDD (1 - User Management, comments dated through 2026-04-15, i.e. contemporaneous with or after that decision) directly contradicts it: Feature 1.3 is an entire admin CRUD feature for creating/editing/listing 'User Groups' as a first-class, separately-assignable, admin-managed construct (System Administrator, Credential, Staffing, EPP, Professional Learning, Data Quality, Citizen, per the FDD's own Business Specifications list) distinct from Role — not a vague or stale mention. Corroborating evidence this is a live requirement, not leftover FDD text nobody updated: (1) wireframe-04 (viewed) is a fully-realized 'Groups' CRUD screen, not just narrative text; (2) 1.4.2/1.4.3/1.5.1 all separately reference assigning/filtering by Group as distinct from Role; (3) the Role Matrix reference workbook (Fdd01RoleMatrixDoc) itself has a 'Group' column distinct from 'Role', meaning even the canonical role-catalog artifact organizes around Groups. This is the strongest evidence available that the domain's 'pending final client concurrence' decision may not have actually been concurred with, or that this FDD was not updated to reflect it — a genuine open reconciliation question for the client, not a simple oversight either side can silently resolve." ;
+    oa:hasTarget iam:Req_01_3_1, iam:Req_01_3_2, iam:Req_01_3_3, iam:Req_01_4_2, iam:Req_01_4_3, iam:Req_01_5_1 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.4: User Search
+#################################################################
+
+iam:Req_01_4_1 a sd:UserStory ;
+    sd:requirementId "1.4.1" ;
+    sd:title "Search for and view user accounts" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to search for and view user accounts within the system, so that I can locate specific individuals to manage their access permissions." ;
+    sd:acceptanceCriteria "The system displays a search interface allowing the administrator to query by MiLogin ID, MiLogin Type, First Name, Last Name, and Email. The search results list displays all users matching the criteria, including those with established roles and those with pending access requests. The results list indicates the MiLogin Type (Citizen, Business, or Worker) for each user. The system allows the administrator to select a user record to view their current details and assigned permissions." ;
+    sd:satisfiedBy iam:Op_SearchUsers, iam:Op_GetUser, iam:Perm_UserView ;
+    sd:notes "Direct match. Per iam-api.ttl's own honest-gap note, Op_SearchUsers/Op_GetUser have no standalone sd:producesShape (no User DomainEntity/Aggregate is modeled in this domain — identity lives on MiLoginIdentity/Authorization instead); that's a pre-existing, already-documented gap, not newly introduced by this FDD. Comment thread 2058739645/189499350 (see this file's header note) confirms the wireframe near this story is a deliberately-reused generic search/list screen, not this feature's literal final UI — noted for context, doesn't change the satisfiedBy assessment." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_4_2 a sd:UserStory ;
+    sd:requirementId "1.4.2" ;
+    sd:title "Assign User Groups and Roles to a user account" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to assign specific User Groups Roles to a user account, so that the user has the appropriate functional permissions to perform their tasks." ;
+    sd:acceptanceCriteria "Upon selecting a user, the system allows the administrator to add or remove User Groups (e.g., Credential, Staffing, EPP). Within a selected Group, the system allows the administrator to assign specific Roles defined in the Role Matrix. The system allows a user to be assigned to multiple Groups and Roles simultaneously. The system logs the date, time, and administrator ID for any changes made to user permissions." ;
+    sd:satisfiedBy iam:Op_ManualGrantAuthorization, iam:RoleDefinitionAggregate ;
+    sd:notes "Partial: the Role-assignment half (assign specific Roles, audit-logged, multiple simultaneously) is satisfied by Op_ManualGrantAuthorization/Seq_SystemAdminManualGrant and RoleDefinitionAggregate directly. The 'add or remove User Groups' half has no backing node at all — see Question_NoUserGroupLayerContradiction (this Requirement is one of its targets). Kept in the Satisfied state overall since a real, substantial part of it is genuinely implemented; the Group-layer gap is called out via the contradiction Annotation rather than a second, separate coverage-gap Annotation." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_4_3 a sd:UserStory ;
+    sd:requirementId "1.4.3" ;
+    sd:title "Prevent assignment of MiLogin-type-incompatible User Groups" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want the system to prevent assignment of User Groups that do not match the user's MiLogin Type, so that users are not granted incompatible permissions." ;
+    sd:acceptanceCriteria "When assigning a Group, the system validates the Group's MiLogin Type against the user's account type. The system displays an error if a mismatch is detected (e.g., assigning a Business group to a Citizen user). The system blocks the assignment until a compatible group is selected." ;
+    sd:satisfiedBy iam:VO_ApplicableMiLoginTypes, iam:Rule_RoleScopeAssignmentCompatibility ;
+    sd:notes "Same analogous-mechanism satisfaction as Req_01_3_3: the compatibility CHECK exists (via Role's ApplicableMiLoginTypes, not a Group's), just not against the 'Group' vocabulary this story uses. Also targeted by Question_NoUserGroupLayerContradiction." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_4_4 a sd:UserStory ;
+    sd:requirementId "1.4.4" ;
+    sd:title "Manage a Business user's entity associations" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to manage or update a Business user's entity associations, so that I can correct access issues or handle exceptions outside the standard security form process." ;
+    sd:acceptanceCriteria "The system allows the administrator to search for and select educational entities (School District, EPP, etc.) from the EEM to link to an existing Business user. The system allows the administrator to add or remove entity associations for the user. The system requires a Role to be defined for each Entity association. Any changes made by the System Admin are logged in the audit history." ;
+    sd:satisfiedBy iam:Seq_SystemAdminManualGrant, orgs:Op_SearchOrganizations, iam:Op_RevokeAuthorization, iam:Op_ManualGrantAuthorization ;
+    sd:notes "Good match: Seq_SystemAdminManualGrant's own flow (search organization via the Organizations API, select roles, submit with required justification, audit-logged) is exactly 'add' half of this story; Op_RevokeAuthorization covers the 'remove' half. 'Requires a Role to be defined for each Entity association' matches the Authorization aggregate's own shape (Scope + Role pairing) directly." ;
+    sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.5: User Roles
+#################################################################
+
+iam:Req_01_5_1 a sd:UserStory ;
+    sd:requirementId "1.5.1" ;
+    sd:title "View list of user roles by Group and MiLogin Type" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to view a list of all existing user roles categorized by User Group and MiLogin Type, so that I can audit the current access configurations in the system." ;
+    sd:acceptanceCriteria "The system displays a searchable table of all User Roles. The table includes columns for Role Name, associated User Group, and MiLogin Type (Citizen, Business, Worker). The system provides filters to view roles specific to a User Group (e.g., Credentialing, Staffing) or MiLogin Type." ;
+    sd:satisfiedBy iam:Op_ListRoles, iam:VO_ApplicableMiLoginTypes ;
+    sd:notes "Partial: Op_ListRoles/iam:Entity_Role plus VO_ApplicableMiLoginTypes satisfy the Role-list-by-MiLogin-Type half; the 'associated User Group' column/filter has no backing concept — see Question_NoUserGroupLayerContradiction (this Requirement is one of its targets)." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_5_2 a sd:UserStory ;
+    sd:requirementId "1.5.2" ;
+    sd:title "Create a new user role" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to create a new User Role and associate it with a specific User Group, so that I can establish a new permission set for a specific category of users." ;
+    sd:acceptanceCriteria "The system provides an 'Add ' function. The user must define a unique Role Name. The user must select the associated User Group (e.g., EPP, School District) and MiLogin Type. The system validates that the selected User Group is compatible with the selected MiLogin Type before saving." ;
+    sd:notes "No satisfiedBy asserted: iam-api.ttl has no create/update/delete Role operation at all — only Op_ListRoles (GET) and Op_GetRole (GET). This is a genuine, structural gap independent of the Group-layer issue: iam:Entity_Role's own description states a Role is a 'Named collection of permissions (system-defined, not user-created)' — meaning the domain model's own documented intent is that Roles are NOT admin-created via a UI like this story asks for at all, a second, distinct contradiction layered on top of the User-Group one. See Question_RoleCrudNotModeled below. wireframe-05 (viewed, embedded at exactly this story) turns out to be a Staffing 'Positions' list screen, not a Role-creation form — direct visual confirmation of the reused-wireframe review-comment thread (id 2058739645) described in this file's header, and itself evidence that this admin capability was never concretely designed either." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_5_3 a sd:UserStory ;
+    sd:requirementId "1.5.3" ;
+    sd:title "Add functions/permissions to a role" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to add functions to a role, so that the role is granted precise access to specific system capabilities. (Visible text reads '...I want to to a role...' — a tracked-change/edit artifact in the source; 'add functions' is the clear intent from the surrounding acceptance criteria.)" ;
+    sd:acceptanceCriteria "When configuring a role, the system displays a list of developer-defined Functional Areas (e.g., Credentialing, Staffing). Upon selecting a Functional Area, the system displays the specific Functions available within that area (e.g., Worklists, Upload Management). The system allows the administrator to assign specific Permissions (e.g., View, Edit, Add, None) to each Function for the role being configured. The system prevents the administrator from creating new Functional Areas or Functions (these are code-based/developer-maintained)." ;
+    sd:notes "No satisfiedBy asserted — same Role-CRUD gap as 1.5.2, see Question_RoleCrudNotModeled. Also worth noting: this story's own last AC line ('prevents the administrator from creating new Functional Areas or Functions... code-based/developer-maintained') already partially concedes the same point iam:Entity_Role's description makes about Roles themselves being system-defined — the FDD is not fully consistent within itself about how much of the permission-bundling model is admin-configurable vs. developer-fixed." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_5_4 a sd:UserStory ;
+    sd:requirementId "1.5.4" ;
+    sd:title "Edit permission mappings for an existing role" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to edit the permission mappings for an existing role, so that I can adjust user access as business requirements evolve." ;
+    sd:acceptanceCriteria "The system allows the administrator to select an existing role and modify its assigned Functional Areas, Functions, and Permissions. The system allows the administrator to rename the role. The system prevents modification of the underlying User Group or MiLogin Type for an established role. The system captures audit details (Modified By/Date) for any changes made to the role's configuration." ;
+    sd:notes "No satisfiedBy asserted — same Role-CRUD gap, see Question_RoleCrudNotModeled." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Question_RoleCrudNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 1.5.2-1.5.4 ask for a full admin UI to create Roles, bundle Functions/Permissions into them, and edit those mappings later. iam-api.ttl only models read access to roles (Op_ListRoles, Op_GetRole); no create/update/delete Role operation exists anywhere in the IAM API surface, and iam:Entity_Role's own description states Roles are 'system-defined, not user-created' — the two aren't just unimplemented, they reflect an explicit, documented design position that this FDD's own Feature 1.5 contradicts. (1.5.3's own acceptance criteria simultaneously insist Functional Areas/Functions themselves stay code-based/developer-maintained, so the FDD is internally inconsistent about how much of this model is meant to be admin-configurable at all.) Distinct from Question_NoUserGroupLayerContradiction — this gap would exist even if the User Group question were resolved in the FDD's favor, since it concerns Role definition itself, not Role-vs-Group terminology." ;
+    oa:hasTarget iam:Req_01_5_2, iam:Req_01_5_3, iam:Req_01_5_4 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.6: MiEdWorkforce Account Registration Requirements
+#################################################################
+
+iam:Req_01_6_1 a sd:UserStory ;
+    sd:requirementId "1.6.1" ;
+    sd:title "Business user auto-directed to Security Authorization Form on first login" ;
+    sd:statement "As a MiLogin for Business user, I want to be automatically directed to the Security Authorization Form upon my first login, so that I can initiate the process of establishing my access to the system." ;
+    sd:acceptanceCriteria "Upon successful authentication from the MiLogin for Business platform, the system checks if the user has an existing MiEdWorkforce account. If no account exists, the system redirects the user to the Security Authorization Form landing page. The system pre-populates the 'MiLogin Account Info' section (ID, Name, Email, Phone) using data passed from the MiLogin token. The system prevents the user from navigating to the main dashboard until a security request has been submitted and approved." ;
+    sd:satisfiedBy iam:Seq_MiLoginAuthenticationIntegration, iam:Seq_BusinessUserInitialAuthorizationRequest, iam:VO_MiLoginIdentity ;
+    sd:notes "Direct match: the routing check ('has existing authorizations for this MiLogin type') and the pre-population data (VO_MiLoginIdentity carries type/ID/email) both line up well." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_6_2 a sd:UserStory ;
+    sd:requirementId "1.6.2" ;
+    sd:title "Search organization and select roles for access request" ;
+    sd:statement "As a MiLogin for Business user, I want to search for my organization and select the roles I need, so that I can submit a request for access to the appropriate Lead Administrator." ;
+    sd:acceptanceCriteria "The form allows the user to search for and select an Entity (ISD, District, Building, or Nonpublic School) sourced from the Educational Entity Master (EEM). The user may select multiple Buildings within the same District, but may only select one ISD or District per request. The system allows the user to multi-select specific roles/permissions being requested for the selected entity. The user must provide a text justification for the access request. The user must agree to the system attestation before the 'Submit Request' button is enabled." ;
+    sd:satisfiedBy iam:Seq_BusinessUserInitialAuthorizationRequest, iam:Op_SubmitAuthorizationRequest, orgs:Op_SearchOrganizations ;
+    sd:notes "Good match on organization search + role selection + justification (the sequence's own steps: 'Search for Organization', 'Select Organization, roles, justification', 'Submit request'). The multi-Building-single-District/ISD selection nuance and the attestation/e-sig checkbox are not individually broken out as separate fields anywhere in iam-domain.ttl (VO_AuthScope only holds one scope reference) — a minor, narrower-than-the-story gap, not raised separately given how much of the story is otherwise covered." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_6_3 a sd:UserStory ;
+    sd:requirementId "1.6.3" ;
+    sd:title "Identify Lead Administrator and send secure approval link" ;
+    sd:statement "As the MiEdWorkforce System, I want to identify the correct Lead Administrator for the selected entity and send them a secure approval link, so that they can approve the request without needing a MiEdWorkforce account." ;
+    sd:acceptanceCriteria "Upon form submission, the system queries the EEM to identify the designated Lead Administrator (e.g., Superintendent) for each selected entity. The system generates a unique, time-bound 'magic link' for the request. The system sends an email notification to the Lead Administrator's email address (sourced from EEM) containing the magic link. If the user selects multiple entities belonging to different Lead Admins, the system splits the request and sends separate notifications to each respective Lead Administrator." ;
+    sd:satisfiedBy iam:Seq_BusinessUserInitialAuthorizationRequest, orgs:Op_GetOrganizationsByLeadAdmin, iam:Rule_AuthorizationApprovalRouting, iam:Rule_ApprovalLinkExpiration ;
+    sd:notes "Good match for the single-entity case (Lead Admin lookup via the Organizations API, single-use time-bound approval link, matching Rule_AuthorizationApprovalRouting/Rule_ApprovalLinkExpiration almost exactly). The 'splits the request across multiple Lead Admins for multiple entities' branch is not shown in Seq_BusinessUserInitialAuthorizationRequest's diagram (which models one organization per request) — a real but narrow gap, not raised as a separate Annotation since the dominant single-entity path is solidly covered." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_6_4 a sd:UserStory ;
+    sd:requirementId "1.6.4" ;
+    sd:title "Auto-provision account on Lead Administrator approval" ;
+    sd:statement "As the MiEdWorkforce System, I want an account to be automatically provisioned upon approval, so that a user can immediately access the system functionality required for their job." ;
+    sd:acceptanceCriteria "When the Lead Administrator selects to 'Approve,' the system automatically creates a user's account in MiEdWorkforce. The system assigns the approved Entity and Roles/Permissions to the user's account immediately. The system sends a confirmation email to the Business User notifying them that access has been granted. If the Lead Administrator modifies the requested roles before approving, the system provisions only the roles explicitly approved by the Administrator." ;
+    sd:satisfiedBy iam:Seq_ScopeApproverApproves, iam:Op_ApproveAuthorizationRequest ;
+    sd:notes "Direct, strong match: Seq_ScopeApproverApproves explicitly models the role-modification-before-approval step ('opt Modify roles... Validate modified roles are compatible with scope') and immediate Authorization creation on approval." ;
+    sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Feature 1.7: User Authorization reports — no numbered sub-story; the FDD's own text
+# is a one-paragraph deferral, modeled as a single plain Requirement (not a UserStory —
+# it is not phrased as an "As a..." narrative).
+#################################################################
+
+iam:Req_01_7 a sd:Requirement ;
+    sd:requirementId "1.7" ;
+    sd:title "User Authorization reports — deferred to Feature 2.1" ;
+    sd:statement "The reporting needs described under Feature 1.7: User Authorization Reports are already fully addressed by the user stories defined in Feature 2.1: Reporting Framework Implementation. Feature 2.1 explicitly includes the required user authorization reports and establishes the global reporting capabilities and architecture (including export options and Power BI-based ad-hoc reporting). To avoid redundancy and maintain consistency with the approved reporting framework, separate user stories for Feature 1.7 are not needed." ;
+    sd:definedIn iam:Fdd01Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 1.7 explicitly defers all User Authorization reporting to Feature 2.1 (Reporting Framework Implementation, a different FDD/domain), per the FDD's own text — not modeled as IAM build items here. Worth flagging a nuance for whoever ingests FDD 2/the Reporting domain: iam-api.ttl already implements three IAM-owned report endpoints directly (Op_GetNewUsersReport, Op_GetDeniedRequestsReport, Op_GetInactivityReport, all backed by iam:BatchJob_GenerateReports) that closely match this FDD's own example bullet list ('Count of new user accounts by MiLogin Type since X date', 'Count of authorized user requests denied by Lead Administrator', 'Users with inactivity for X timeframe') — i.e. IAM already has its own dedicated reporting surface, not solely a consumer of a generic cross-domain Reporting Framework. This FDD's 'fully addressed by Feature 2.1' framing may understate what IAM already owns directly; not resolved here, just noted for the Reporting-domain ingestion to reconcile." ;
+    oa:hasTarget iam:Req_01_7 ; sd:status "resolved" ; sd:definedIn iam:Fdd01Doc .
+
+#################################################################
+# Requirements — Feature 1.8: Emulate system for specific users and entities
+#################################################################
+
+iam:Req_01_8_1 a sd:UserStory ;
+    sd:requirementId "1.8.1" ;
+    sd:title "Admin searches citizen user and views the system as them (impersonation)" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to search for a citizen user and view the system from their perspective, so that I can troubleshoot issues with credential applications or profiles without logging in as them." ;
+    sd:acceptanceCriteria "The system allows the administrator to search for a citizen user by Unique ID, Name, or Account Number. Upon selecting a user, the system provides an option to 'View As' or 'Impersonate' the user. The system renders the user's view, including their Dashboard, User Profile, and in-progress Credential Applications. The system displays a visual indicator (e.g., banner) that the administrator is currently viewing the system as another user." ;
+    sd:notes "No satisfiedBy asserted — see Question_ImpersonationFeatureContradictsOmission below. wireframe-06 (viewed) shows exactly this 'View System as User' link on a citizen record's Actions panel, alongside a struck-through 'Send Reset Password' action — direct visual confirmation this is a specifically-designed feature, not vague narrative text." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_8_2 a sd:UserStory ;
+    sd:requirementId "1.8.2" ;
+    sd:title "Admin views system context for a Business User or Entity" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to view the system context for a specific Business User or Entity, so that I can see district-level reports, rosters, and applications exactly as the business user sees them." ;
+    sd:acceptanceCriteria "The system allows the administrator to enter an Entity Code or Entity Name to access the data view for that business entity. The system displays the temporary credential applications, employee rosters, and district reports associated with that entity. If the impersonated user has access to multiple entities, the system allows the administrator to toggle between the entities using the global filter available to the user. The system logs the start and end of the entity view session in the audit log." ;
+    sd:notes "No satisfiedBy asserted — same impersonation feature as 1.8.1, extended to entity/Business-user context. See Question_ImpersonationFeatureContradictsOmission below." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_8_3 a sd:UserStory ;
+    sd:requirementId "1.8.3" ;
+    sd:title "Admin views user-entered data and errors without saving (read-only impersonation)" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to view user-entered data and validation errors without the ability to save changes, so that I can diagnose submission blockers without altering the user's record." ;
+    sd:acceptanceCriteria "While in 'View As' mode, the system allows the administrator to navigate to pages where the user has entered data. The system displays any error messages or validation flags currently visible to the user. The system disables or blocks all 'Submit,' 'Save,' and 'Delete' actions (Read-Only). The system allows UI-based manipulations (e.g., changing filters, expanding rows) to view data, provided no database changes occur." ;
+    sd:notes "No satisfiedBy asserted. Notably, this story's own read-only design (view/search allowed, all mutations blocked) is materially the SAME design iam-technical-design.ttl's iam:Question_UserImpersonationOmission already describes iam-technical-visual-summary.md's 'Impersonation: Read-Only Mode' diagram as proposing — meaning this isn't merely an unimplemented idea, it is the specific, already-evaluated, already-excluded idea. See Question_ImpersonationFeatureContradictsOmission below." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Req_01_8_4 a sd:UserStory ;
+    sd:requirementId "1.8.4" ;
+    sd:title "Restrict View As capability by administrator's functional role" ;
+    sd:statement "As the MiEdWorkforce System, I want to restrict 'View As' capabilities based on the administrator's functional role, so that admins only view users relevant to their domain." ;
+    sd:acceptanceCriteria "The Credential Admin can only initiate 'View As' sessions for users in the Credential or Citizen groups. The Staffing Admin can only initiate 'View As' sessions for users in the School District/Staffing groups. The MiEdWorkforce System Admin can initiate 'View As' sessions for all user types. The Identity Admin is restricted from initiating 'View As' sessions." ;
+    sd:notes "No satisfiedBy asserted — same impersonation feature, with a role-based access matrix on top. Also uses the 'groups' vocabulary from Question_NoUserGroupLayerContradiction ('Credential or Citizen groups', 'School District/Staffing groups'), though that terminology overlap is secondary to the larger impersonation-omission contradiction here; not double-counted as a separate target of that other Annotation given how narrow the overlap is. See Question_ImpersonationFeatureContradictsOmission below." ;
+    sd:definedIn iam:Fdd01Doc .
+
+iam:Question_ImpersonationFeatureContradictsOmission a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "contradiction" ;
+    rdfs:comment "iam-technical-design.ttl's own iam:Question_UserImpersonationOmission already documents a three-way discrepancy: iam.user.impersonate is cataloged as a permission (iam:Perm_UserImpersonate), a read-only-impersonation design was diagrammed in iam-technical-visual-summary.md, but iam-technical-design.md's 'Omission of User Impersonation' section states impersonation was designed, evaluated, and deliberately EXCLUDED from the initial implementation (diagnostic value achieved instead via admin views of records/history/audit logs and screenshare tooling, with documented reintroduction criteria). This FDD (Feature 1.8, all four stories) is a FOURTH independent document describing the exact same capability in comparable or greater detail — citizen search-and-view-as (1.8.1), Business/Entity context view (1.8.2), read-only enforcement matching the already-diagrammed design almost exactly (1.8.3), and a role-based access-restriction matrix on top (1.8.4) — plus its own wireframe (wireframe-06, viewed). No sd:satisfiedBy is asserted for any of the four: no ApiOperation or Sequence implements 'View As' anywhere in iam-api.ttl/iam-sequences.ttl, consistent with the domain's own documented exclusion decision. This strengthens rather than resolves the existing open question — four separate documents (permissions catalog, technical-visual-summary, this FDD's Business Specs section, and this FDD's own Addendum) describe or assume impersonation exists or should exist, against one technical-design section that says it was cut. Whoever owns the reintroduction-criteria decision should see this FDD as material evidence the client-facing requirement did not go away." ;
+    oa:hasTarget iam:Req_01_8_1, iam:Req_01_8_2, iam:Req_01_8_3, iam:Req_01_8_4 ;
+    sd:references iam:Perm_UserImpersonate, iam:Question_UserImpersonationOmission ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn iam:Fdd01Doc .

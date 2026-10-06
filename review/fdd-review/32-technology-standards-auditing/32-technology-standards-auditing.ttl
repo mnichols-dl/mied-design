@@ -1,0 +1,554 @@
+# FDD 32 review — "32 - Technology, Standards & Auditing" (Features 32.1-32.16).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md. Unlike every other FDD reviewed so
+# far, this one does NOT belong to a single bounded context: it is the project's
+# cross-cutting architectural/NFR document (UI/UX standards, database platform, software
+# stack, security, data migration, integration, reporting-platform choice, batch-job
+# administration, worklist administration, and electronic document management). Its own
+# Addendum content maps across nine of the eleven real domains (credentialing, epp,
+# proflearning, profpractice, staffing, iam, documents, reporting) plus several purely
+# solution-wide governance/procurement concerns that don't belong to ANY bounded context.
+#
+# Prefix decision: since no single domain owns this FDD, its own Requirement/SourceDocument
+# IRIs are minted under a new `t32:` instance namespace scoped to this review file only
+# (NOT registered as a new sd:BoundedContext / stub in CONVENTIONS.md's registry — nothing
+# else in the graph needs to reference these IRIs, unlike a real domain or cross-domain
+# stub). If a future pass on another cross-cutting FDD (04 Business Rule Management, 08
+# Interfaces & Integrations Setup, 12 Admin Users) needs the same treatment, this is worth
+# promoting to an explicit convention rather than reinventing per FDD — flagged for the
+# project owner, not decided unilaterally here.
+#
+# Source: "32 - Technology standards and Audit.docx" (.md sibling read first). Unzipped for
+# comments.xml/commentsExtended.xml/commentsIds.xml (33 comments, paraId-linked into 13
+# threads via w15:paraIdParent; genuinely still-open vs. resolved determined from w15:done
+# plus reply content, not just the flag alone — e.g. two "Omgosh, sorry, wrong place,
+# ignore/delay my comments" self-retractions are NOT live findings despite w15:done="0").
+# 17 w:ins / 4 w:del tracked-change spans in document.xml — far fewer than FDD 11/16's
+# ~120 — scanned but nothing load-bearing beyond what the comment threads already surface.
+# NO word/media folder exists in this docx at all (confirmed by directory listing, not
+# assumed) — this FDD has zero embedded wireframes, consistent with its architectural
+# rather than screen-driven nature; no wireframes/ subfolder was created for this review.
+# "Wiki-Application standards.pptx" is referenced inline by 32.1's own text as the actual
+# governing document for application-behavior standards, and a second file
+# "Wiki-Application standards.pptx" sits alongside the FDD in the source folder — skipped
+# per CONVENTIONS.md's pptx exclusion (no comment or FDD text names it as load-bearing
+# reference DATA the way a Role Matrix xlsx would be; it's prose standards content, not
+# structured data this review would extract fields from).
+#
+# Structure used as the Requirement unit: the FDD's own "Addendum" section is authoritative
+# for numbered stories, exactly as it was for FDD 29. Ten of the sixteen Features (32.1,
+# 32.4-32.10, 32.12) are explicitly marked "User stories are not required, as this feature
+# serves as a guideline rather than a functional deliverable" — for these, ONE Requirement
+# per Feature is modeled directly from the Business-Specifications-section prose (skipped
+# nowhere else, since there is no HLS-vs-Addendum duplication to dedupe for these guideline
+# features — the HLS tables for these features restate the same guideline at coarser grain
+# and add no independent content). The HLS paraphrase tables for the six Features that DO
+# have real Addendum stories (32.2, 32.11, 32.13, 32.14, 32.15, 32.16) are skipped per
+# CONVENTIONS.md, same as every other FDD reviewed. Per the Phase-2 task brief's own framing:
+# most guideline-only Features are modeled as sd:NonFunctionalRequirement; 32.3 and 32.12 are
+# kept as plain sd:Requirement since their content is a mix of a rejected feature (32.3) and
+# process/QA-gate steps (32.12) rather than a single quality attribute. All genuine "As a
+# <role>, I want..." Addendum items are sd:UserStory.
+#
+# Notable structural findings from the comment threads (see inline notes/Annotations for
+# full detail, not repeated here):
+# - Feature 32.3 (Auditing) was explicitly declared "no longer considered necessary" in the
+#   Addendum, and a 2026-01-02 reply thread (Caswell/Punniyamoorthy) reconfirms the
+#   decision stands — modeled as REJECTED, not a gap. This is a significant irony worth
+#   flagging: the FDD's own dedicated "Auditing" feature was killed, yet "audit
+#   log"/"audit controls" language recurs as an unexamined assumption in at least six OTHER
+#   stories across this same document (32.14.1, 32.14.7, 32.15.3, 32.15.9, 32.16.2,
+#   32.16.5, 32.16.10) as if a real, working, cross-domain audit capability exists to back
+#   it. It does not — see Question_AuditCapabilityAssumedButStubOnly below, this pass's
+#   single highest-impact finding.
+# - Feature 32.4 (Database) carries an active, unresolved tension between the FDD's own
+#   hedged text ("the state retains the right to determine whether the final data model
+#   will be CEDS IDS or CEDS JSON-LD") and a 2025-12-29 reviewer comment (Handley, CEPI)
+#   saying the JSON-LD/SHACL/Cosmos DB decision is "far enough along" that the document
+#   should be updated to remove the ambiguity. Neither this FDD nor any of the 11 converted
+#   domains' own files independently resolves which one is actually true.
+# - Feature 32.13 (Reporting) is the one Feature that explicitly defers its own detailed
+#   requirements to another FDD ("user stories defined under Epic 2 - Reporting represent
+#   the detailed functional implementation... of this Feature 32.13") — this closes the
+#   loop GAPS.md's FDD 02 entry and FDD 29's own header both left open (both had
+#   independently flagged "32.13" as an unconverted dependency; this pass is that
+#   conversion, and confirms the cross-reference holds).
+#
+# Verification note: per this review's own brief, adt:AuditContext (the `audit` stub per
+# CONVENTIONS.md's registry) was confirmed still stub-only before treating anything as a
+# gap — grep across all of abox/mied-v3 shows it declared identically in three files
+# (credentialing-domain.ttl, iam-domain.ttl — both `a sd:BoundedContext ; sd:status "stub"`
+# with no aggregates/permissions/API of its own) and referenced only via sd:subscribesTo
+# edges from five domains (credentialing, communications, documents, iam, profpractice via
+# its own citation). No AuditLog aggregate, no audit-log API operation, and no audit-log
+# UI/sequence of any kind exists anywhere in mied-v3 EXCEPT Documents' own domain-scoped
+# docs:Op_GetAuditLogs/docs:Op_ExportAuditLogs (backed by a real docs:DocumentAccessLog
+# entity) — which only covers document access/lifecycle events, not the general
+# "who changed what, when" trail this FDD's other features assume exists platform-wide.
+# iam:Perm_AuditView also exists as a bare permission with no backing operation anywhere,
+# the same "permission with nothing behind it" pattern already seen elsewhere in this
+# project (e.g. cred:Perm_GuidanceView, per the FDD 29 review).
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix t32:   <urn:solutiondesign:instance:fdd32:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix epp:   <urn:solutiondesign:instance:epp:> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix iam:   <urn:solutiondesign:instance:iam:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix orgs:  <urn:solutiondesign:instance:organizations:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+@prefix adt:   <urn:solutiondesign:instance:audit:> .
+
+#################################################################
+# Source document
+#################################################################
+
+t32:Fdd32Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/32 - Technology, Standards & Auditing/32 - Technology standards and Audit.docx" ;
+    sd:notes "Covers Features 32.1-32.16 (the document's own subtitle: '32.0 Technology, Standards and Auditing (32.1-32.16)'). Authors Vidhya Punniyamoorthy, Sean Strom, Fernando Montenegro (DTMB); reviewed by Sean Strom (Technical Owner, 5/22/2025); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 — but comments.xml contains dated entries through 2026-01-13, well after that signoff date (same pattern already noted in the FDD 29 review: the signoff table isn't 'nothing changed after this')." .
+
+#################################################################
+# Feature 32.1 — Application Standards (guideline, no user stories)
+#################################################################
+
+t32:Req_32_1 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.1" ;
+    sd:title "Application interface/behavior standards conformance" ;
+    sd:statement "The system must maintain interface and behavior standards: application behaviors consistent with SOM UI/UX standards unless business needs require differences (documented); all SOM standards required and followed unless specifically overridden by business need; deviations from cybersecurity standards require explicit, documented business approval; all deviations from SOM standards must be linked to business needs, requested/approved by business owners, and documented for use during the ATO (Authority to Operate) process." ;
+    sd:notes "Addendum: 'User stories are not required, as this feature serves as a guideline rather than a functional deliverable.' Comment thread 3->4 (Montenegro/Carney, 2025-04-01, both resolved) narrows this Feature's actual scope: an early draft's 'Application' language was ambiguous between narrow (backend) and broad (whole app, including UI/UX already covered by the FDD's own dedicated UI/UX Business Specification) readings; Carney's resolution — no merging of RFP-published Business Specification numbers, no content duplication, this Feature should focus on non-UI/UX application standards specifically, with UI/UX referenced rather than restated — is why the visible text reads as governance-process language rather than concrete UI/UX criteria. 'Wiki-Application standards.pptx', named inline right after this Feature's HLS table, appears to be the actual governing document for the standards this Feature points at; skipped per CONVENTIONS.md's pptx exclusion (prose standards content, not structured reference data)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No graph node anywhere in mied-v3 models a standards-conformance/deviation-approval process (a place to record 'this feature deviates from SOM standard X, approved by business owner Y, documented for ATO'). This is a genuine, if process-shaped rather than feature-shaped, gap — none of the 11 converted domains' own BusinessRule/Annotation machinery is used for cross-cutting platform standards governance, only for domain-specific rules. Not necessarily something the SOLUTION needs to build (it may be a pure project-management/documentation process outside the application itself), but flagged since the FDD frames it as a system requirement ('the system must maintain...')." ;
+    oa:hasTarget t32:Req_32_1 ; sd:impact "L" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.2 — Device UI/UX
+#################################################################
+
+t32:Req_32_2_1 a sd:UserStory ;
+    sd:requirementId "32.2.1" ;
+    sd:title "Developer adherence to SOM Digital Standards before go-live" ;
+    sd:statement "As a Developer, I want the application to adhere to State of Michigan Digital Standards so that we ensure compliance before the application can go live." ;
+    sd:acceptanceCriteria "The system must adhere to State of Michigan Digital Standards. The application is made available for DTMB eMichigan review." ;
+    sd:notes "No satisfiedBy: no graph node models a pre-launch digital-standards review gate or its outcome anywhere in mied-v3 — this is a release/QA-process requirement, not a domain-model concept, and none of the 11 domains' own technical-design files describe an eMichigan review step." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_2_2 a sd:UserStory ;
+    sd:requirementId "32.2.2" ;
+    sd:title "Mobile accessibility for educators and non-certified staff" ;
+    sd:statement "As an Educator or Non-Certified Staff, I want the system to be accessible and operational on my mobile device so that I can manage my profile and credentials easily." ;
+    sd:acceptanceCriteria "The system is accessible and operational on mobile devices. The system operation is verified with a particular focus for educators and non-certified staff. The design must comply with the State of Michigan digital standards (which covers mobile functionality)." ;
+    sd:notes "No satisfiedBy: responsive/mobile-web behavior is a UI-implementation concern this ontology deliberately doesn't model at the design-node level (no domain's own conversion describes a distinct mobile UI/UX pattern) — consistent with how the whole solution design treats UI mechanics generally (wireframes describe screen CONTENT, never responsive layout behavior)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Neither a pre-launch digital-standards review gate (32.2.1) nor mobile-responsive operability (32.2.2) is modeled by any node in mied-v3. Both are legitimate platform-wide NFRs with no current graph representation — grouped here since both trace to the same 'SOM Digital Standards' governing document and neither has domain-specific content to satisfy it." ;
+    oa:hasTarget t32:Req_32_2_1, t32:Req_32_2_2 ; sd:impact "L" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.3 — Auditing (REJECTED by the FDD itself)
+#################################################################
+
+t32:Req_32_3 a sd:Requirement ;
+    sd:requirementId "32.3" ;
+    sd:title "Mark data inactive/'delete' per audit and retention schedules (soft-delete, historical reconstruction, admin change review)" ;
+    sd:statement "The system is able to mark data as inactive or 'delete' in accordance with required audit and retention schedules. Administrator users can review recent actions and data changes; in general, no data should be permanently deleted (soft-deleted/marked for deletion instead, except purely transactional data, erroneous uploads, or business-preapproved exceptions); where appropriate, historical data should be reconstructable. Data retention governed by SOM data retention guidelines; certain log formats may be required by DTMB for SIEM/monitoring/cybersecurity compliance (e.g. Dynatrace)." ;
+    sd:notes "Addendum, verbatim: 'It has been determined that this feature is no longer considered necessary.' Confirmed still current by a 2026-01-02 comment thread (id 30/1291395255, Punniyamoorthy asking 'Need to confirm with Brandy' -> Caswell/Brandy replying 'Previously confirmed that this feature was no longer needed. If that is still the case, please feel free to resolve this comment.') — the rejection was re-verified, not just carried forward stale. IRONY WORTH FLAGGING: this Feature's own body text is the single clearest generic statement anywhere in this document of what a real audit capability would need to do (soft-delete over hard-delete, admin change review, historical reconstruction) — and it was the one Feature explicitly killed, while six OTHER stories in this same FDD (32.14.1, 32.14.7, 32.15.3, 32.15.9, 32.16.2, 32.16.5, 32.16.10) go on to casually assume 'audit log'/'audit controls' exist as a working platform capability. See Question_AuditCapabilityAssumedButStubOnly below." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Feature 32.3 (Auditing) was explicitly declared no longer necessary in the FDD's own Addendum, and the decision was independently re-confirmed in a 2026-01-02 comment-thread exchange between Punniyamoorthy and Caswell. Modeled as a deliberate rejection, not a coverage gap — but see this file's header and Question_AuditCapabilityAssumedButStubOnly for why the underlying capability need did not actually go away." ;
+    oa:hasTarget t32:Req_32_3 ; sd:status "resolved" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.4 — Database (guideline, no user stories)
+#################################################################
+
+t32:Req_32_4 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.4" ;
+    sd:title "CEDS Integrated Data Store (or CEDS JSON-LD) as primary educator-information datastore" ;
+    sd:statement "The system must utilize the latest CEDS Integrated Data Store (IDS) as the primary database for storage and retrieval of educator information. The current CEDS IDS is SQL Server based; the standard's administrators and the State are evaluating converting to a NoSQL DB with a JSON-LD schema, likely Azure Cosmos DB. The state retains the right to determine the final data model (CEDS IDS vs. CEDS JSON-LD). Modifications to the data model must be State-approved. The IDS must be upgraded to the latest available version at launch (likely CEDS-IDS-14.x), without data loss (SOM-approved if loss is possible); SOM must approve any IDS-to-JSON-LD migration." ;
+    sd:notes "No satisfiedBy: no single graph node represents 'the platform's primary datastore/persistence architecture' as a decision — each domain's own technical-design file describes its OWN storage choices independently (e.g. communications-technical-design.ttl's Cosmos DB hot-storage-for-email-content decision, which is domain-scoped, not a statement about the platform's PRIMARY educator-information store this Feature is actually about). orgs:OrganizationsContext's own CEPI/CEDS-JSON-LD integration (organizations-capability.ttl) is the closest existing evidence of the JSON-LD direction actually being pursued, but that's specifically about the Organizations capability's own EEM/CEPI read replica, not the platform's core IDS. sd:cedsAlignment is asserted on individual fields across 8+ domains, which is the CEDS-adherence half of this NFR being honored piecemeal — but there is no central node asserting 'MiEdWorkforce's core data model is CEDS IDS (or CEDS JSON-LD)' as a platform decision." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No node in mied-v3 represents the platform's core persistence-architecture decision (CEDS IDS/SQL Server vs. CEDS JSON-LD/Cosmos DB) — each domain documents its own storage choices independently, and none of them is actually the CEDS IDS/JSON-LD 'primary database for educator information' this Feature describes. A future pass converting a genuine platform-architecture source document (if one exists beyond this FDD) should mint this centrally, likely at the sd:Solution level per its own sd:nonFunctionalRequirement/NonFunctionalRequirement guidance." ;
+    oa:hasTarget t32:Req_32_4 ; sd:impact "M" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "The FDD's own visible text hedges the CEDS IDS vs. CEDS JSON-LD/Cosmos DB decision ('the state retains the right to determine whether the final data model will be a CEDS IDS or CEDS JSON-LD schema'), but a 2025-12-29 reviewer comment (Handley, CEPI, comment id 10) states: 'I think this decision to use JSON-LD, SHACL & Cosmos is far enough along to update the doc to reflect that and eliminate ambiguity & the need for changing later.' Two related, still-open sibling comments from the same reviewer on the same section: comment 6 ('Not sure this section is complete?') and comments 7/8 (a new CEDS version releases ~Feb/Mar 2026; the doc should specify which version it targets and flag the 14.x figure may need updating). None of these were resolved in the visible document text as of this pass — genuine, unresolved tension between the document's own hedged framing and a specific reviewer's read that the decision is effectively already made." ;
+    oa:hasTarget t32:Req_32_4 ; sd:impact "M" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Features 32.5-32.10 — Software (six guideline Features, no user stories,
+# individually enumerated in the Addendum despite sharing one narrative block
+# in the main Business Specifications section)
+#################################################################
+
+t32:Req_32_5 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.5" ;
+    sd:title "Software framework/language currency (Frameworks)" ;
+    sd:statement "The system must be maintainable after delivery using the State's preferred frameworks: latest .NET LTS at delivery time (likely 10); source code in C#, ANSI SQL/T-SQL, JavaScript (TypeScript preferred); if Angular/Vue/similar SPA technology is used, latest State-supported LTS version." ;
+    sd:notes "Addendum: 'User stories are not required, as this feature serves as a guideline rather than a functional deliverable.'" ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_6 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.6" ;
+    sd:title "Industry-standard, State-approved open-source technology (Industry Standards and Open-Source Approval)" ;
+    sd:statement "Technology used must be industry-standard; open-source software must be State-approved for use; the solution must allow integration with State-hosted and non-hosted data sources." ;
+    sd:notes "Addendum: 'User stories are not required...'" ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_7 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.7" ;
+    sd:title "Software licensing compliance (Licensing)" ;
+    sd:statement "Technology used must be appropriately licensed (Contractor-owned or public domain); all licensing requirements documented and submitted for business-owner review regardless of cost." ;
+    sd:notes "Addendum: 'User stories are not required...' HLS scenario 3 additionally expects a software Bill of Materials (BOM) report and documented terms for both paid and non-paid licenses." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_8 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.8" ;
+    sd:title "Rapid security-update mechanism (Security Updates)" ;
+    sd:statement "Technology used must support a mechanism for quick updates, especially security-related ones, relative to industry vulnerability categories (e.g. OWASP-defined) and remediation speed; results of scans/security audits made available to appropriate SOM employees on an ongoing basis; no backdoors/security bypasses/default credentials, all credentials available to SOM administrators and rotatable at all levels without new development." ;
+    sd:notes "Addendum: 'User stories are not required...' No satisfiedBy: none of the 11 domains' own technical-design files document a platform-wide vulnerability-remediation SLA, credential-rotation mechanism, or scan-result distribution process — each domain's own security notes (e.g. payments-technical-design.ttl's circuit-breaker configuration, iam-technical-design.ttl's RBAC caching) are architectural details, not evidence of THIS specific NFR being satisfied." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_9 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.9" ;
+    sd:title "Near-real-time, admin-addressable error reporting (Error Reporting)" ;
+    sd:statement "Software-application-generated errors must be reported in near-real-time and be addressable (correctable by administrators) in suitable online and/or batch options." ;
+    sd:notes "Addendum: 'User stories are not required...' HLS scenario 5 additionally expects application health dashboards (running processes, CPU/network load, error messages, exception logs) integrated with SOM logging platforms (Dynatrace, QRadar, Azure App Insights)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_10 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.10" ;
+    sd:title "Integration with State-hosted and non-hosted data sources (Integration Capability)" ;
+    sd:statement "The solution must allow for integration with State-hosted and non-hosted data sources; industry standards for data exchange (REST APIs, SFTP) must be supported and preferred, with reasonable effort to support legacy/custom SOM solutions." ;
+    sd:notes "Addendum: 'User stories are not required...' Overlaps materially with every domain's own real, converted sd:Dependency/sd:ExternalSystem modeling (Mi-Key, CEPAS, CEPI, Pearson MTTC, SendGrid, Rap Back/CHRISS are all real, already-modeled external integrations using REST/SOAP/webhook mechanisms) — those ARE the concrete instances of this NFR being satisfied, just not centrally cited from one node. Not linked via sd:satisfiedBy since no single existing node represents 'the platform's integration-capability posture' as a whole; the individual Dependency nodes are domain-scoped facts, not evidence for this cross-cutting NFR node specifically." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "None of the six Software-guideline Features (32.5-32.10 — frameworks, OSS approval, licensing, security updates, error reporting, integration capability) is modeled by any specific graph node: each is a solution-wide technology/vendor/process policy rather than a feature the 11 converted domains would themselves implement, and no central 'platform technology stack' or 'platform NFR register' artifact exists to hold them. This is a genuine, structural absence rather than eleven separate small gaps — worth a project-level decision on whether these belong permanently at the sd:Solution root (per sd:nonFunctionalRequirement's own comment) rather than in per-domain files, the next time any of them needs to be cited or satisfied individually." ;
+    oa:hasTarget t32:Req_32_5, t32:Req_32_6, t32:Req_32_7, t32:Req_32_8, t32:Req_32_9, t32:Req_32_10 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.11 — Data Migration and Conversion
+#################################################################
+
+t32:Req_32_11_1 a sd:UserStory ;
+    sd:requirementId "32.11.1" ;
+    sd:title "CEDS adherence for personal/certification data, migrated from MOECS/REP" ;
+    sd:statement "As a Data Governance Specialist, I want MiEdWorkforce to adhere to the Common Education Data Standards (CEDS) for all personal and certification information so that data consistency is maintained across CEPI systems." ;
+    sd:acceptanceCriteria "MiEdWorkforce will adhere to CEDS for all personal and certification information. Data must be stored in a CEDS-compliant format. CEDS data, including extensions, must be consistent with other MDE/CEPI systems. The conversion process ensures all identified data from MOECS and REP systems is migrated as needed throughout the development lifecycle." ;
+    sd:notes "Two distinct asks bundled in one story. The CEDS-COMPLIANCE half is partially, piecemeal corroborated: sd:cedsAlignment is asserted across 8+ domain files (communications, credentialing, documents, epp, iam, organizations, payments, proflearning, profpractice, reporting, staffing) on individual fields/aggregates. The MOECS/REP MIGRATION half is a genuine, unqualified coverage gap: no MigrationBatchJob/Sequence, no legacy-system-import concept, and no 'MOECS-derived identifier' resolution exists anywhere in mied-v3 — credentialing-domain.ttl's own Open Question #35 (credential_number's 'PV'/'CC-K' prefixes, likely legacy-MOECS-derived) and proflearning-domain.ttl's Open Question #13 (a possible legacy-MOECS Sponsor ID) both independently flag pieces of exactly this same undocumented migration, from two different domains, without a resolution in either. No sd:satisfiedBy asserted given how central and unaddressed the migration-process half is; see the coverage-gap Annotation below." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_11_2 a sd:UserStory ;
+    sd:requirementId "32.11.2" ;
+    sd:title "Legacy/historical data availability and long-term retention" ;
+    sd:statement "As a MiEdWorkforce User, I want all legacy data to be available in the new application or an appropriate platform (e.g., cold storage) so that I can reference historical information for my professional records." ;
+    sd:acceptanceCriteria "All legacy data available in the new application or an appropriate platform (cloud storage, offline database, etc.). Application fully functional with migrated data. Where possible, legacy data (past applications, messages sent) is replicated. An appropriate platform (e.g. Azure cold storage) is used for long-term retention. Retention covers long-term history (e.g. credential issue date + 99 years, or decades of employment data)." ;
+    sd:notes "No sd:satisfiedBy: docs:RetentionPolicyVO/docs:DocumentAggregate model a real, granular retention-policy mechanism, but it is scoped to DOCUMENTS specifically (with category-level policies), not the broader 'historical educator/employment/application data, wherever it lives' this story describes, and no retention duration anywhere in mied-v3 approaches the 99-year figure named here. A structurally similar but not equivalent mechanism — noted, not claimed as satisfying." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No MOECS/REP legacy-data-migration process (batch job, sequence, or even a named aggregate) exists anywhere in mied-v3, despite being referenced as a hard dependency by this Feature and independently flagged from two other domains' own Open Questions (credentialing's Open Question #35 on credential_number's likely-legacy-MOECS format; proflearning's Open Question #13 on a possible legacy-MOECS Sponsor ID) — three independent points of contact with the same undocumented gap, which raises confidence this is a real, unaddressed piece of scope rather than a one-off FDD phrasing. Separately, no historical-data long-term-retention platform (cold storage tier, 99-year retention schedule) is modeled outside Documents' own document-scoped retention policy." ;
+    oa:hasTarget t32:Req_32_11_1, t32:Req_32_11_2 ; sd:impact "H" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.12 — Integration (guideline, no user stories)
+#################################################################
+
+t32:Req_32_12 a sd:Requirement ;
+    sd:requirementId "32.12" ;
+    sd:title "Vendor exit plan, environment compatibility, and pre-launch security/integration validation" ;
+    sd:statement "The Contractor must provide an implementation/engagement exit plan ensuring SOM always retains an operational system, with or without further Contractor updates (subject to licensing/contract terms). The system must be built compatible with SOM standards (or easily migrated/reconfigured if not). Pre-launch validation includes: all user types can log in; security scans (DAST, Tenable, SAST, SCA) show no critical/high/medium vulnerabilities (or a documented remediation plan); a basic configuration audit; interface testing; a basic security audit (no default passwords, no backdoors, no open-by-default networking); a smoke test." ;
+    sd:notes "Addendum: 'User stories are not required, as this feature serves as a guideline rather than a functional deliverable.' HLS scenario 3's own stray fragment ('All configuration items work as expected Needs work') was flagged by a reviewer comment (id 23, Handley: 'IDK why this phrase is here. \"Needs work\"') as apparently unintentional leftover text, not a real acceptance criterion — noted, not modeled as its own requirement." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No node in mied-v3 represents a vendor exit/transition plan or a pre-launch security/configuration/smoke-test validation gate — these are engagement-management and release-QA process artifacts, not domain-model concepts, and none of the 11 domains' conversions describe them. Same category of gap as 32.1/32.2's process-shaped NFRs, grouped separately here since 32.12 is specifically about the delivery/handoff process rather than day-2 operational standards." ;
+    oa:hasTarget t32:Req_32_12 ; sd:impact "L" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.13 — Reporting (explicitly deferred to FDD 02)
+#################################################################
+
+t32:Req_32_13 a sd:NonFunctionalRequirement ;
+    sd:requirementId "32.13" ;
+    sd:title "Analytics/reporting-platform integration (Power BI / SAS)" ;
+    sd:statement "Solution must integrate with analytics tools such as Power BI and SAS. All MiEdWorkforce data (any storage format/platform/online status) must be accessible via the reporting platform, with reasonably performant queries; legacy reports must be available in the new system; new data must be easy to expose for reporting without new development; reports reference data from multiple sources including historical. Reporting must not interfere with system performance (long-running queries against separate, synchronized storage). Periodic/tunable reports supported. Reporting permissions consistent with the rest of the system; report creation/viewing embedded in MiEdWorkforce." ;
+    sd:acceptanceCriteria "Addendum, verbatim: 'The user stories defined under Epic 2 - Reporting represent the detailed functional implementation of the high-level requirements originally outlined in this Feature 32.13 - Reporting (Epic 32 - Technology Standards and Audit).'" ;
+    sd:satisfiedBy rpt:ReportingContext ;
+    sd:notes "This is the one Feature in this FDD that explicitly hands off its own detailed requirements to another FDD by name. Both abox/mied-v3/GAPS.md's FDD-02 entry and the FDD-29 review's own GAPS.md entry independently flagged 'Technology Standards and Audit requirements (32.13)' as an unconverted dependency at the time each of those passes ran — this pass closes that loop: 32.13 is satisfied by the entirety of rpt:ReportingContext's own conversion (reporting-capability/api/permissions/sequences/technical-design.ttl, reviewed in fdd-review/02-reporting/02-reporting.ttl), not by any node specific to this file. The Power-BI-as-embedded-analytics-platform decision this Feature announces is corroborated concretely by rpt:Op_GenerateEmbedToken (Power BI GenerateToken API integration) — confirms the cross-reference holds in both directions, it was not just an assumption." ;
+    sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.14 — Batch Processing
+#################################################################
+
+t32:Req_32_14_1 a sd:UserStory ;
+    sd:requirementId "32.14.1" ;
+    sd:title "View batch job run history for audit/accountability" ;
+    sd:statement "As a MiEdWorkforce Administrator, I want the ability to view the history for all batch jobs run for a feature so that I maintain full audit controls and accountability." ;
+    sd:acceptanceCriteria "Administrator can view history of batch jobs for which they have access. History includes prior versions of the job. History displays configuration changes. Detailed logging of administrative activity related to batch jobs is maintained." ;
+    sd:notes "No satisfiedBy: sd:BatchJob (a Sequence subclass) is used across 7 domains for individual scheduled processes, but no CROSS-CUTTING batch-job-administration surface (a place to view run history, prior configuration versions, or admin activity logs across all of them) exists anywhere — each domain's own BatchJob instances describe what the job DOES, not an admin UI/API for managing its schedule or history. See the consolidated coverage-gap Annotation below (shared with 32.14.2-32.14.6, all facets of the same missing capability)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_2 a sd:UserStory ;
+    sd:requirementId "32.14.2" ;
+    sd:title "View all current batch job schedules with read access" ;
+    sd:statement "As a MiEdWorkforce Administrator, I want to be able to view all current batch job schedules (including various job types, such as email notifications and file transfers) for which I have at least read-only access, so that I can monitor the scheduled processing activity." ;
+    sd:acceptanceCriteria "Administrator can view all current batch job schedules. Can only view schedules for jobs where they have read-only or full access. Multiple job types (email notifications, file transfers, etc.) are viewable when appropriate." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_3 a sd:UserStory ;
+    sd:requirementId "32.14.3" ;
+    sd:title "Create/add batch job schedules with appropriate access" ;
+    sd:statement "As a MiEdWorkforce Administrator with appropriate permissions, I want to be able to create and add schedules for batch jobs, so that I can manage automated processing within the system while respecting security access rules." ;
+    sd:acceptanceCriteria "Administrator can add schedules for batch jobs. Cannot see jobs for which they are not authorized. Cannot add schedules for jobs where they only have read-only access. Scheduling-system authentication consistent with other MDE/CEPI systems (ADM accounts, SSO login)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_4 a sd:UserStory ;
+    sd:requirementId "32.14.4" ;
+    sd:title "Manually trigger ad hoc batch job runs" ;
+    sd:statement "As a MiEdWorkforce Administrator, I want the ability to manually trigger and run ad hoc batch jobs outside of the regular schedule, so that I can execute necessary processes immediately upon need." ;
+    sd:acceptanceCriteria "System supports the State Administrator's ability to run ad hoc batch jobs. Administrator can manually trigger a batch run outside the automated schedule." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_5 a sd:UserStory ;
+    sd:requirementId "32.14.5" ;
+    sd:title "Modify/remove batch job schedules with full access" ;
+    sd:statement "As a MiEdWorkforce Administrator with full access to a job, I want to be able to modify or remove existing batch job schedules, so that I can adjust processing timing and configuration as needed." ;
+    sd:acceptanceCriteria "Administrator can remove schedules. Administrator can modify schedules. Can only modify schedules for jobs where they have full access." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_6 a sd:UserStory ;
+    sd:requirementId "32.14.6" ;
+    sd:title "Cancel running batch jobs with full access" ;
+    sd:statement "As a MiEdWorkforce Administrator with full access, I want to be able to cancel running batch jobs when necessary, so that I can stop erroneous or unwanted processing immediately." ;
+    sd:acceptanceCriteria "Administrator can cancel running jobs. Can only cancel running jobs for which they have full access." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No cross-cutting Batch Job Administration capability exists anywhere in mied-v3 — no bounded context, aggregate, or API operation lets an administrator view run history/prior configuration versions, view/create/modify/remove schedules with per-job read-only-vs-full access control, or manually trigger/cancel a run, across the 7 domains that already use sd:BatchJob for their own individual scheduled processes. Each domain's BatchJob instances describe WHAT the job does (content/errorScenarios/initiatedBy), never a management surface for WHEN/whether it runs or who administers it. This is a single, well-defined missing capability spanning six numbered stories (32.14.1-32.14.6), not six separate small gaps." ;
+    oa:hasTarget t32:Req_32_14_1, t32:Req_32_14_2, t32:Req_32_14_3, t32:Req_32_14_4, t32:Req_32_14_5, t32:Req_32_14_6 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_14_7 a sd:UserStory ;
+    sd:requirementId "32.14.7" ;
+    sd:title "Notify admins/business owners on batch job failure" ;
+    sd:statement "As a MiEdWorkforce Administrator or Business Owner, I want to receive a notification when a scheduled batch job fails, so that I can quickly initiate troubleshooting and remediation." ;
+    sd:acceptanceCriteria "System must successfully detect when a scheduled batch job fails. Admins and business owner(s) must receive a notification of the failed job. Detailed logging of system/administrative activity related to the failure must be maintained to aid troubleshooting." ;
+    sd:notes "Shares the same missing-admin-surface gap as 32.14.1-6 (see that Annotation) for the detection/logging half. The notification half has a genuinely still-open, separately-tracked question: comment thread 36->1682393414 (Punniyamoorthy: 'Need to add the notification format and the content' -> Caswell, 2026-01-02: 'Agreed. I'm not sure we officially determined what type of notification a user should receive. Can we confirm that?') shows this was flagged during drafting and remained unanswered as of the most recent comment — not just unbuilt, but unspecified. See Question_BatchFailureNotificationContentUndefined below." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "The notification format/content/channel for a batch-job-failure alert to admins and business owners was raised during drafting (comment 36, Punniyamoorthy: 'Need to add the notification format and the content') and the reply (comment 1682393414, Caswell, 2026-01-02) confirms it was never actually decided ('I'm not sure we officially determined what type of notification a user should receive. Can we confirm that?') — genuinely open, not resolved in the visible document text. comm:CommunicationsContext (Alerts & Communications) is the natural eventual home for this, consistent with how every other domain defers notification content to that same capability, but no batch-job-failure-specific alert type is defined there today." ;
+    oa:hasTarget t32:Req_32_14_7 ; sd:impact "M" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.15 — Worklist
+#################################################################
+
+t32:Req_32_15_1 a sd:UserStory ;
+    sd:requirementId "32.15.1" ;
+    sd:title "Create/maintain worklists per credential type" ;
+    sd:statement "As an Admin with Credential permission, I want to create and maintain worklists specific to each credential type (e.g., Permit, Special Education, School Counselor), so that users with the appropriate access can process the worklist items as defined by the credential type." ;
+    sd:acceptanceCriteria "Admin with Credential permission can create/maintain the worklist per credential type (Permit, Special Education, School Counselor, School Administrator, Renewal license, Educator (Standard/Professional/Interim Teaching), School Nurse, School Social Worker, Annual Career Authorization, Additional Endorsements, Candidate Tracking). Users with the right access can access/process the worklist as defined for that type." ;
+    sd:satisfiedBy cred:CredentialingContext, cred:Rule_ManualReviewTriggering ;
+    sd:notes "Credentialing's own routing/worklist logic (Rule_ManualReviewTriggering, PPR-flag-based routing per the FDD 29 review's Req_29_2_8) matches the underlying mechanism well, but per-credential-type NAMED worklists with distinct admin-configurable access are the same still-open gap credentialing's own cred:Question_WorklistAssignmentScope already tracks (FDD 5/FDD 13's per-user, not just per-role, worklist assignment) — cross-referenced, not re-raised as a new Annotation here." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_2 a sd:UserStory ;
+    sd:requirementId "32.15.2" ;
+    sd:title "Create/manage the Identity Management worklist" ;
+    sd:statement "As an Administrator, I want to create and manage the worklist related to Identity management so that tasks related to user identity verification are centrally processed." ;
+    sd:acceptanceCriteria "Administrator can create/manage the Identity management worklist. Users with the right access can access/process it. Business rules governing worklist processing are maintained per Business Rule Management (4.0)." ;
+    sd:satisfiedBy iam:IdentityResolutionRequestAggregate, iam:Rule_CitizenNearMatchResolution ;
+    sd:notes "Good match: iam:IdentityResolutionRequestAggregate's RequiresResolution status IS the Identity Administrator's worklist queue (iam-domain.ttl's own notes describe staffing/citizen flows both routing into it). The 'Business Rule Management (4.0)' cross-reference names a capability with no bounded-context home anywhere in mied-v3 (see GAPS.md's existing FDD-29 entry on this same gap) — not re-raised here, already on record." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_3 a sd:UserStory ;
+    sd:requirementId "32.15.3" ;
+    sd:title "Configure/allocate worklist-management privileges, with audit controls" ;
+    sd:statement "As an Administrator, I want the system to allow me to configure and allocate privileges to manage Worklist assignments for users, so that I can ensure role-based worklist access is maintained, and all configuration changes are captured under audit controls. Reference additional user stories as part of business specification #5 System Administration - Credentialing, feature 5.5: Manage Worklist Assignment." ;
+    sd:acceptanceCriteria "State admin setup can configure/allocate privileges to manage Worklist assignments. MiEdWorkforce provides role-based worklist access/assignment per business process. Any change in user access/worklist configuration is captured under audit log." ;
+    sd:satisfiedBy iam:RoleDefinitionAggregate, iam:UserAuthorizationAggregate ;
+    sd:notes "The general role/authorization-allocation mechanism is satisfied by IAM's RBAC model. Two things are NOT: (1) a distinct, per-worklist-item privilege grain (view/process/reassign/configure, as opposed to IAM's own role-bundle-of-permissions model) isn't modeled generically — each domain's own worklist (e.g. profp:PPRWorklistAggregate's AssignedReviewers) handles this internally rather than through a shared cross-cutting concept; (2) the 'captured under audit log' clause assumes a working audit-log capability that does not exist — see Question_AuditCapabilityAssumedButStubOnly below (shared with 32.15.9, which makes the identical claim)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_4 a sd:UserStory ;
+    sd:requirementId "32.15.4" ;
+    sd:title "Create/manage the Education Preparation Providers (EPP) worklist" ;
+    sd:statement "As an Administrator, I want to be able to create and manage the worklist specifically for Education Preparation Providers (EPP), so that EPP users with the right access can process their workflow items. Reference additional user stories as part of business specification #13 Educator Preparation Providers, feature 13.3: Work list." ;
+    sd:acceptanceCriteria "Administrator can create/manage the EPP worklist. EPP users with the right access can access/process it as defined." ;
+    sd:satisfiedBy epp:EppContext, epp:Perm_ApplicationsView, epp:Perm_ApprovalsView ;
+    sd:notes "EPP's own working assumption ('Worklist' as a filtered view, not a separate aggregate — epp-domain.ttl's own header) covers the base case; epp:Question_WorklistAssignmentScope (Open Question #11) already tracks the exact same per-user-not-just-per-role assignment gap this story's 'right access' phrasing implies — cross-referenced, not re-raised." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_5 a sd:UserStory ;
+    sd:requirementId "32.15.5" ;
+    sd:title "Create/manage the Professional Learning worklist" ;
+    sd:statement "As an Administrator, I want to be able to create and manage the worklist related to Professional Learning, so that authorized users can access and process relevant items. Reference additional user stories as part of business specification #14 Professional Learning feature 14.3: Worklist." ;
+    sd:acceptanceCriteria "Administrator can create/manage the Professional Learning worklist. Users with the right access can access/process it as defined." ;
+    sd:satisfiedBy plrn:ProfessionalLearningContext ;
+    sd:notes "ProfLearning models its own worklist as a filtered view over ApplicationReviewStatus/RequestStatus, same working assumption as EPP's. plrn:Question_ConfigurableWorklistStatuses (Open Question #12) already tracks a possible gap between that assumption and FDD 14.3's own admin-configurable-status language — cross-referenced, not re-raised." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_6 a sd:UserStory ;
+    sd:requirementId "32.15.6" ;
+    sd:title "Create/manage the Professional Practice and Rapbacks worklist" ;
+    sd:statement "As an Administrator, I want to be able to create and manage the worklist related to Professional practice and Rapbacks, so that authorized users can access and process these specific case types." ;
+    sd:acceptanceCriteria "Administrator can create/manage the Professional Practice and Rapbacks worklist. Users with the right access can access/process it as defined." ;
+    sd:satisfiedBy profp:PPRWorklistAggregate, ext:RapBackSystem ;
+    sd:notes "Good match on both halves: profp:PPRWorklistAggregate is a real, fully modeled worklist aggregate (AssignedReviewers/RoutingRules/PriorityRules/etc.), and Rap Back-triggered disclosures (profp:RapBackNotificationReceivedEvent, sourced from ext:RapBackSystem) flow into the same PPR review process rather than a separate queue — consistent with this story treating 'Professional practice and Rapbacks' as one combined worklist, not two." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_7 a sd:UserStory ;
+    sd:requirementId "32.15.7" ;
+    sd:title "Create/manage the Staffing data collection worklist" ;
+    sd:statement "As an Administrator, I want to be able to create and manage the worklist related to Staffing data collection, so that users responsible for staffing data can access and process relevant worklist items." ;
+    sd:acceptanceCriteria "Administrator can create/manage the Staffing data collection worklist. Users with the right access can access/process it as defined." ;
+    sd:notes "No satisfiedBy: unlike EPP/ProfLearning/ProfPractice, staffing-domain.ttl models no worklist concept of its own at all — not even a filtered-view working assumption. staffing-domain.ttl's own header explicitly disclaims owning several adjacent worklist-like concerns (the Identity Administrator worklist belongs to IAM), but nothing fills the gap for staffing's OWN data-collection worklist this story describes. Genuine, unqualified coverage gap — see the Annotation below." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No worklist concept — not even a filtered-view working assumption, unlike EPP/ProfLearning/ProfPractice — exists anywhere in staffing-domain.ttl for the Staffing-data-collection worklist this story describes. The only worklist-adjacent staffing content is a disclaimer that staffing does NOT own the (separate) Identity Administrator worklist." ;
+    oa:hasTarget t32:Req_32_15_7 ; sd:impact "M" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_8 a sd:UserStory ;
+    sd:requirementId "32.15.8" ;
+    sd:title "Access role-based worklist from the Dashboard" ;
+    sd:statement "As a MiEdWorkforce User with appropriate permissions, I want to be able to access my specific role-based worklist directly from the dashboard, so that I can immediately view and process my assigned workflow items." ;
+    sd:acceptanceCriteria "System allows the user to access their role-based worklist from the dashboard. Worklists are accessible from the user Dashboard based on user access permissions. The dashboard defines role-specific rules to access the worklist." ;
+    sd:notes "No satisfiedBy: dash:DashboardsContext is a stub-only bounded context (same as it was for FDD 29's Req_29_1_8 and FDD 11/16's Req_11_7) — this is the same cross-cutting dashboard-widget-surfacing concern those two prior passes already found, now independently reconfirmed a third time from a Technology Standards FDD rather than a feature FDD, which raises confidence this Dashboards-stub gap is real and central rather than a one-off. Out-of-scope for any individual domain to build, per the established precedent." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Worklist access from the Dashboard (32.15.8) belongs to the Dashboards capability (dash:DashboardsContext, stub-only), the same cross-cutting concern already found from FDD 29's Req_29_1_8 and FDD 11/16's Req_11_7 — a third independent FDD naming the identical gap." ;
+    oa:hasTarget t32:Req_32_15_8 ; sd:status "resolved" ; sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_15_9 a sd:UserStory ;
+    sd:requirementId "32.15.9" ;
+    sd:title "Allocate view/process/reassign/configure worklist privileges to roles, with audit logging" ;
+    sd:statement "As a State Administrator, I need to allocate view, process, reassign and configure privileges to roles so that only authorized staff can act on a worklist." ;
+    sd:acceptanceCriteria "Role matrix lists security roles from User-Management (1.0). Changes take effect immediately. Updates are logged for audit." ;
+    sd:satisfiedBy iam:RoleDefinitionAggregate ;
+    sd:notes "Same partial-match shape as 32.15.3 (general role/privilege allocation satisfied by IAM's RBAC model; the specific view/process/reassign/configure GRANULARITY per worklist is not a distinct modeled concept; 'logged for audit' assumes a capability that doesn't exist — see Question_AuditCapabilityAssumedButStubOnly below, shared target with 32.15.3)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Question_AuditCapabilityAssumedButStubOnly — the single highest-impact finding of this review pass. adt:AuditContext (the `audit` stub per CONVENTIONS.md's registry) is declared identically in credentialing-domain.ttl and iam-domain.ttl as `a sd:BoundedContext ; sd:status \"stub\"` with NO aggregates, NO permissions, and NO API operations of its own anywhere in mied-v3 — its only content is sd:subscribesTo edges from five domains (credentialing, communications, documents, iam) recording that it listens to their events, which is not the same thing as a working, queryable 'view recent actions and data changes' capability. Yet 'audit log'/'audit controls' is casually assumed to exist as a real, working platform capability by at least six stories across this FDD alone: 32.14.1 (batch job history for 'audit controls'), 32.14.7 (failure-related audit logging), 32.15.3 and 32.15.9 (worklist configuration 'captured under audit log' / 'logged for audit'), 32.16.2 and 32.16.5 (document administration/override-request auditability) — plus Feature 32.3 (Auditing) itself, which was explicitly REJECTED as no longer necessary (see Req_32_3). The only real, working audit-log capability anywhere in mied-v3 is Documents' own domain-scoped docs:Op_GetAuditLogs/docs:Op_ExportAuditLogs (backed by docs:DocumentAccessLog) — which covers document access/lifecycle events only, not the general cross-domain 'who changed what, when' trail these other stories assume. iam:Perm_AuditView additionally exists as a bare permission with no backing operation anywhere, the same 'permission with nothing behind it' pattern the FDD 29 review already found for cred:Perm_GuidanceView. Recommend logging this in GAPS.md as a genuinely whole-solution-level gap (not domain-specific): mied-v3 has no real, queryable, cross-domain audit trail, despite the project's own 'audit' stub existing specifically to be that thing eventually." ;
+    oa:hasTarget t32:Req_32_15_3, t32:Req_32_15_9, t32:Req_32_14_1, t32:Req_32_3 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .
+
+#################################################################
+# Feature 32.16 — Electronic Documentation Management
+#################################################################
+
+t32:Req_32_16_1 a sd:UserStory ;
+    sd:requirementId "32.16.1" ;
+    sd:title "Malware-scan all uploaded documents before storage" ;
+    sd:statement "As a System Administrator, I want the system to allow for integration with malware scanning tools (including ransomware, virus, and spyware scanners) so that all uploaded documents are vetted before storage." ;
+    sd:acceptanceCriteria "System allows integration with malware scanning tools. Integration supports ransomware/virus/spyware threat identification. All uploaded documents are vetted before being saved." ;
+    sd:satisfiedBy docs:Seq_DocumentUploadWithMalwareScanning, docs:MalwareScanResultVO, docs:DocumentMalwareDetectedEvent ;
+    sd:notes "Direct, strong match — Azure Defender for Storage integration with NO fallback scanner (documents-capability.ttl's own Malware Scan Blocking rule: ALL uploads blocked if Defender is unavailable) is a materially stricter posture than this story's own 'vetted before storage' ask, not a gap." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_2 a sd:UserStory ;
+    sd:requirementId "32.16.2" ;
+    sd:title "Document administration page for cross-system list/view/audit" ;
+    sd:statement "As an Administrator, I want to be able to access a document administration page to list and view documents across the system, so that I can perform auditing and management tasks based on my permissions." ;
+    sd:acceptanceCriteria "Administrator can access a document administration page. Page allows listing/viewing documents across the system. Administrator can only view documents for which they have proper read-only/modify permissions. RBAC and access logs are implemented. System supports document retrieval/management for auditing purposes." ;
+    sd:satisfiedBy docs:Perm_AdminViewAll, docs:Op_SearchDocuments, docs:Op_GetAuditLogs, docs:DocumentAccessLog ;
+    sd:notes "Good match, and one of the few places in this FDD where 'for auditing purposes' is actually backed by a real capability (docs:Op_GetAuditLogs/docs:DocumentAccessLog) rather than an assumed one — contrast with 32.15.3/32.15.9's unbacked 'audit log' language (see Question_AuditCapabilityAssumedButStubOnly)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_3 a sd:UserStory ;
+    sd:requirementId "32.16.3" ;
+    sd:title "Bulk-upload multiple documents" ;
+    sd:statement "As an Administrator, I want the ability to upload multiple documents simultaneously (bulk-upload), so that I can efficiently load large quantities of files into the system where appropriate." ;
+    sd:acceptanceCriteria "System implements bulk upload functionality. Administrators/Power users can upload multiple documents simultaneously. Bulk upload is implemented where appropriate for business use." ;
+    sd:satisfiedBy docs:Op_InitiateBulkUpload, docs:Seq_BulkDocumentUpload ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_4 a sd:UserStory ;
+    sd:requirementId "32.16.4" ;
+    sd:title "Bulk-remove documents respecting legal holds and retention" ;
+    sd:statement "As an Administrator, I want to be able to mark multiple documents for removal (bulk-remove), while respecting restrictions like legal holds and retention schedules, so that I can manage document inventory effectively and compliantly." ;
+    sd:acceptanceCriteria "Administrator can mark multiple documents for removal. System prevents bulk removal when legal holds are in place. System prevents bulk removal when retention schedules are in place." ;
+    sd:satisfiedBy docs:Op_BulkDeleteDocuments, docs:Seq_BulkDocumentSoftDeleteWithValidation ;
+    sd:notes "Direct match — documents-capability.ttl's own invariant ('If any item in bulk delete violates retention policy, entire operation marked Partially Failed') is a more precise version of this story's 'respecting restrictions' ask." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_5 a sd:UserStory ;
+    sd:requirementId "32.16.5" ;
+    sd:title "Request and approve document-removal-restriction overrides" ;
+    sd:statement "As an Administrator, I want to be able to request an override of document removal restrictions, and as a Business Owner, I want to be able to review and approve those override requests, so that necessary exceptions to retention rules can be managed and audited." ;
+    sd:acceptanceCriteria "Administrator can request an override when attempting to delete a restricted document. Business Owner(s) can review and approve override requests. The override request process is auditable." ;
+    sd:satisfiedBy docs:Op_RequestRetentionOverride, docs:Op_ApproveOverrideRequest, docs:Op_ExecuteOverrideRequest, docs:Seq_AdministratorRequestsRetentionOverride ;
+    sd:notes "Strong match, including dual-approval for high-value overrides (documents-capability.ttl's own invariant: legal holds/retention >5 years require dual approval) and a 7-day approved-override expiry — both go beyond what this story's acceptance criteria explicitly ask for, in a good way. 'Auditable' here IS backed by real content (docs:Rule/invariant 'All override actions logged to compliance audit system'), another exception to the Question_AuditCapabilityAssumedButStubOnly pattern found elsewhere in this FDD." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_6 a sd:UserStory ;
+    sd:requirementId "32.16.6" ;
+    sd:title "Granular retention rules and legal holds per document type" ;
+    sd:statement "As an Administrator, I want record retention rules and legal holds to be implemented at a granular level for all document types so that we ensure compliance with SOM guidelines." ;
+    sd:acceptanceCriteria "Retention rules implementable at a granular level for all document types. Legal holds implementable at a granular level for all document types. Different document types support different storage backends/policies." ;
+    sd:satisfiedBy docs:Op_ApplyLegalHold, docs:Op_ReleaseLegalHold, docs:RetentionPolicyVO, docs:LegalHoldVO ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_7 a sd:UserStory ;
+    sd:requirementId "32.16.7" ;
+    sd:title "Replace a previously uploaded document" ;
+    sd:statement "As a User who has previously uploaded a document, I want to be able to replace the uploaded document only when permitted, so that the system maintains the most current file version while discarding the old document appropriately." ;
+    sd:acceptanceCriteria "User can replace a previously uploaded document. Can only replace when permitted by system permissions. Old document is appropriately discarded on replacement. New document becomes the current version, saved in the appropriate store." ;
+    sd:satisfiedBy docs:Op_RequestDocumentReplacement, docs:Seq_DocumentReplacementAndVersioning, docs:Rule_DocumentReplacementVersioning ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_8 a sd:UserStory ;
+    sd:requirementId "32.16.8" ;
+    sd:title "Version control across document replacements" ;
+    sd:statement "As a User, I want the system to maintain version controls when I replace an uploaded document so that historical submission records are preserved." ;
+    sd:acceptanceCriteria "Version controls are supported for uploaded documents. Replacing a document maintains version controls. Historical document-submission records can be retrieved. Historical records are preserved for auditing/retrieval." ;
+    sd:satisfiedBy docs:DocumentVersion, docs:Rule_DocumentReplacementVersioning ;
+    sd:notes "Direct match, with a concrete detail this story doesn't name: docs:DocumentVersion caps at a maximum of 10 versions per document — a real constraint worth knowing about relative to this story's unqualified 'preserved' language, though not a contradiction (10 versions comfortably covers ordinary replacement patterns)." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_9 a sd:UserStory ;
+    sd:requirementId "32.16.9" ;
+    sd:title "Upload a document into its correct category/store" ;
+    sd:statement "As a MiEdWorkforce User logging into the appropriate section, I want to upload a document, so that the document is saved correctly in the appropriate document store according to its category." ;
+    sd:acceptanceCriteria "User must log in before uploading. Uploaded document is saved in the appropriate store. Different storage backends/policies apply per document type/category. All uploads are vetted by malware scanning before storage. Storage includes appropriate security measures (e.g. strong encryption). Backend is fully integrated with the UI/UX platform. Business approves the storage solution if multiple native/cost-effective options exist." ;
+    sd:satisfiedBy docs:Op_RequestDocumentUpload, docs:Seq_DocumentUploadWithMalwareScanning ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_10 a sd:UserStory ;
+    sd:requirementId "32.16.10" ;
+    sd:title "View previously uploaded documents per permission, with access logging" ;
+    sd:statement "As a MiEdWorkforce User, I want to be able to view documents previously uploaded only for which I have read-only or modify permissions, so that I can confirm document contents while adhering to system security controls." ;
+    sd:acceptanceCriteria "User can view previously uploaded documents. Can only view documents for which they have read-only/modify permissions. RBAC enforces this. System maintains access logs recording document views. User is prevented from viewing without proper permissions." ;
+    sd:satisfiedBy docs:Op_DownloadDocument, docs:DocumentAccessLog, docs:DocumentViewedEvent ;
+    sd:notes "Direct match, including the access-logging half — another case where 'access logs' is a real, modeled capability (docs:DocumentAccessLog, docs:DocumentViewedEvent, subscribed to by adt:AuditContext) rather than an assumed one." ;
+    sd:definedIn t32:Fdd32Doc .
+
+t32:Req_32_16_11 a sd:UserStory ;
+    sd:requirementId "32.16.11" ;
+    sd:title "View worklist-attached documents directly from the worklist" ;
+    sd:statement "As a User processing a worklist item, I want to be able to view relevant documents attached to that item directly from my worklist, so that I have the necessary information for efficient task processing." ;
+    sd:acceptanceCriteria "System supports document processing for worklist management. When viewing worklist items, relevant documents are viewable directly from the worklist. Viewing from the worklist still adheres to RBAC/permissions. System supports document retrieval specifically for worklist processing." ;
+    sd:notes "No satisfiedBy: this requires a worklist-to-document LINKING concept (a worklist item knows which document(s) it references, and can hand off to Documents' own view/permission machinery) that doesn't exist on either side — documents-capability.ttl's own DocumentAggregate has no notion of 'the worklist item that references me,' and none of the domain-specific worklist aggregates (profp:PPRWorklistAggregate, credentialing's routing model) declare a Documents-facing relationship either. Documents' underlying view/permission mechanism (docs:Op_DownloadDocument, RBAC) is real and would need no new work; only the cross-domain LINK itself is missing. Genuine, narrow, well-defined coverage gap." ;
+    sd:definedIn t32:Fdd32Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No cross-domain link exists between a worklist item (in any domain's own worklist aggregate) and the document(s) it references — 32.16.11 requires viewing worklist-attached documents directly from the worklist, but neither Documents' own DocumentAggregate nor any domain-specific worklist aggregate models this relationship. The underlying document-viewing mechanism itself is otherwise fully real (docs:Op_DownloadDocument, RBAC, access logs) — this is narrowly about the missing worklist<->document association, not a document-capability gap." ;
+    oa:hasTarget t32:Req_32_16_11 ; sd:impact "L" ; sd:status "open" ; sd:definedIn t32:Fdd32Doc .

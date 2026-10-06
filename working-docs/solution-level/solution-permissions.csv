@@ -1,0 +1,289 @@
+﻿Source,Category,PermissionId,Description,ApplicableScopes,Notes
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-templates.view`,View Credentialing email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-templates.create`,Create new Credentialing email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-templates.edit`,Edit Credentialing email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-templates.activate`,Activate Credentialing template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-templates.delete`,Archive Credentialing email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-emails.view-history`,View and search historical sent Credentialing emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: credentialing,`communications.credentialing-emails.resend`,Resend historical Credentialing emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-templates.view`,View Staffing email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-templates.create`,Create new Staffing email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-templates.edit`,Edit Staffing email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-templates.activate`,Activate Staffing template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-templates.delete`,Archive Staffing email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-emails.view-history`,View and search historical sent Staffing emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: staffing,`communications.staffing-emails.resend`,Resend historical Staffing emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-templates.view`,View Professional Learning email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-templates.create`,Create new Professional Learning email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-templates.edit`,Edit Professional Learning email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-templates.activate`,Activate Professional Learning template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-templates.delete`,Archive Professional Learning email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-emails.view-history`,View and search historical sent Professional Learning emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: proflearning,`communications.proflearning-emails.resend`,Resend historical Professional Learning emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: epp,`communications.epp-templates.view`,View EPP email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: epp,`communications.epp-templates.create`,Create new EPP email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: epp,`communications.epp-templates.edit`,Edit EPP email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: epp,`communications.epp-templates.activate`,Activate EPP template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: epp,`communications.epp-templates.delete`,Archive EPP email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: epp,`communications.epp-emails.view-history`,View and search historical sent EPP emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: epp,`communications.epp-emails.resend`,Resend historical EPP emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-templates.view`,View Professional Practice Review email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-templates.create`,Create new Professional Practice Review email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-templates.edit`,Edit Professional Practice Review email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-templates.activate`,Activate Professional Practice Review template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-templates.delete`,Archive Professional Practice Review email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-emails.view-history`,View and search historical sent Professional Practice Review emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: profpractice,`communications.profpractice-emails.resend`,Resend historical Professional Practice Review emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: payments,`communications.payments-templates.view`,View Payments email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: payments,`communications.payments-templates.create`,Create new Payments email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: payments,`communications.payments-templates.edit`,Edit Payments email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: payments,`communications.payments-templates.activate`,Activate Payments template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: payments,`communications.payments-templates.delete`,Archive Payments email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: payments,`communications.payments-emails.view-history`,View and search historical sent Payments emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: payments,`communications.payments-emails.resend`,Resend historical Payments emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: iam,`communications.iam-templates.view`,View Identity and Access Management email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: iam,`communications.iam-templates.create`,Create new Identity and Access Management email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: iam,`communications.iam-templates.edit`,Edit Identity and Access Management email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: iam,`communications.iam-templates.activate`,Activate Identity and Access Management template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: iam,`communications.iam-templates.delete`,Archive Identity and Access Management email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: iam,`communications.iam-emails.view-history`,View and search historical sent Identity and Access Management emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: iam,`communications.iam-emails.resend`,Resend historical Identity and Access Management emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Domain-Specific: documents,`communications.documents-templates.view`,View Documents email templates,System-wide,Read-only access to template list and versions
+communications-permissions.md,Domain-Specific: documents,`communications.documents-templates.create`,Create new Documents email templates,System-wide,Can create drafts; activation requires separate permission
+communications-permissions.md,Domain-Specific: documents,`communications.documents-templates.edit`,Edit Documents email templates,System-wide,Creates new template version; does not auto-activate
+communications-permissions.md,Domain-Specific: documents,`communications.documents-templates.activate`,Activate Documents template versions,System-wide,Sets template version as current/active
+communications-permissions.md,Domain-Specific: documents,`communications.documents-templates.delete`,Archive Documents email templates,System-wide,Soft delete; templates remain in audit trail
+communications-permissions.md,Domain-Specific: documents,`communications.documents-emails.view-history`,View and search historical sent Documents emails,System-wide,"Includes filtering by recipient, date, status; typically for help desk and admins"
+communications-permissions.md,Domain-Specific: documents,`communications.documents-emails.resend`,Resend historical Documents emails with recipient override,System-wide,Only available during content retention period; requires view-history
+communications-permissions.md,Template Variables,`communications.template-variables.view`,View template variable definitions,System-wide,See available variables and their data sources
+communications-permissions.md,Email Sending,`communications.email.send-manual`,Manually compose and send emails using templates,System-wide,Typically for help desk staff sending one-off emails on behalf of users
+communications-permissions.md,Email Sending,`communications.email.send-adhoc`,Send ad-hoc emails without using templates,System-wide,System Admin only; bypasses template framework
+communications-permissions.md,Email Sending,`communications.email.customize`,Customize template content for one-time send,System-wide,Modify template content without altering base template
+communications-permissions.md,Email History - View,`communications.email.view-all-history`,View all historical sent emails across all functional areas,System-wide,System Admin only; bypasses functional area filtering
+communications-permissions.md,Email History - Details,`communications.email.view-details`,"View full email details including content, metadata, delivery events",System-wide,Requires corresponding view-history permission
+communications-permissions.md,Alert Management,`communications.alerts.view`,View alerts for functional area,System-wide,See alert templates and configuration
+communications-permissions.md,Alert Management,`communications.alerts.create`,Create new alert templates,System-wide,"Define alert content, targeting, triggers"
+communications-permissions.md,Alert Management,`communications.alerts.edit`,Edit alert templates,System-wide,
+communications-permissions.md,Alert Management,`communications.alerts.delete`,Archive alert templates,System-wide,
+communications-permissions.md,Comment Management,`communications.comments.view-internal`,View internal comments on process items,"Building, District, ISD (transitive)",Internal staff only; scoped to their org level
+communications-permissions.md,Comment Management,`communications.comments.create-internal`,Create internal comments,"Building, District, ISD (transitive)",Comments not visible to external users; scoped to their org level
+communications-permissions.md,Comment Management,`communications.comments.create-external`,Create external comments,"Building, District, ISD (transitive)",Comments may be shared with citizens/applicants; scoped to their org level
+communications-permissions.md,Comment Management,`communications.comments.edit`,Edit comments (before email send),"Building, District, ISD (transitive)",Cannot edit after included in sent email; scoped to their org level
+communications-permissions.md,Comment Management,`communications.comments.delete`,Delete comments,"Building, District, ISD (transitive)",Soft delete; remains in audit trail; scoped to their org level
+communications-permissions.md,Predefined Comments,`communications.predefined-comments.view`,View predefined comment library,System-wide,
+communications-permissions.md,Predefined Comments,`communications.predefined-comments.manage`,Create/edit predefined comments,System-wide,System Admin or Functional Area Lead
+communications-permissions.md,Reporting,`communications.reports.view`,View template usage analytics,System-wide,"Send counts, frequency, trigger analysis"
+credentialing-permissions.md,Credential Definitions,`credentialing.credential-definition.view`,View credential type definitions and requirements,System-wide,Read-only access to credential catalogs
+credentialing-permissions.md,Credential Definitions,`credentialing.credential-definition.manage`,"Create, edit, or deprecate credential definitions",System-wide,System Admin only
+credentialing-permissions.md,Endorsement Definitions,`credentialing.endorsement-definition.view`,View endorsement types and requirements,System-wide,Read-only access to endorsement catalog
+credentialing-permissions.md,Endorsement Definitions,`credentialing.endorsement-definition.manage`,"Create, edit, or deactivate endorsement definitions",System-wide,System Admin only
+credentialing-permissions.md,Application Submission,`credentialing.application.submit`,"Submit credential applications (new, renewal, endorsement)",Self-only,All authenticated educators
+credentialing-permissions.md,Application Review,`credentialing.application.view`,View credential applications,"System-wide, Entity, District, ISD",Scope determines visibility
+credentialing-permissions.md,Application Processing,`credentialing.application.approve`,Approve applications in assigned worklists,"System-wide, Worklist-specific",Requires worklist assignment
+credentialing-permissions.md,Application Processing,`credentialing.application.deny`,Deny applications in assigned worklists,"System-wide, Worklist-specific",Requires worklist assignment
+credentialing-permissions.md,Application Processing,`credentialing.application.place-hold`,Place application on hold pending additional review,"System-wide, Worklist-specific",Requires worklist assignment
+credentialing-permissions.md,Manual Override,`credentialing.application.manual-submit`,Manually enter applications on behalf of educators,"System-wide, Entity, District, ISD",For bulk data entry or historical corrections
+credentialing-permissions.md,Manual Override,`credentialing.application.bypass-validation`,Override business rule validations during processing,System-wide,"System Admin only, fully audited"
+credentialing-permissions.md,Application Management,`credentialing.application.delete`,"Delete own application if still in ""Submitted"" status",Self-only,Limited to pre-processing stage
+credentialing-permissions.md,Credential Issuance,`credentialing.credential.issue`,Manually issue credentials outside normal workflow,"System-wide, Entity, District, ISD",For emergency or corrective issuance
+credentialing-permissions.md,Credential Issuance,`credentialing.permit.issue`,Issue temporary permits to educators,"System-wide, Entity, District, ISD",Scoped by organizational hierarchy
+credentialing-permissions.md,Credential Management,`credentialing.credential.view`,View issued credentials,"System-wide, Entity, District, ISD, Self-only",Educators see their own; admins see by scope
+credentialing-permissions.md,Credential Management,`credentialing.credential.print`,Print official credential certificates,"Self-only, System-wide",Educators print their own; admins can print any
+credentialing-permissions.md,Credential Management,`credentialing.credential.suspend`,Suspend active credentials,System-wide,System Admin only
+credentialing-permissions.md,Credential Management,`credentialing.credential.revoke`,Permanently revoke credentials,System-wide,System Admin only
+credentialing-permissions.md,Credential Management,`credentialing.credential.reinstate`,Reinstate suspended credentials,System-wide,System Admin only
+credentialing-permissions.md,Endorsement Management,`credentialing.endorsement.view`,View endorsements on credentials,"Self-only, System-wide",Educators see their own; admins see all
+credentialing-permissions.md,Endorsement Management,`credentialing.endorsement.add`,Add endorsements to existing certificates,Self-only (via application),Educators submit applications; auto or manual approval
+credentialing-permissions.md,Endorsement Management,`credentialing.endorsement.nullify`,Remove endorsements from certificates,System-wide,System Admin only
+credentialing-permissions.md,Reporting,`credentialing.reports.view`,View application status and volume reports,"System-wide, Entity, District, ISD",Scope-aware reporting
+credentialing-permissions.md,Audit,`credentialing.audit.view`,View credential and application audit logs,"System-wide, Entity, District, ISD",Scope-aware audit visibility
+credentialing-permissions.md,Assessment Results,`credentialing.assessment-result.view`,View subject area assessment results for educators,"System-wide, Self-only",Educators see their own; processors see all
+credentialing-permissions.md,Guidance Documents,`credentialing.guidance.view`,View credential issuance guidance documentation,System-wide,All authenticated users
+credentialing-permissions.md,Guidance Documents,`credentialing.guidance.manage`,Upload and manage guidance documents,System-wide,System Admin only
+credentialing-permissions.md,Configuration,`credentialing.definition.compare-versions`,Compare different versions of credential/endorsement definitions,System-wide,For auditing and compliance review
+credentialing-permissions.md,Assessment Definitions,`credentialing.assessment-definition.view`,View assessment type definitions and version history,System-wide,Read-only access to assessment catalog
+credentialing-permissions.md,Assessment Definitions,`credentialing.assessment-definition.manage`,"Create, edit, or retire assessment definitions",System-wide,System Admin only; creates versioned changes
+credentialing-permissions.md,Assessment Results,`credentialing.assessment-result.import`,Upload and import assessment result files from providers,System-wide,"Admin uploads CSV/XLSX from Pearson, ETS, etc.; system parses and creates AssessmentResult records"
+documents-permissions.md,Legal Hold,`documents.legal-hold.apply`,Apply legal hold to one or more documents,System-wide,"Legal Counsel, Compliance Officer; requires justification; audit logged"
+documents-permissions.md,Legal Hold,`documents.legal-hold.release`,Release legal hold from document(s),System-wide,"Legal Counsel, Compliance Officer; requires case closure justification; audit logged"
+documents-permissions.md,Legal Hold,`documents.legal-hold.view`,View documents with active legal holds,System-wide,"Legal Counsel, Compliance Officer, Document Admin"
+documents-permissions.md,Retention Override,`documents.retention-override.request`,Request early deletion before retention expiry,System-wide,Document Admin; requires business justification; audit logged
+documents-permissions.md,Retention Override,`documents.retention-override.approve`,Approve a retention override request,System-wide,"Business Owner, Compliance Officer; dual approval required for high-value documents; audit logged"
+documents-permissions.md,Admin Operations,`documents.admin.view-quarantine`,View documents flagged by malware scanner,System-wide,"Security Admin, Document Admin; regular users receive only a generic upload failure message"
+documents-permissions.md,Admin Operations,`documents.admin.override-scan`,Mark a quarantined document as a false positive,System-wide,Security Admin only; requires justification; audit logged
+documents-permissions.md,Admin Operations,`documents.admin.force-hard-delete`,Immediately hard-delete a document outside the normal retention cycle,System-wide,System Admin only; requires approved override request; irreversible; audit logged
+documents-permissions.md,Admin Operations,`documents.admin.bulk-delete`,Soft-delete multiple documents in a single batch operation,System-wide,Document Admin; retention and legal hold status validated per item before executing
+documents-permissions.md,Admin Operations,`documents.admin.view-all`,View and download any document regardless of attachment context,System-wide,"Document Admin, Compliance Officer; for audit and compliance investigations"
+documents-permissions.md,Category Management,`documents.category.view`,View document category configurations,System-wide,"Document Admin, Compliance Officer"
+documents-permissions.md,Category Management,`documents.category.create`,Create a new document category,System-wide,"System Admin, Document Admin"
+documents-permissions.md,Category Management,`documents.category.edit`,"Modify category configuration (display name, allowable formats, file size limit)",System-wide,"System Admin, Document Admin; retention period and storage tier changes are backend config only"
+documents-permissions.md,Category Management,`documents.category.deprecate`,"Mark a category as deprecated; prevents new uploads, existing documents unaffected",System-wide,System Admin only
+documents-permissions.md,Audit & Reporting,`documents.audit.view`,View and export document access logs and audit trail,System-wide,"Document Admin, Compliance Officer, Auditor"
+documents-permissions.md,Audit & Reporting,`documents.reports.view`,"View all document reports (storage usage, upload activity, retention compliance)",System-wide,Scope-aware reporting
+epp-permissions.md,EPP Provider Management,`epp.provider.view`,View EPP provider details and configuration,"System-wide, EPP-specific","Allows viewing EPP master data, program approvals, contacts"
+epp-permissions.md,EPP Provider Management,`epp.provider.create`,Designate EEM organization as EPP,System-wide,Requires organization to exist in EEM first
+epp-permissions.md,EPP Provider Management,`epp.provider.edit`,Update EPP-specific configuration,"System-wide, EPP-specific","Cannot modify core org data (name, address) - those come from EEM"
+epp-permissions.md,EPP Provider Management,`epp.provider.delete`,Close/deactivate EPP provider,System-wide,Typically restricted to prevent accidental deletion
+epp-permissions.md,Certificate Category Management,`epp.certificatecategory.create`,Add certificate type/pathway approval to EPP,"System-wide, EPP-specific",Grants authority to offer new program types
+epp-permissions.md,Certificate Category Management,`epp.certificatecategory.edit`,Modify certificate category approval dates,"System-wide, EPP-specific","Update MDE approval, enrollment close, recommend close dates"
+epp-permissions.md,Certificate Category Management,`epp.certificatecategory.delete`,Remove certificate category approval,"System-wide, EPP-specific",Blocked if active candidate enrollments exist
+epp-permissions.md,Endorsement Management,`epp.endorsement.create`,Add approved endorsement to EPP,"System-wide, EPP-specific",Must have approved certificate type first
+epp-permissions.md,Endorsement Management,`epp.endorsement.edit`,Modify endorsement approval dates,"System-wide, EPP-specific","Update MDE approval, enrollment close, recommend close dates"
+epp-permissions.md,Endorsement Management,`epp.endorsement.delete`,Remove approved endorsement,"System-wide, EPP-specific",Blocked if active candidates pursuing endorsement
+epp-permissions.md,Pro Prep Management,`epp.proprepconfig.manage`,Configure Pro Prep catalog visibility,"System-wide, EPP-specific","Toggle program visibility, manage page content"
+epp-permissions.md,Candidate Enrollment Verification,`epp.enrollment.verify`,Accept or reject candidate enrollment,EPP-specific,Core EPP coordinator function
+epp-permissions.md,Candidate Enrollment Management,`epp.enrollment.view`,View candidate enrollment records,"EPP-specific, Self-only",Coordinators see their EPP's candidates only
+epp-permissions.md,Candidate Enrollment Management,`epp.enrollment.edit`,Update candidate enrollment status and programs,EPP-specific,"Modify status, add/remove programs, update details"
+epp-permissions.md,Candidate Enrollment Management,`epp.enrollment.bulk-upload`,Upload bulk candidate tracking file,EPP-specific,Batch enrollment updates from institutional systems
+epp-permissions.md,Credential Application Review,`epp.applications.view`,View credential applications in EPP worklist,EPP-specific,See applications requiring EPP review
+epp-permissions.md,Credential Application Review,`epp.applications.review`,Review and take action on credential applications,EPP-specific,"Hold, Deny, Cancel, Recommend actions"
+epp-permissions.md,Credential Application Review,`epp.applications.recommend`,Recommend candidates for credentials,EPP-specific,May be separated from general review for dual approval
+epp-permissions.md,Approval Application Review,`epp.approvals.view`,View approval applications in EPP worklist,EPP-specific,See alternative route approval applications
+epp-permissions.md,Approval Application Review,`epp.approvals.review`,Review and take action on approval applications,EPP-specific,Recommend or Deny approval applications
+epp-permissions.md,Reporting,`epp.reports.view`,View EPP-specific reports,"EPP-specific, System-wide","Access to enrollment metrics, application statistics"
+epp-permissions.md,Administration,`epp.admin.system`,Full administrative access to EPP domain,System-wide,Super admin - all EPP functions across all providers
+iam-permissions.md,User Accounts,`iam.user.view`,View user account details and list,System-wide,Read-only access to user directory
+iam-permissions.md,User Accounts,`iam.user.edit`,Edit user account details,System-wide,"System Admin only; modify contact info, flags"
+iam-permissions.md,User Accounts,`iam.user.impersonate`,View system as another user (read-only),System-wide,All actions audit-logged; no transactions allowed
+iam-permissions.md,Authorization Requests,`iam.authorization.view`,View authorization requests,"Building, District, ISD (transitive) or System-wide",Scope-aware: Organization admins see their Organization only
+iam-permissions.md,Authorization Requests,`iam.authorization.approve`,Approve user authorization requests,"Building, District, ISD (transitive)",Must be Lead Admin for Organization
+iam-permissions.md,Authorization Requests,`iam.authorization.deny`,Deny user authorization requests,"Building, District, ISD (transitive)",Must be Lead Admin for Organization; can add denial reason
+iam-permissions.md,Authorization Requests,`iam.authorization.grant`,Manually grant authorization without approval,System-wide,System Admin only; bypasses approval workflow
+iam-permissions.md,Authorization Requests,`iam.authorization.revoke`,Revoke/remove user authorization,"Building, District, ISD (transitive) or System-wide",Organization admin for scope or System Admin
+iam-permissions.md,Authorization Removal,`iam.removal-request.review`,Review public authorization removal requests,System-wide,System Admin only; approve/deny external requests
+iam-permissions.md,Roles,`iam.role.view`,View role definitions,System-wide,"See role names, descriptions, assigned permissions"
+iam-permissions.md,Permissions,`iam.permission.view`,View permission catalog,System-wide,See all defined permissions
+iam-permissions.md,User Groups,`iam.group.view`,View user groups,System-wide,See group definitions and members
+iam-permissions.md,User Groups,`iam.group.create`,Create user groups,System-wide,System Admin only
+iam-permissions.md,User Groups,`iam.group.edit`,Edit user group membership,System-wide,System Admin only; add/remove users
+iam-permissions.md,User Groups,`iam.group.delete`,Delete user groups,System-wide,System Admin only
+iam-permissions.md,Inactivity Policy,`iam.inactivity.configure`,Set auto-deactivation rules,System-wide,Configure threshold (days) and schedule
+iam-permissions.md,Inactivity Policy,`iam.inactivity.run`,Manually trigger inactivity deactivation job,System-wide,System Admin only; for testing/emergency runs
+iam-permissions.md,Approval Links,`iam.approval-link.configure`,Configure approval link expiration,System-wide,Set default expiration timeframe (days)
+iam-permissions.md,Reports,`iam.reports.view`,View User Management Report,System-wide,System Admin only
+iam-permissions.md,Audit Logs,`iam.audit.view`,View authorization audit logs,System-wide or Organization,Scope-aware: Organization admins see their Organization only
+organizations-permissions.md,Organizations,`organizations.organization.view`,"View organization details, grade band, and Lead Administrator",System-wide,Granted to all authenticated users; required to use org search and detail endpoints
+organizations-permissions.md,Organizations,`organizations.lead-admin.view`,Retrieve Lead Administrator contact for an organization,System-wide,Internal service permission; consumed by IAM for authorization approval routing. Lead Admin email not exposed to non-admin users directly.
+organizations-permissions.md,Organizations,`organizations.org-types.view`,List active organization types,System-wide,Granted to all authenticated users; used to populate type filter dropdowns
+organizations-permissions.md,Organizations,`organizations.sync.trigger`,Manually trigger an organization sync run,System-wide,System Admin only; reserved for emergency re-seeding or post-failure recovery. Normal sync is pipeline-driven.
+organizations-permissions.md,Organizations,`organizations.sync-log.view`,View sync execution history and status,System-wide,System Admin / Platform Operations only
+payments-permissions.md,Payment Initiation,`payments.transaction.initiate`,Initiate payment for a credential application,Individual,Implicit baseline — any authenticated user can pay fees for their own applications
+payments-permissions.md,Payment Initiation,`payments.transaction.initiate-bulk`,Initiate bulk payment for multiple applications within scope,"District, ISD (transitive), System-wide",District staff paying fees for multiple applications in their organization
+payments-permissions.md,Payment Viewing,`payments.transaction.view`,View payment transactions within organizational scope,"Individual, District, ISD (transitive), System-wide",System-wide grants full visibility across all transactions
+payments-permissions.md,Payment Retry,`payments.transaction.retry`,Retry a failed payment transaction,"Individual, System-wide",Implicit baseline — user can re-initiate after failure; each retry creates a new transaction
+payments-permissions.md,Refunds,`payments.refund.request`,Submit a refund request for a paid transaction,System-wide,Credential Admin; requires justification; audit logged
+payments-permissions.md,Refunds,`payments.refund.request-bulk`,Submit refund requests for multiple transactions at once,System-wide,Credential Admin; audit logged
+payments-permissions.md,Refunds,`payments.refund.approve`,Approve or reject refund requests,System-wide,Financial Admin; dual approval required for amounts >$500; audit logged
+payments-permissions.md,Refunds,`payments.refund.view`,View refund requests and history,System-wide,"Credential Admin, Financial Admin"
+payments-permissions.md,Reconciliation,`payments.reconciliation.view`,View reconciliation batch results and daily posting file processing,System-wide,Payment Admin
+payments-permissions.md,Reconciliation,`payments.reconciliation.run`,Manually trigger reconciliation batch job,System-wide,Payment Admin; audit logged
+payments-permissions.md,Reconciliation,`payments.reconciliation.discrepancy-view`,View unresolved reconciliation discrepancies,System-wide,Payment Admin
+payments-permissions.md,Reconciliation,`payments.reconciliation.discrepancy-resolve`,Manually resolve reconciliation discrepancies,System-wide,Payment Admin; requires resolution notes; audit logged
+payments-permissions.md,Reconciliation,`payments.reconciliation.export`,Export reconciliation data for financial audit,System-wide,"Payment Admin, Financial Admin"
+payments-permissions.md,Reports,`payments.report.view`,"View all payment reports (transactions, refunds, reconciliation, revenue, failed payments)",System-wide,"Includes export; Credential Admin, Payment Admin, Financial Admin"
+payments-permissions.md,Audit,`payments.audit.view`,View and export payment audit logs with advanced filtering,System-wide,"System Admin, Compliance Officer; includes search and export"
+payments-permissions.md,Administration,`payments.admin.force-status`,Manually override a payment transaction status,System-wide,System Admin only; emergency use; requires justification; audit logged
+payments-permissions.md,Administration,`payments.admin.circuit-breaker-reset`,Reset CEPAS circuit breaker after outage,System-wide,Payment Admin; audit logged
+proflearning-permissions.md,Sponsor Management,`proflearning.sponsor.view`,View sponsor details and program list,Entity (specific sponsor),Coordinators have this for their sponsor
+proflearning-permissions.md,Sponsor Management,`proflearning.sponsor.edit`,Edit sponsor contact information and metadata,Entity (specific sponsor),"Coordinators for their sponsor, admins system-wide"
+proflearning-permissions.md,Sponsor Management,`proflearning.sponsor.approve`,Approve new sponsor applications,System-wide,Professional Learning Admin only
+proflearning-permissions.md,Sponsor Management,`proflearning.sponsor.delete`,Delete sponsor applications or approved sponsors,System-wide,Professional Learning Admin only
+proflearning-permissions.md,Program Management,`proflearning.program.create`,Submit new program applications,Entity (sponsor-scoped),Coordinators for their sponsor
+proflearning-permissions.md,Program Management,`proflearning.program.edit`,Edit program details (triggers re-approval if approved),Entity (program-scoped),Coordinators for programs under their sponsor
+proflearning-permissions.md,Program Management,`proflearning.program.view`,View program application details,Entity (program-scoped),"Coordinators, admins, or public for active programs"
+proflearning-permissions.md,Program Management,`proflearning.program.approve`,Approve program applications,System-wide,Professional Learning Admin only
+proflearning-permissions.md,Program Management,`proflearning.program.withdraw`,Withdraw or delete programs,Entity (program-scoped),"Coordinators for their programs, admins system-wide"
+proflearning-permissions.md,Session Management,`proflearning.session.create`,Add program sessions (dates/locations),Entity (program-scoped),"Coordinators, Professional Learning Admin"
+proflearning-permissions.md,Session Management,`proflearning.session.edit`,Edit session dates and locations,Entity (session-scoped),"Coordinators, Professional Learning Admin"
+proflearning-permissions.md,Attendance Management,`proflearning.attendance.add`,Add attendees to program roster,Entity (session-scoped),Coordinators for their programs
+proflearning-permissions.md,Attendance Management,`proflearning.attendance.view`,View attendance roster,Entity (session-scoped),"Coordinators for their programs, admins system-wide"
+proflearning-permissions.md,Attendance Management,`proflearning.attendance.adjust`,Adjust awarded SCECH hours before certification,Entity (session-scoped),Coordinators for their programs
+proflearning-permissions.md,Attendance Management,`proflearning.attendance.certify`,Certify finalized attendance and award SCECHs,Entity (session-scoped),Coordinators for their programs
+proflearning-permissions.md,Attendance Management,`proflearning.attendance.override`,Adjust SCECH hours after certification,System-wide,Professional Learning Admin only
+proflearning-permissions.md,Evaluation Management,`proflearning.evaluation.view`,View submitted evaluations,Entity (program-scoped),"Coordinators, Professional Learning Admin"
+proflearning-permissions.md,Evaluation Management,`proflearning.evaluation.submit`,Submit program evaluation,Self-only,Attendees for programs they attended
+proflearning-permissions.md,College Course Credit,`proflearning.collegecourse.apply`,Apply college course for SCECH credit,Self-only,Educators for their own courses
+proflearning-permissions.md,Admin Functions,`proflearning.admin.categories`,Manage program categories and subcategories,System-wide,Professional Learning Admin
+proflearning-permissions.md,Admin Functions,`proflearning.admin.questions`,Manage evaluation question sets,System-wide,Professional Learning Admin
+proflearning-permissions.md,Public Access,`proflearning.catalog.search`,Search public professional learning catalog,System-wide (unauthenticated),No login required
+proflearning-permissions.md,Public Access,`proflearning.catalog.bookmark`,Bookmark programs/sponsors,System-wide (authenticated),Requires login
+proflearning-permissions.md,Correction Requests,`proflearning.correction.submit`,Submit SCECH correction request for certified attendance,Entity (session-scoped),Coordinators for their programs
+proflearning-permissions.md,Correction Requests,`proflearning.correction.view`,View correction requests,Entity (sponsor/session-scoped),"Coordinators see their requests, admins see all"
+proflearning-permissions.md,Correction Requests,`proflearning.correction.approve`,Approve SCECH correction requests,System-wide,Professional Learning Admin only
+proflearning-permissions.md,Admin Functions,`proflearning.admin.evaluationtemplates`,Manage evaluation templates,System-wide,Professional Learning Admin
+proflearning-permissions.md,Reports,`proflearning.report.view`,View and export all professional learning reports and analytics,System-wide,Includes export; Professional Learning Admin
+profpractice-permissions.md,Self-Disclosure,`profpractice.disclosure.submit`,Submit self-disclosure of criminal conviction or disciplinary action,Self-only,All authenticated educators
+profpractice-permissions.md,Self-Disclosure,`profpractice.disclosure.view`,View disclosure history and status,"Self-only, System-wide, Worklist-specific",Educators see own; reviewers see assigned/all
+profpractice-permissions.md,PPR Response,`profpractice.response.submit`,Submit annual Professional Practice Review response,Self-only,All authenticated educators; required annually
+profpractice-permissions.md,PPR Response,`profpractice.response.view`,View PPR response history,"Self-only, System-wide",Educators see own; admins see all
+profpractice-permissions.md,Disclosure Review,`profpractice.disclosure.search`,Search and filter disclosures across worklists,"System-wide, Worklist-specific",PPR Reviewer role; includes advanced filters
+profpractice-permissions.md,Disclosure Review,`profpractice.disclosure.edit`,Edit disclosure details during active review,"System-wide, Worklist-specific","Can modify date, type, description, attachments while status is ""Under PPR Review"""
+profpractice-permissions.md,Disclosure Processing,`profpractice.status.update`,Change disclosure status through workflow,"System-wide, Worklist-specific",PPR Reviewer role; enforce valid status transitions
+profpractice-permissions.md,Disclosure Processing,`profpractice.remarks.add`,Add comments to disclosures (internal or external),"System-wide, Worklist-specific",PPR Reviewer role; remark type determined by API parameter
+profpractice-permissions.md,Disclosure Processing,`profpractice.disclosure.finalize`,Mark disclosure as reviewed and lock for editing,"System-wide, Worklist-specific","Transitions to ""Reviewed-*"" status; prevents further edits"
+profpractice-permissions.md,Disclosure Processing,`profpractice.disclosure.revert`,"Revert finalized disclosure back to ""Under PPR Review""",System-wide,PPR Admin role only; allows corrections after finalization
+profpractice-permissions.md,Disclosure Deletion,`profpractice.disclosure.delete`,Remove disclosure from view but retain in audit (soft delete),System-wide,PPR Admin role only; educator cannot delete own disclosures
+profpractice-permissions.md,Account Markers,`profpractice.markers.view`,"View account-level markers (Mandatory Hold, Enhanced Monitoring, Re-Review)","System-wide, Entity, District, ISD",PPR Reviewer can view; visibility by scope
+profpractice-permissions.md,Account Markers,`profpractice.markers.manage`,Set or clear any account marker type,System-wide,PPR Admin or Credentialing Admin role; requires justification; fully audited
+profpractice-permissions.md,Assessments,`profpractice.clearance.view`,View PPR clearance assessment for credential applications,"System-wide, Entity, District, ISD",Credentialing staff check clearance before approval
+profpractice-permissions.md,Assessments,`profpractice.eligibility.view`,View roster eligibility assessment for employment,"System-wide, Entity, District, ISD",District HR checks eligibility before roster addition
+profpractice-permissions.md,External Integration,`profpractice.rapback.view`,View Rap Back notification metadata,System-wide,"PPR Reviewer role; see notification date, TCN, judicial marker"
+profpractice-permissions.md,External Integration,`profpractice.rapsheet.retrieve`,Initiate on-demand rap sheet retrieval via CHRISS SOAP call,System-wide,"PPR Reviewer role; display-only, never stored"
+profpractice-permissions.md,External Integration,`profpractice.nasdtec.view`,View NASDTEC disciplinary records matched to educators,System-wide,PPR Reviewer role; includes clearinghouse URL
+profpractice-permissions.md,External Integration,`profpractice.nasdtec.access`,Access external NASDTEC clearinghouse site for full details,System-wide,PPR Reviewer role; opens clearinghouse URL in new tab
+profpractice-permissions.md,Audit,`profpractice.actions.log`,"Document external activities (phone calls, emails, manual reviews)","System-wide, Worklist-specific",PPR Reviewer role; creates audit trail for offline actions
+profpractice-permissions.md,Audit,`profpractice.audit.view`,View disclosure and marker audit logs,"System-wide, Entity, District, ISD",Scope-aware audit visibility
+profpractice-permissions.md,Worklist Management,`profpractice.worklist.view`,View assigned PPR worklists and queued disclosures,Worklist-specific,PPR Reviewer assigned to specific worklists
+profpractice-permissions.md,Worklist Management,`profpractice.worklist.configure`,"Create, edit, or pause PPR worklists and routing rules",System-wide,PPR Admin role only
+profpractice-permissions.md,Worklist Management,`profpractice.worklist.assign`,Add or remove reviewers from worklists,System-wide,PPR Admin role only
+profpractice-permissions.md,Question Configuration,`profpractice.questions.view`,View PPR question configurations and branching logic,System-wide,Read-only access to form definitions
+profpractice-permissions.md,Question Configuration,`profpractice.questions.manage`,"Create, edit, or activate PPR question configurations",System-wide,System Admin only; creates versioned changes
+profpractice-permissions.md,Documents,`profpractice.attachments.view`,View supporting documents attached to disclosures,"System-wide, Worklist-specific, Self-only",Educators see own; reviewers see assigned disclosures
+profpractice-permissions.md,Documents,`profpractice.attachments.upload`,Upload supporting documents to disclosure,Self-only,Educators upload to their own disclosures during submission
+profpractice-permissions.md,Documents,`profpractice.attachments.delete`,Remove document from view but retain in audit (soft delete),System-wide,PPR Reviewer role; requires justification
+profpractice-permissions.md,Reporting,`profpractice.report.view`,"View and export all PPR reports, metrics, and analytics","System-wide, Entity, District, ISD",Scope-aware; includes export
+profpractice-permissions.md,District Notifications,`profpractice.notifications.view`,View PPR-related notifications for district users,"District, ISD",District HR sees alerts for educators they're hiring/employing
+reporting-permissions.md,Catalog Management,`reporting.catalog.view`,View the report catalog and browse available reports,System-wide,All authenticated users; individual reports are further gated by their declared domain permission
+reporting-permissions.md,Catalog Management,`reporting.catalog.manage`,"Register, edit, or deactivate report definitions in the catalog",System-wide,System Admin only; does not affect the underlying Power BI report definition
+reporting-permissions.md,Embed Token,`reporting.embed-token.generate`,Trigger embed token generation for an eligible report,System-wide,Not directly role-assignable; granted implicitly when the user holds the report's declared domain permission at an appropriate scope. The Reporting API enforces this — it is not a standalone assignable permission.
+reporting-permissions.md,Audit,`reporting.embed-audit.view`,View embed token request audit log,System-wide,System Admin only
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.view`,View employee roster for entity,Entity,Required to see list of employees for school/district
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.add-employee`,Add new employee to roster via online entry,Entity,Triggers Unique ID matching workflow with Mi-Key
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.update-employment`,"Update employment status, dates, separation reason",Entity,Allows termination and status changes
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.update-demographics`,Request demographic update via Mi-Key,Entity,Triggers Mi-Key update workflow
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.certify`,Certify employee roster collection for entity,Entity,Requires all pre-certification tasks complete
+staffing-permissions.md,Employee Roster,`staffing.employee-roster.bulk-upload`,Upload bulk file to update employee data,Entity,Must include valid Unique IDs; cannot create new employees via bulk
+staffing-permissions.md,Position Roster,`staffing.position-roster.view`,View position roster and organizational chart,Entity,Required to see positions for school/district
+staffing-permissions.md,Position Roster,`staffing.position-roster.create`,Create new position in roster,Entity,Only allowed during working window or open collection
+staffing-permissions.md,Position Roster,`staffing.position-roster.update`,"Update position details, status, approved FTE",Entity,"Includes status changes (Filled, Frozen, Cancelled, etc.)"
+staffing-permissions.md,Position Roster,`staffing.position-roster.delete`,Delete position during working window,Entity,Only allowed before position is established/certified
+staffing-permissions.md,Position Roster,`staffing.position-roster.certify`,Certify position roster collection for entity,Entity,Requires all pre-certification tasks complete
+staffing-permissions.md,Assignment,`staffing.assignment.view`,View employee assignment details,Entity,Required to see assignments for employees in entity
+staffing-permissions.md,Assignment,`staffing.assignment.create`,Assign employee to position,Entity,Triggers credential validation
+staffing-permissions.md,Assignment,`staffing.assignment.update`,"Update assignment details (FTE, dates, course info)",Entity,Includes adding/removing spots from position
+staffing-permissions.md,Assignment,`staffing.assignment.submit-justification`,Submit credential error justification,Entity,Required when assigning without appropriate credential
+staffing-permissions.md,Assignment,`staffing.assignment.certify`,Certify assignment details collection for entity,Entity,Requires all pre-certification tasks complete
+staffing-permissions.md,Education History,`staffing.education-history.view`,View education history for employee,"Entity, Self-only",District users see for their employees; citizens see own
+staffing-permissions.md,Education History,`staffing.education-history.update`,Add/update education history records,"Entity, Self-only","Citizens can add/remove; districts can add, cannot remove citizen-added"
+staffing-permissions.md,Evaluation Outcome,`staffing.evaluation-outcome.view`,View evaluation outcomes for employee,"Entity, Self-only",District users see for their employees; citizens see own
+staffing-permissions.md,Evaluation Outcome,`staffing.evaluation-outcome.submit`,Submit evaluation outcome for employee,Entity,District submits for instructional staff/administrators
+staffing-permissions.md,Evaluation Outcome,`staffing.evaluation-outcome.appeal`,Appeal evaluation outcome,"Entity, Self-only",District can appeal within 5-year window; citizen can appeal any
+staffing-permissions.md,Evaluation Outcome,`staffing.evaluation-outcome.approve-appeal`,Approve or deny citizen appeal request,Entity,District reviews and approves/denies citizen appeals
+staffing-permissions.md,New Teacher Monitoring,`staffing.new-teacher-monitoring.view`,View new teacher monitoring data,Entity,Required to see mentor assignments and SCECH tracking
+staffing-permissions.md,New Teacher Monitoring,`staffing.new-teacher-monitoring.update`,Update new teacher monitoring data,Entity,"Assign mentor, link SCECH sessions for DPPD requirement"
+staffing-permissions.md,Collection,`staffing.collection.view`,View collection workflow status and progress,Entity,"See pre-certification tasks, quality review results"
+staffing-permissions.md,Collection,`staffing.collection.request-exception`,Submit collection exception request,Entity,Request extension past legislative deadline
+staffing-permissions.md,Collection,`staffing.collection.validate`,Trigger quality review validation,Entity,Run data quality checks before certification
+staffing-permissions.md,Audit,`staffing.audit.view`,View audit worklist for ISD/RESA or SOM,"ISD/RESA Entity, System-wide",ISD Auditor sees constituent districts; SOM Auditor sees all ISDs
+staffing-permissions.md,Audit,`staffing.audit.review-submission`,Review district data collection submission,ISD/RESA Entity,ISD Auditor reviews constituent district submissions
+staffing-permissions.md,Audit,`staffing.audit.submit-finding`,Create and submit audit finding,ISD/RESA Entity,"Document placement issues, request additional documentation"
+staffing-permissions.md,Audit,`staffing.audit.request-documentation`,Request additional documentation from district,ISD/RESA Entity,"Request master schedules, attendance records, etc."
+staffing-permissions.md,Audit,`staffing.audit.finalize`,Finalize and certify audit report,ISD/RESA Entity,Requires attestation and e-signature
+staffing-permissions.md,Audit,`staffing.audit.decertify`,De-certify audit report during allowable window,ISD/RESA Entity,Allows correction during defined de-certification period
+staffing-permissions.md,Admin,`staffing.admin.manage-collections`,Define and manage collection configurations,System-wide,"Staffing Data Admin role; create collections, set date ranges, entity types"
+staffing-permissions.md,Admin,`staffing.admin.manage-validations`,Define and manage business rule validations,System-wide,Staffing Data Admin role; assign validations to collections/categories/elements
+staffing-permissions.md,Admin,`staffing.admin.manage-data-elements`,Define and manage data element definitions,System-wide,"Staffing Data Admin role; create/update data elements, categories, components"
+staffing-permissions.md,Admin,`staffing.admin.process-exceptions`,Approve or deny collection exception requests,System-wide,Staffing Data Admin role; review and approve deadline extension requests
+staffing-permissions.md,Admin,`staffing.admin.view-file-queues`,View and manage file upload queues,System-wide,Staffing Data Admin role; monitor bulk upload processing
+staffing-permissions.md,Admin,`staffing.admin.reset-file-processing`,Reset or delete files in processing queue,System-wide,Staffing Data Admin role; troubleshoot stuck file uploads
+staffing-permissions.md,Admin,`staffing.admin.manage-reports`,Define and manage report availability and access,System-wide,Staffing Data Admin role; configure report access by role

@@ -1,0 +1,617 @@
+# FDD 18 review — "18 - Data Collection & Compliance - Roster of Positions". Ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Staffing graph
+# (staffing-domain.ttl / staffing-permissions.ttl / staffing-api.ttl / staffing-sequences.ttl
+# / staffing-technical-design.ttl, all loaded together). Per this session's brief, staffing's
+# own v1 PositionRosterAggregate (hasEntity staff:Position, staff:Spot) was checked first and
+# is indeed the direct match for nearly this entire FDD — this is one of the best-covered FDDs
+# reviewed in this project to date.
+#
+# Source: "18 - Collection & Compliance - Position Roster.docx" + its .md sibling. Read the .md
+# first, then unzipped the .docx for comments.xml (10 comments, all short editorial/clarification
+# threads between Caswell/Groom/Dontje — retention-schedule wording, a broken hyperlink, "this
+# epic is pending workflows with 18.2-18.6", a note that assignment field requirements vary by
+# position type (foreshadowing FDD 22 Employee Assignment Details), an open "AI for SOM: need to
+# define error message" action item, and a audit-logging-scope clarification (only log completed
+# tasks/actions, not page views) that is already reflected in the Addendum's own final wording —
+# none surface a live, unresolved contradiction the way FDD 29's cover-letter thread did, so none
+# are modeled as standalone Annotations; folded into individual Requirements' sd:notes where they
+# bear on a specific story (18.4.1's audit-logging clarification) and otherwise just noted here.
+#
+# Structure used: a prose "Business Specifications" section + a 38-row "HIGH LEVEL SCENARIOS"
+# paraphrase table restate the same content at coarser grain and are SKIPPED per CONVENTIONS.md.
+# An "Addendum" with real Feature/story numbering (18.1.1-18.1.9, 18.2.1-18.2.7, 18.3.1-18.3.10,
+# 18.4.1-18.4.8, 18.5.1-18.5.9, 18.6.1-18.6.5 — 48 stories total) is the primary Requirement unit
+# used below. One genuine Business-Specifications-only feature was never promoted into the
+# Addendum's numbering at all — "duplicate/copy an existing position" (its own paragraph, with
+# distinct save/delete-before-submission rules) — modeled with a synthetic
+# staff:Req_18_BizSpec_DuplicatePosition ID, matching FDD 29's precedent for this exact situation
+# (three un-numbered Business-Specifications features there). Total Requirements modeled: 49.
+#
+# 18.1.5's own title ("Save Validation Errors for Position Creation") does not match its body,
+# which is actually the three-step "Add Filled Spot" assignment workflow (Spot Details > Select
+# Employee > Confirm and Add) — a leftover/mislabeled heading from an earlier draft, not corrected
+# here; sd:title below uses the FDD's literal (mismatched) heading text with a note, sd:statement
+# carries the actual (correct) user-story text.
+#
+# Wireframes: 41 embedded images total (2 in word/media/, captioned but generic/decorative header
+# logos, not modeled; 39 in a top-level /media/ folder referenced via the FDD-29-style
+# absolute-path relationship-ID quirk, addressed directly to the Addendum's Feature 18.1-18.2
+# write-up — no captions). De-duplicated by checksum to 34 distinct images (several are reused
+# byte-identical across the doc, e.g. image7=image8=image9). Given the very close 1:1 match
+# between this FDD's Addendum stories and staffing's own PositionRoster/Assignment model, 10
+# representative images were extracted and viewed to CONFIRM that match rather than to discover
+# new structure: the Positions list (staff:Wireframe1), Add New Position form (staff:Wireframe2),
+# Position Details page with a Delete option (staff:Wireframe3), all three steps of the "Add
+# Filled Spot" workflow (staff:Wireframe4/5/6 — direct visual match for 18.1.5 and for
+# staff:Seq_AssignEmployeeToPosition's own three-step shape), the Assignments tab FTE-health
+# warning banner (staff:Wireframe7), a two-row Filled Spots table (staff:Wireframe8), the
+# "Partially" meets-requirements state with a "See Recommendations" banner (staff:Wireframe9 —
+# this is what surfaces the 18.1.7/18.1.8 coverage gap below, since Op_ValidatePlacement's
+# responseSchema only has a boolean meetsRequirements, no three-state Yes/Partially/No), and the
+# Positions list with its export/download icon circled (staff:Wireframe10 — corroborates the
+# 18.3.6/18.5.7 export gap). The remaining ~24 distinct images were not individually viewed;
+# spot-checking their filenames/sizes against the ones viewed (several are exact-duplicate reuses
+# of the same screens at different points in the Addendum) gives no indication of an undocumented
+# additional screen/feature beyond what the 10 viewed images and the Addendum text already cover.
+#
+# StaffPositionsDetails.xlsx (a companion reference workbook, hyperlinked from the FDD body
+# showing the Education-Job-Type/Local-Job-Category/Local-Job-Function relationship, the same
+# kind of "confirmed load-bearing exception" as a Role Matrix) was opened via its .md sibling
+# extraction — it is a large, flat cross-reference table of valid Job Type/Category/Function
+# combinations (hundreds of rows). It confirms, at a data level, that
+# staff:EducationJobType/staff:LocalJobCategory/staff:LocalJobFunction (staffing-domain.ttl) are
+# the right value objects and that "for each Education Job Type and Local Job Category, the
+# Staffing Admin defines the allowable Local Job Functions" (FDD line ~104) is exactly the kind
+# of admin-configurable value-list relationship already implicit in those ValueObjects — it does
+# not introduce any new entity/requirement not already covered by the Addendum's own stories, so
+# no separate Requirement was minted for it; referenced only as a SourceDocument for traceability.
+#
+# Feature 18.5 (Data Input via API and File Upload) surfaces this FDD's single biggest finding:
+# staffing-api.ttl has NO bulk-file-upload or file-based ingestion endpoint anywhere for
+# Positions (staff:Op_CreatePosition/Op_UpdatePosition/Op_UpdatePositionStatus are all
+# single-record REST calls) — a real, confirmed coverage gap, not a documentation oversight
+# (staffing-domain.md's own methods list explicitly promises "Online / Bulk file / API"). See the
+# coverage-gap Annotation below.
+#
+# Feature 18.6 (Email/Communication) is out-of-scope for Staffing on the same basis FDD 29 used
+# for its own alerts stories: the FDD's own Dependencies section names "Alerts, Emails and
+# Communications (6.0)" as the owner, and comm:CommunicationsContext already subscribes to
+# several of staffing's own events (CollectionCertifiedEvent, CollectionOpenedEvent, etc.) —
+# consistent, corroborating evidence, not a new gap.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix orgs:  <urn:solutiondesign:instance:organizations:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd18Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "abox-tests/mied-fdds/functional-design-docs/18 - Data Collection & Compliance - Roster of Positions/18 - Collection & Compliance - Position Roster.docx" ;
+    sd:notes "Covers the Position Roster epic (18.0). Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/04/2025 per the signoff table — but comments.xml contains entries dated through 2026-03-10, well after that signoff date, meaning the document (specifically its Addendum) continued to be actively revised after nominal approval, same pattern FDD 29 documented." .
+
+staff:StaffPositionsDetailsDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "abox-tests/mied-fdds/functional-design-docs/18 - Data Collection & Compliance - Roster of Positions/StaffPositionsDetails.xlsx" ;
+    sd:notes "Reference workbook (hyperlinked from the FDD body) cross-referencing valid Education Job Type / Local Job Category / Local Job Function combinations. Confirms staff:EducationJobType/staff:LocalJobCategory/staff:LocalJobFunction are the right value objects; introduces no new entity or requirement beyond what the Addendum already covers." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-01-positions-list.png" ;
+    sd:notes "Confirmed by viewing: 'Positions' summary table (Position/Category/Building/Filled FTE/Unfilled FTE/Approved FTE/Status/Health/Last Update), an 'Add Position' button, filter and download icons, and dynamic search — direct visual match for 18.1.1 and the summary-page Business Specifications prose (sort/filter/search fields)." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-02-add-new-position.png" ;
+    sd:notes "Confirmed by viewing: 'Add New Position' form (Type, Category, Position, Building, Approved FTE, Status dropdown defaulting Active) — direct visual match for 18.1.1/18.1.2." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-03-position-details-delete.png" ;
+    sd:notes "Confirmed by viewing: Position Details tab (Approved FTE, Building, Status editable fields) with a 'This position has not been reported in any collection...' note and a 'Delete Position' button — direct visual match for 18.2.1 and 18.2.3's working-window-only delete gate." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-04-add-filled-spot-step1.png" ;
+    sd:notes "Confirmed by viewing: 'Add Filled Assignment' modal, Step 1 of 3 (Spot Details) — SCED Course, Grade Levels checkboxes, FTE Allocation, Start Date, with a visible validation-error state on FTE Allocation. Direct visual match for staff:Seq_AssignEmployeeToPosition's Step 1 and 18.1.5's actual (mislabeled) body text." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-05-add-filled-spot-step2.png" ;
+    sd:notes "Confirmed by viewing: Step 2 of 3 (Select Employee) — search box, 'Only show appropriately certified & endorsed employees' toggle, a live PPR-flag blocking banner ('Record_Name has a PPR Flag/Disclore and cannot be assigned to this position'), and a Certificate/Endorsement Yes-indicator table. Direct match for staff:Seq_AssignEmployeeToPosition's PPR-block branch and 18.1.5's acceptance criteria." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe6 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-06-add-filled-spot-step3.png" ;
+    sd:notes "Confirmed by viewing: Step 3 of 3 (Confirm and Add to Assignment) — employee name, Certificates table (name/expiration), Endorsements table (name/grade band). Direct match for staff:Seq_AssignEmployeeToPosition's Step 3 and 18.1.5's final acceptance criterion." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe7 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-07-assignments-fte-health-warning.png" ;
+    sd:notes "Confirmed by viewing: Assignments tab with a red 'Filled and Unfilled FTE do not meet the Approved FTE amount' banner and four stat cards (Filled/Vacant/Frozen/Total & Approved FTE) with red accent bars — direct visual match for 18.1.4's FTE health indicator." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe8 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-08-filled-spots-list.png" ;
+    sd:notes "Confirmed by viewing: Filled Spots table with two rows for the same employee (different SCED courses) — direct visual match for 18.1.6's 'if multiple filled spots exist, display them in a list format' criterion." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe9 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-09-recommendation-banner-partially.png" ;
+    sd:notes "Confirmed by viewing: three-row Filled Spots table with one employee's Meets Requirements column showing 'Partially' (not just Yes/No), plus a second red banner ('Assigned employees do not meet the requirements for the position') with a 'See Recommendations' link. This is the direct evidence for the 18.1.7/18.1.8 coverage gap below: staff:Op_ValidatePlacement's responseSchema is a flat boolean (meetsRequirements: true/false, missingCredential?/missingEndorsement?), with no three-state Yes/Partially/No concept and no Recommendations-modal-shaped output anywhere in staffing-domain.ttl/staffing-api.ttl." ;
+    sd:definedIn staff:Fdd18Doc .
+staff:Wireframe10 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/18-roster-of-positions/wireframes/wireframe-10-positions-list-export-icon.png" ;
+    sd:notes "Same Positions list as Wireframe1, with the download/export icon circled for emphasis — corroborates the 18.3.6/18.5.7 export-endpoint coverage gap below (no export/download sd:ApiOperation exists anywhere in staffing-api.ttl)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.1: Add New Position
+#################################################################
+
+staff:Req_18_1_1 a sd:UserStory ;
+    sd:requirementId "18.1.1" ;
+    sd:title "Create a New Position" ;
+    sd:statement "As a School District User, I want to create a new position so that I can define the staffing needs for a role in my district." ;
+    sd:acceptanceCriteria "Add Position button on the Positions screen opens a Position Creation screen; required fields validated before save; system generates a unique position identifier on save; redirects to the Assignments page for the new position; all position creation actions logged with user, timestamp, and position ID." ;
+    sd:satisfiedBy staff:Seq_CreateNewPosition, staff:Op_CreatePosition, staff:PositionRosterAggregate ;
+    sd:notes "Direct match, confirmed visually (Wireframe1/Wireframe2). staff:Seq_CreateNewPosition's own key decision ('Position identifier is system-generated to ensure uniqueness') matches this story's acceptance criteria near-verbatim." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_2 a sd:UserStory ;
+    sd:requirementId "18.1.2" ;
+    sd:title "Capture Approved/Desired FTE" ;
+    sd:statement "As a School District User, I want to specify the Approved FTE for a position so that the system reflects the staffing allocation authorized for the position." ;
+    sd:acceptanceCriteria "Approved FTE required on creation; must be numeric, greater than 0.00, decimals accepted; displayed immediately on the Assignments screen after saving; included in all downstream position health calculations." ;
+    sd:satisfiedBy staff:Op_CreatePosition, staff:PositionRosterAggregate ;
+    sd:notes "Direct match: PositionRosterAggregate's own invariant ('Approved FTE must be greater than zero') is this exact rule." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_3 a sd:UserStory ;
+    sd:requirementId "18.1.3" ;
+    sd:title "View Newly Created Position with No Spots" ;
+    sd:statement "As a School District User, I want the Assignments page to show that no spots currently exist so that I understand that additional staffing setup is required." ;
+    sd:acceptanceCriteria "Position Details page shows zero filled/vacant/frozen spots via stat cards immediately after creation (all zero except Approved FTE); no default spots auto-created; controls present to proceed to spot/assignment creation." ;
+    sd:satisfiedBy staff:PositionRosterAggregate, staff:Op_CreatePosition ;
+    sd:notes "Satisfied at the data-model level (Position/Spot entities, Approved-FTE-vs-sum-of-spot-FTE invariant), but the specific Filled/Vacant/Frozen FTE 'stat card' breakdown this story and Wireframe7 describe is not itself an explicit field on staff:Position in staffing-domain.ttl — it is implicitly derived by summing staff:Spot records. Not raised as a separate gap (a derived/computed display value, not missing domain modeling), but noted for completeness." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_4 a sd:UserStory ;
+    sd:requirementId "18.1.4" ;
+    sd:title "Display FTE Health Indicator for Mismatch" ;
+    sd:statement "As a School District User, I want the system to display a warning when the sum of spot FTE does not equal the Approved FTE so that I am aware that staffing allocations are incomplete or inaccurate." ;
+    sd:acceptanceCriteria "Warning displayed when Approved FTE > 0 and spot FTE sum does not match; persists until resolved; visually indicated via a red state; informational only, does not block actions until certification." ;
+    sd:satisfiedBy staff:PositionRosterAggregate ;
+    sd:notes "Exact match: PositionRosterAggregate's own invariant states 'Sum of spot FTE should equal approved FTE for position (health indicator, not blocking)' — same non-blocking framing as this story. Confirmed visually (Wireframe7)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_5 a sd:UserStory ;
+    sd:requirementId "18.1.5" ;
+    sd:title "Save Validation Errors for Position Creation (FDD heading; body is actually the Add Filled Spot workflow — see file header)" ;
+    sd:statement "As a School District User, I want to add a filled spot to a position by completing the three-step assignment workflow, so that I can assign an eligible employee to the appropriate SCED course, grade levels, and FTE allocation." ;
+    sd:acceptanceCriteria "Step 1 (Spot Details) dynamically shows/hides SCED Course and Grade Level fields based on Education Job Type/Local Job Category (Teacher gets full fields; Administrator/Student Support/Non-Instructional get a reduced set); FTE Allocation and Start Date required to proceed; Step 2 (Select Employee) offers search, an 'appropriately certified & endorsed' filter toggle, per-employee certificate/endorsement indicators, a PPR-flag blocking message, and grade-band validation; Step 3 (Confirm and Add) shows the employee's certificates/endorsements verbatim; on Add, creates a filled spot and updates the Filled Spots table and all four FTE stat cards; all steps logged." ;
+    sd:satisfiedBy staff:Seq_AssignEmployeeToPosition, staff:Op_ValidatePlacement, staff:Op_CreateAssignment ;
+    sd:notes "Very close 1:1 match, confirmed visually across all three wireframed steps (Wireframe4/5/6): staff:Seq_AssignEmployeeToPosition is exactly this three-step workflow, including the PPR-blocking branch and the credential/endorsement validation branch. The dynamic field set by Education Job Type (Teacher vs. Administrator/Student Support/Non-Instructional) is not separately called out as a distinct rule in staffing-domain.ttl beyond the general AssignmentAggregate invariants, but is consistent with them." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_6 a sd:UserStory ;
+    sd:requirementId "18.1.6" ;
+    sd:title "Update Assignment Page After Adding a Filled Spot" ;
+    sd:statement "As a School District User, I want the Assignments tab to update immediately after adding a filled spot, so that I can see updated FTE totals, health indicators, and the list of filled and unfilled spots." ;
+    sd:acceptanceCriteria "Recalculates and displays all four FTE stat cards; shows the health-indicator warning if mismatched; lists newly added filled spots (employee, Meets Requirements Yes/Partially/No, SCED Course Title, Start Date, Allocation); Add Filled/Unfilled Spot actions remain available; no additional user action required." ;
+    sd:satisfiedBy staff:Seq_AssignEmployeeToPosition, staff:PositionRosterAggregate ;
+    sd:notes "Direct match for the FTE-recalculation and multi-row-list behavior (confirmed visually, Wireframe8). The three-state 'Yes/Partially/No' Meets Requirements indicator is only partially modeled — see Req_18_1_7's coverage-gap note; folded here as a partial-satisfaction caveat rather than a duplicate Annotation target, per the 'partial satisfaction is normal' rule." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_7 a sd:UserStory ;
+    sd:requirementId "18.1.7" ;
+    sd:title "Display Recommendation Banner for Non-Qualified Employees" ;
+    sd:statement "As a School District User, I want to be notified when assigned employees do not meet position requirements, so that I can take corrective action." ;
+    sd:acceptanceCriteria "After an assignment update, revalidate all employees on the position; if any employee fails, display a banner with a 'See Recommendations' link even if only one of several employees fails; banner persists until resolved." ;
+    sd:notes "No satisfiedBy: staff:Op_ValidatePlacement's responseSchema is a flat boolean (meetsRequirements: true/false, missingCredential?/missingEndorsement?) evaluated once at assignment-creation time — there is no revalidate-on-update behavior, no three-state Yes/Partially/No outcome, and no banner/notification concept anywhere in staffing-domain.ttl or staffing-api.ttl. Confirmed by Wireframe9's visible 'Partially' state and 'See Recommendations' banner, which has no backing node to satisfy it. See the coverage-gap Annotation below (grouped with Req_18_1_8, the closely related Recommendations-modal story)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_8 a sd:UserStory ;
+    sd:requirementId "18.1.8" ;
+    sd:title "View Appropriate Placement Recommendations" ;
+    sd:statement "As a School District User, I want to view detailed recommendations for employees who do not meet assignment requirements, so that I understand how to resolve qualification issues." ;
+    sd:acceptanceCriteria "Modal lists each non-qualifying employee, the missing requirement, and recommended actions (apply for endorsement, apply for Temporary Credential, reassign employee); 'Temporary Credential' links to that workflow if in scope; informational only, no automatic changes." ;
+    sd:notes "No satisfiedBy: same gap as Req_18_1_7 — no Recommendations-modal-shaped output or 'recommended actions' concept exists anywhere in staffing-domain.ttl. The 'Apply for Temporary Credential' / 'Submit Justification' fork DOES exist as a real branch in staff:Seq_AssignEmployeeToPosition (the assignment-creation-time version of this idea) — this story describes a similar but distinct, later/on-demand version of that same choice, surfaced from a revalidation banner rather than from the initial assignment flow." ;
+    sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Ongoing/on-demand revalidation of assigned employees against position requirements, with a three-state (Yes/Partially/No) outcome, a notification banner, and a detailed Recommendations modal (missing requirement + recommended actions per employee), is described in 18.1.7/18.1.8 and directly confirmed by Wireframe9 — but nothing in staffing-domain.ttl or staffing-api.ttl models it. staff:Op_ValidatePlacement only evaluates credential/endorsement fit once, at assignment-creation time, with a flat boolean outcome. This is a genuine, wireframe-confirmed gap, not a documentation artifact." ;
+    oa:hasTarget staff:Req_18_1_7, staff:Req_18_1_8 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_1_9 a sd:UserStory ;
+    sd:requirementId "18.1.9" ;
+    sd:title "View Assignment History" ;
+    sd:statement "As a School District User, I want to view the assignment history for a position, so that I can see past staffing activity and FTE changes." ;
+    sd:acceptanceCriteria "'Assignment History' tab shows type, employee, SCED course title, start date, end date, allocation; entries read-only; date-range filter (e.g. Last 12 Months); empty state when no history; historical entries remain visible after current-cycle changes; access to the tab logged." ;
+    sd:notes "No satisfiedBy: no queryable assignment-history/version-log entity or endpoint exists anywhere in staffing-domain.ttl or staffing-api.ttl — staff:Op_GetAssignment returns only a single current AssignmentDetail, and the AuditWorkItemAggregate's own audit trail is scoped to the certification/audit domain, not to a per-position change history. Genuine coverage gap; see the annotation grouped with Req_18_3_7 below (same underlying missing concept: a queryable position/assignment audit-and-version history)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.2: Edit/remove position
+#################################################################
+
+staff:Req_18_2_1 a sd:UserStory ;
+    sd:requirementId "18.2.1" ;
+    sd:title "Edit Position Details" ;
+    sd:statement "As a School District User, I want to edit existing position details so that I can keep the position record accurate when names or classifications change." ;
+    sd:acceptanceCriteria "Select a position from the Positions table; edit Approved FTE, Building, and Status; validate on Save Changes; field-specific errors block save until corrected; edit logged with user, timestamp, position ID." ;
+    sd:satisfiedBy staff:Op_UpdatePosition, staff:PositionRosterAggregate ;
+    sd:notes "Direct match, confirmed visually (Wireframe3). staff:Op_UpdatePosition's own projection note ('Partial update of title, job category/function, approved FTE only') covers FTE and category/function; Building and Status are handled by this story's dedicated fields too, matching the wireframe's editable-field set." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_2 a sd:UserStory ;
+    sd:requirementId "18.2.2" ;
+    sd:title "Set Status to Filled (Assign Employee Required)" ;
+    sd:statement "As a School District User, when I set a position to 'Filled,' I want the system to require assignment of an active employee so that the position is accurately linked to staffing." ;
+    sd:acceptanceCriteria "Required Assigned Employee field, searchable by Unique ID or Name, limited to Active-Employment-Status employees; Job Position Status Date required before submission; conflict message on status conflicts; logged with user, timestamp, position ID." ;
+    sd:satisfiedBy staff:Op_UpdatePositionStatus, staff:Seq_UpdatePositionStatus ;
+    sd:notes "Exact match: staff:Seq_UpdatePositionStatus's own 'Status = Filled' branch requires an employee assignment or returns 400 Bad Request, identical to this story's rule." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_3 a sd:UserStory ;
+    sd:requirementId "18.2.3" ;
+    sd:title "Remove Position During Working Window (Deletion)" ;
+    sd:statement "As a School District User, I want to delete a position when it is still in the working window (not yet submitted/certified) so that I can remove positions created in error." ;
+    sd:acceptanceCriteria "Delete option shown only during the working window; confirmation before removal; deleted positions removed entirely; deletion disallowed once established (post-working-window); if the position had an employee assignment, employee-assignment validations are rerun; logged." ;
+    sd:satisfiedBy staff:Op_CancelPosition, staff:PositionRosterAggregate ;
+    sd:notes "Consistent with PositionRosterAggregate's own invariant ('Position cannot be deleted after establishment (working window only); use Cancelled status instead'), confirmed visually (Wireframe3's Delete Position button). Worth flagging: staff:Op_CancelPosition's own summary is 'Cancel position (sets status to Cancelled)' — a status transition, not the true, record-removing deletion this story describes for the pre-establishment case. staffing-api.ttl models only one DELETE /positions/{positionId} operation and its notes describe only the Cancelled-status behavior; it isn't explicit that this same operation performs a hard delete during the working window versus a soft Cancelled transition afterward. Not raised as a full coverage-gap Annotation (the underlying business rule is present and correct), but noted as an API-documentation ambiguity worth tightening." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_4 a sd:UserStory ;
+    sd:requirementId "18.2.4" ;
+    sd:title "Cancel/End Position (For Established Positions)" ;
+    sd:statement "As a School District User, I want to cancel an established position so that I can end its lifecycle with proper documentation." ;
+    sd:acceptanceCriteria "Delete disabled once established; Cancelled status requires Job Position Status Date and Cancelled Reason; cancellation blocked without a reason; position drops from the active/default roster after the effective date but remains in historical/archived views; logged." ;
+    sd:satisfiedBy staff:Op_CancelPosition, staff:Rule_PositionStatusCancelledRequiresReason ;
+    sd:notes "Direct, exact match to staff:Rule_PositionStatusCancelledRequiresReason." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_5 a sd:UserStory ;
+    sd:requirementId "18.2.5" ;
+    sd:title "Prevent Employee Association for Certain Statuses" ;
+    sd:statement "As a School District User, I want the system to prohibit assigning an active employee to positions set to statuses where assignments are not allowed so that records remain valid." ;
+    sd:acceptanceCriteria "Assigned Employee field hidden/disabled for Active, Frozen, or Cancelled status; prior assignment shown to end after the status-change effective date; cannot save 'Filled' semantics (employee assignment) under a non-Filled status; disallowed attempts logged." ;
+    sd:satisfiedBy staff:PositionRosterAggregate, staff:Rule_FrozenPositionProhibitsAssignment, staff:Seq_UpdatePositionStatus ;
+    sd:notes "Exact match: PositionRosterAggregate's own invariant ('Position status Active/Frozen/Cancelled prohibits active employee assignment after effective date') and Rule_FrozenPositionProhibitsAssignment's worked example both state this precisely; staff:Seq_UpdatePositionStatus's own Frozen/Cancelled branches ('end employee assignment at effective date') implement it end-to-end." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_6 a sd:UserStory ;
+    sd:requirementId "18.2.6" ;
+    sd:title "Bulk Update of Position Status and Status Date" ;
+    sd:statement "As a School District User, I want to update the Job Position Status and Status Date for multiple positions simultaneously so that I can efficiently manage roster updates." ;
+    sd:acceptanceCriteria "Multi-select positions enables Bulk Update; a single Status Date applies to all selected; Cancelled requires one Cancelled Reason for all selected; Filled is not permitted in bulk (assignments are per-position unique); logs list all affected position IDs." ;
+    sd:notes "No satisfiedBy: staffing-api.ttl has no bulk/multi-position update endpoint of any kind for Positions — staff:Op_UpdatePositionStatus (PATCH /positions/{positionId}/status) and staff:Op_UpdatePosition are both single-record operations, and no SequenceReference/ApiOperation anywhere models a multi-select batch update. Genuine coverage gap — grouped in the Feature 18.5 bulk/API-ingestion Annotation below, since it is the same underlying missing capability (a batch/bulk write surface for Positions) surfacing from a different UI entry point." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_2_7 a sd:UserStory ;
+    sd:requirementId "18.2.7" ;
+    sd:title "Validation Errors for Edit/Remove Operations" ;
+    sd:statement "As a School District User, I want clear validation messages if edits, deletions, or status changes cannot be applied so that I can correct issues quickly." ;
+    sd:acceptanceCriteria "Missing-required-field errors on edit/status-update/cancellation are clear; status-change-vs-active-assignment conflicts are shown; no update saved until all errors are resolved." ;
+    sd:satisfiedBy staff:Op_UpdatePosition, staff:Op_UpdatePositionStatus, staff:Op_CancelPosition ;
+    sd:notes "General validation behavior already implied by each operation's own 400-Bad-Request error paths in staff:Seq_UpdatePositionStatus — a thin but real match; no dedicated validation-message catalog exists (consistent with the rest of the platform's approach, which keeps error text as prose on each sequence rather than a promoted class)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.3: Create new collection
+#################################################################
+
+staff:Req_18_3_1 a sd:UserStory ;
+    sd:requirementId "18.3.1" ;
+    sd:title "Automatically Initialize the New Academic Year" ;
+    sd:statement "As the MiEdWorkforce System, I want to automatically initialize the new collection year so that districts can begin reviewing and reporting their annual Position Roster data." ;
+    sd:acceptanceCriteria "New academic year triggers automatic collection-year creation; no user action required; references the prior year's certified roster; logs rollover timestamp, academic year, and initialization status." ;
+    sd:satisfiedBy staff:Seq_OpenNewCollection ;
+    sd:notes "Exact match: staff:Seq_OpenNewCollection is initiatedBy 'internal-system', triggered by a Scheduler, and its own whatWhenWho text ('System automatically initializes a new school-year collection at the start of the academic year... No user action needed') is this story near-verbatim." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_2 a sd:UserStory ;
+    sd:requirementId "18.3.2" ;
+    sd:title "Automatically Carry Forward Active Positions" ;
+    sd:statement "As the MiEdWorkforce System, I want to carry forward all active positions so that the new collection year reflects continuing staffing needs." ;
+    sd:acceptanceCriteria "Positions without an end date (Active, Approved, Filled, Vacant, or Frozen statuses) automatically carry forward with metadata and Approved FTE intact; no district re-entry required." ;
+    sd:satisfiedBy staff:Rule_CollectionRolloverCarriesForward, staff:Seq_OpenNewCollection ;
+    sd:notes "Exact match — Rule_CollectionRolloverCarriesForward's statement and worked example describe this precisely, including the no-end-date carry-forward condition." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_3 a sd:UserStory ;
+    sd:requirementId "18.3.3" ;
+    sd:title "Automatically Exclude Ended Positions" ;
+    sd:statement "As the MiEdWorkforce System, I want to exclude positions with an end date so that only valid, ongoing positions continue into the new collection year." ;
+    sd:acceptanceCriteria "Positions with both an end date and a Cancelled/end reason are excluded from the new year's default roster but remain in historical views; logs which position IDs were excluded." ;
+    sd:satisfiedBy staff:Rule_CollectionRolloverCarriesForward, staff:Seq_OpenNewCollection ;
+    sd:notes "Exact match — the same rule's exclusion branch." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_4 a sd:UserStory ;
+    sd:requirementId "18.3.4" ;
+    sd:title "View Roster Data from the Previous School Year" ;
+    sd:statement "As a School District User, I want to view my previous school year's roster at the beginning of the new collection year so that I can confirm which positions have carried forward." ;
+    sd:acceptanceCriteria "Prior year's roster displayed as the basis for the new year on login after rollover; carried-forward positions show prior-year metadata; cancelled/ended positions absent from the new roster; active school year clearly displayed." ;
+    sd:satisfiedBy staff:Seq_OpenNewCollection, staff:Op_ListCollections ;
+    sd:notes "Direct match — staff:Seq_OpenNewCollection's own final steps show exactly this district-login-after-rollover view." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_5 a sd:UserStory ;
+    sd:requirementId "18.3.5" ;
+    sd:title "View Historical Organizational Charts (Read-Only)" ;
+    sd:statement "As a School District User, I want to view historical organizational charts so that I can reference how positions were structured and staffed in prior years." ;
+    sd:acceptanceCriteria "View any prior school year's org chart, read-only; shows start/end dates and status history; editing of historical positions/spots is prevented; correcting certified historical data requires a formal, admin-controlled reopen request; academic year and version shown in the UI." ;
+    sd:notes "No satisfiedBy: no dedicated 'historical organizational chart' read view or endpoint exists in staffing-api.ttl (only current-collection Op_ListPositions/Op_GetPosition) and no reopen-REQUEST operation exists (staff:CollectionState_Reopened exists as a state, and staff:Rule_CollectionRolloverCarriesForward's own notes mention excluded records 'remain visible under historical views,' but nothing shows those historical views are actually queryable via a modeled endpoint, nor is there a citizen/district-facing reopen-request flow — only the reopen STATE itself is modeled). Genuine coverage gap; grouped with Req_18_3_7 below (same underlying missing capability: queryable historical/versioned position views)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_6 a sd:UserStory ;
+    sd:requirementId "18.3.6" ;
+    sd:title "Export Position Roster and Historical Data" ;
+    sd:statement "As a School District User, I want to export my position roster data, including historical rosters, so that I can perform local analysis and reconcile information with HR systems." ;
+    sd:acceptanceCriteria "Export in one or more supported formats (Excel, CSV, XML) for any selected school year; exported data matches what's shown, including carried-forward and ended positions; includes key position fields; export logged with user ID, timestamp, academic year." ;
+    sd:notes "No satisfiedBy: no export/download sd:ApiOperation exists anywhere in staffing-api.ttl for Positions (or for any other Staffing aggregate) — confirmed visually by Wireframe10's download icon on the Positions list, which has no backing operation. Genuine, wireframe-confirmed coverage gap; see the Annotation below (grouped with the identical 18.5.7 export story)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_7 a sd:UserStory ;
+    sd:requirementId "18.3.7" ;
+    sd:title "View Versioning / Audit Details for Position Records" ;
+    sd:statement "As a School District User, I want to view audit and versioning details for positions so that I can understand how a position has changed over time." ;
+    sd:acceptanceCriteria "Position Details page shows a version history/audit trail (status updates, end dates, cancelled reasons, user actions, timestamps); prior-year audit details are read-only." ;
+    sd:notes "No satisfiedBy: staff:Seq_UpdatePositionStatus's own keyDecisions say status changes are 'tracked in audit history for compliance reporting,' but no queryable audit-trail entity or endpoint for Positions exists in staffing-domain.ttl/staffing-api.ttl to back a UI view of it — the audit trail is asserted as happening, never modeled as a retrievable node. Same underlying gap as Req_18_1_9's assignment history and Req_18_3_5's historical org-chart view — see the consolidated coverage-gap Annotation below." ;
+    sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "A queryable, versioned audit/history view for Positions and Assignments is referenced three separate times across this FDD (18.1.9 Assignment History, 18.3.5 historical org charts, 18.3.7 position audit/version details) but never modeled as a retrievable entity or endpoint anywhere in staffing-domain.ttl or staffing-api.ttl. Several sequences (staff:Seq_UpdatePositionStatus, staff:Seq_CertifyCollection) assert that changes are 'tracked in audit history,' but nothing surfaces that history back to a user via a modeled ApiOperation. The recurrence across three independent stories in the same FDD raises confidence this is a real, cross-cutting gap (a general Staffing audit/versioning read surface) rather than three unrelated small omissions." ;
+    oa:hasTarget staff:Req_18_1_9, staff:Req_18_3_5, staff:Req_18_3_7 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_8 a sd:UserStory ;
+    sd:requirementId "18.3.8" ;
+    sd:title "System Logging of Rollover Outcomes" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all actions taken during the creation of the new collection so that system administrators can review the results." ;
+    sd:acceptanceCriteria "Logs total positions carried forward and total excluded; records unexpected errors, flagged for admin review; logging data accessible to authorized support staff." ;
+    sd:satisfiedBy staff:Seq_OpenNewCollection ;
+    sd:notes "Exact match: staff:Seq_OpenNewCollection's own content explicitly includes 'Log rollover outcome (counts carried forward, counts excluded, errors)' as a diagram step, and its errorScenarios describe unexpected per-record errors being 'logged and flagged for Staffing Data Admin review; does not block rollover for other records.'" ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_9 a sd:UserStory ;
+    sd:requirementId "18.3.9" ;
+    sd:title "Display Data Quality Indicators After Rollover" ;
+    sd:statement "As a School District User, I want the system to show data quality indicators so that I am aware of any positions that require attention before certification." ;
+    sd:acceptanceCriteria "FTE health indicators recalculated per position on rollover completion; positions with issues visually flagged; indicators don't block user actions but remain visible until corrected." ;
+    sd:satisfiedBy staff:Seq_OpenNewCollection, staff:PositionRosterAggregate ;
+    sd:notes "Exact match: staff:Seq_OpenNewCollection explicitly includes 'Recalculate FTE health indicators and data-quality flags for carried-forward positions.'" ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_3_10 a sd:UserStory ;
+    sd:requirementId "18.3.10" ;
+    sd:title "Recognize Re-Open Requests for Historical Data" ;
+    sd:statement "As the MiEdWorkforce System, I want to recognize when a collection period has been reopened so that previously locked position data can be edited if authorized." ;
+    sd:acceptanceCriteria "Staffing Data Admin reopens a prior collection; system allows edits to that year's data; a reopened-status banner/message is shown; edits during reopen follow standard working-window validation rules; all reopen-period edits logged with user ID, timestamp, rationale." ;
+    sd:satisfiedBy staff:CollectionState_Reopened, staff:CollectionAggregate ;
+    sd:notes "Partial satisfaction: staff:CollectionState_Reopened (a real, non-terminal StateDefinition on CollectionAggregate) and staffing-technical-design.ttl's own Rule_CollectionRolloverCarriesForward references confirm the state exists, but no dedicated sd:Sequence or sd:ApiOperation models the actual admin-initiated reopen ACTION (analogous to how staff:Seq_RequestCollectionException models the exception-request flow but nothing equivalent exists for a plain reopen) — the state is modeled, the transition into it is not. Not raised as a standalone Annotation given the state itself IS present and this is a narrower gap than the audit/history one above, but noted here per the 'partial satisfaction is normal' rule." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.4: Position Roster Certification
+#################################################################
+
+staff:Req_18_4_1 a sd:UserStory ;
+    sd:requirementId "18.4.1" ;
+    sd:title "View Certification Workflow Status" ;
+    sd:statement "As a School District User, I want to view the certification workflow/status so that I understand what steps remain before I can certify the Position Roster." ;
+    sd:acceptanceCriteria "Certification page shows workflow steps (Pre-Certification Tasks, Data Quality Review, Justifications, Attestation, Certification) each marked complete/incomplete/blocked; Certify button disabled until all required steps complete; audit details (User ID, timestamp) captured only when a user completes a task or takes an action, not on page view." ;
+    sd:satisfiedBy staff:Op_GetCertificationStatus, staff:Seq_CertifyCollection ;
+    sd:notes "Direct match. The 'only log task completion, not page views' clause was itself the subject of a live review-comment exchange (comment 543258739 -> 1502134421): Groom asked whether audit details would be captured 'for the page view, or only when completing tasks,' and Caswell confirmed the intent was the latter and revised the acceptance criterion accordingly — the version modeled here already reflects that resolution, so no separate Annotation is needed." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_2 a sd:UserStory ;
+    sd:requirementId "18.4.2" ;
+    sd:title "Perform Pre-Certification Tasks" ;
+    sd:statement "As a School District User, I want the system to verify that all pre-certification tasks are complete so that I can proceed to certification." ;
+    sd:acceptanceCriteria "Evaluates pre-certification task completeness on starting certification; displays incomplete tasks; blocks progress to Data Quality Review until addressed; marks tasks Complete once done." ;
+    sd:satisfiedBy staff:Seq_CertifyCollection ;
+    sd:notes "Direct match — staff:Seq_CertifyCollection's own 'Pre-certification tasks incomplete' alt-branch blocks quality review exactly this way." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_3 a sd:UserStory ;
+    sd:requirementId "18.4.3" ;
+    sd:title "System-Generated Data Quality Review (QR Validation)" ;
+    sd:statement "As the MiEdWorkforce System, I want to run the Quality Review process so that the system can identify errors and anomalies before certification." ;
+    sd:acceptanceCriteria "Runs business rule validations for the collection; checks record completeness, lifecycle/dates, status/metadata consistency, historical comparison, cross-record/cross-interface (EEM) alignment; categorizes into Errors/Warnings/Justification-Required; results shown in a structured list; validation output stored in the certification audit record; execution logged with user ID, timestamp, result counts." ;
+    sd:satisfiedBy staff:Op_RunQualityReview, staff:TP_ValidationRuleEngine ;
+    sd:notes "Direct match — staff:TP_ValidationRuleEngine's own rule-category breakdown (field-level, cross-field, cross-record/collection-level with EEM lookups, historical/trend anomaly detection) covers exactly the check categories this story lists." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_4 a sd:UserStory ;
+    sd:requirementId "18.4.4" ;
+    sd:title "Enter Required Justification for QR Conditions" ;
+    sd:statement "As a School District User, I want to provide justification for specific data quality issues so that certification can proceed when certain conditions cannot be corrected." ;
+    sd:acceptanceCriteria "Justification-required items shown in a dedicated section; text/structured input per issue; mandatory items clearly marked; certification blocked until all required justifications entered; justifications saved to the certification audit trail; each entry logged with user ID, timestamp, issue ID." ;
+    sd:satisfiedBy staff:Op_SubmitJustifications ;
+    sd:notes "Direct match." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_5 a sd:UserStory ;
+    sd:requirementId "18.4.5" ;
+    sd:title "Prevent Certification When Errors Exist" ;
+    sd:statement "As the MiEdWorkforce System, I want to prevent certification when validation errors are present so that only accurate and validated data is certified." ;
+    sd:acceptanceCriteria "Checks for remaining Errors (not Warnings) at certification attempt; blocks and messages if any exist; justification does not substitute for correcting true errors unless specifically flagged as justification-allowed; proceeds to Attestation if none remain; blocked attempts logged with user ID, timestamp, unresolved-error list." ;
+    sd:satisfiedBy staff:Rule_CollectionCannotCertifyWithErrors ;
+    sd:notes "Exact match." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_6 a sd:UserStory ;
+    sd:requirementId "18.4.6" ;
+    sd:title "Display Attestation / Agreement Text" ;
+    sd:statement "As a School District User, I want to review and affirm attestation statements so that I legally acknowledge the accuracy of my district's submission." ;
+    sd:acceptanceCriteria "Attestation text shown once pre-certification/QR/justifications are complete; user must view (scroll) and affirmatively acknowledge via checkbox or similar; certification blocked until acknowledged; acknowledgement logged with user ID and timestamp." ;
+    sd:satisfiedBy staff:CertificationAttestation, staff:Seq_CertifyCollection ;
+    sd:notes "Direct match — staff:CertificationAttestation's own description ('E-signature and timestamp of authorized user certification') and staff:Seq_CertifyCollection's attestation step cover this." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_7 a sd:UserStory ;
+    sd:requirementId "18.4.7" ;
+    sd:title "Certify the Position Roster" ;
+    sd:statement "As a School District User, I want to certify the Position Roster so that my district's data is finalized for the collection year." ;
+    sd:acceptanceCriteria "On Certify, confirms pre-tasks/QR/justifications/attestation are all satisfied; permanently marks the roster Certified; records become read-only; workflow status updates; generates a certification receipt (District ID, User ID, Timestamp, School year, summary of certification conditions); successful certification logged." ;
+    sd:satisfiedBy staff:Op_CertifyCollection, staff:Seq_CertifyCollection ;
+    sd:notes "Direct match for the certification transition itself. Partial gap: staff:Op_CertifyCollection's producesShape is staff:CollectionDefinition — a distinct, structured 'certification receipt' artifact (District ID/User ID/Timestamp/School year/condition summary) as its own document/output isn't separately modeled; the certification event and timestamp are captured, but not as a formatted receipt document. Minor — not raised as its own Annotation, noted per the 'partial satisfaction is normal' rule." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_4_8 a sd:UserStory ;
+    sd:requirementId "18.4.8" ;
+    sd:title "Lock Data After Certification" ;
+    sd:statement "As the MiEdWorkforce System, I want to lock certified position roster data so that it remains immutable unless the collection is formally reopened." ;
+    sd:acceptanceCriteria "Editing/deletion of certified records prevented; attempted modification shows a certified-collection message; view-only access allowed; reopening by Staffing Data Admin marks data editable again and logs the reopening." ;
+    sd:satisfiedBy staff:CollectionState_Certified, staff:Seq_CertifyCollection ;
+    sd:notes "Direct match — staff:CollectionState_Certified is a real, isTerminal StateDefinition, and staff:Seq_CertifyCollection's own steps include 'Lock all records in collection (read-only except via reopen).' The reopen-logging half connects to the same Req_18_3_10 partial gap noted above (state modeled, dedicated reopen-action sequence not modeled)." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.5: Data Input via API and File Upload
+#################################################################
+
+staff:Req_18_5_1 a sd:UserStory ;
+    sd:requirementId "18.5.1" ;
+    sd:title "Upload Bulk File for Position Updates" ;
+    sd:statement "As a School District User, I want to upload a bulk file containing position updates so that I can update the Position Roster without manually editing each position." ;
+    sd:acceptanceCriteria "Select records on the Positions screen, select Update; navigate to file staging area; file-upload control accepts CSV/XML; standard file-upload processing applied; each record validated for a required Job Identifier; unsupported/unreadable file format errors and blocks processing; upload attempts (success or failure) logged with timestamp and user ID." ;
+    sd:notes "No satisfiedBy: no bulk-file-upload sd:ApiOperation or sd:Sequence exists anywhere in staffing-api.ttl/staffing-sequences.ttl for Positions (or for any Staffing aggregate) — every modeled operation is a single-record REST call. Genuine coverage gap; see the consolidated Annotation below." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_2 a sd:UserStory ;
+    sd:requirementId "18.5.2" ;
+    sd:title "Process Bulk File and Update Position Components" ;
+    sd:statement "As the MiEdWorkforce System, I want to process bulk file uploads so that all components of a position can be updated at once." ;
+    sd:acceptanceCriteria "Processes all records with standard file-ingestion rules; updates all position-related data elements per the file; identifies positions by Job Identifier; logs each processed update; reflects updates immediately in the roster." ;
+    sd:notes "No satisfiedBy — same gap as Req_18_5_1." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_3 a sd:UserStory ;
+    sd:requirementId "18.5.3" ;
+    sd:title "Validate Bulk File Records and Allow Partial Success" ;
+    sd:statement "As the MiEdWorkforce System, I want to validate all bulk file records and allow partial success so that valid updates can proceed even when some records contain errors." ;
+    sd:acceptanceCriteria "Validates each record individually; applies passing records; rejects and lists failing records with error messages; generates a downloadable/viewable validation report of successes and rejections." ;
+    sd:notes "No satisfiedBy — same gap as Req_18_5_1." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_4 a sd:UserStory ;
+    sd:requirementId "18.5.4" ;
+    sd:title "Display Proposed Changes Before Finalizing Upload (Alternative Flow)" ;
+    sd:statement "As a School District User, I want to review changes detected during the bulk file upload so that I can confirm the updates before they are applied." ;
+    sd:acceptanceCriteria "Presents a summary of detected changes when the file differs from current values; requires user confirmation; no updates on cancel; proceeds with valid/invalid split on confirm; confirmations/cancellations logged." ;
+    sd:notes "No satisfiedBy — same gap as Req_18_5_1." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_5 a sd:UserStory ;
+    sd:requirementId "18.5.5" ;
+    sd:title "Accept Position & Employee Data via API" ;
+    sd:statement "As the MiEdWorkforce System, I want to accept position and employee data from an external HR system via API so that the Position Roster can be updated programmatically." ;
+    sd:acceptanceCriteria "Receives payload via established connection rules from an authorized external HR system; applies standard ingestion/validation; updates position and employee components per payload; validates each record individually; valid records update, invalid records trigger standard API error messaging; transactions logged with timestamp, external system identifier, success/error status." ;
+    sd:satisfiedBy staff:Op_CreatePosition, staff:Op_UpdatePosition, staff:Op_UpdatePositionStatus ;
+    sd:notes "Partial satisfaction: staffing-api.ttl's own file header explicitly documents that several operations, including these three, list 'x-access: [internal-user, external-client]' — i.e. they ARE already callable by an external HR/SIS system on a district's behalf, which is the mechanism this story actually describes for single-record submissions. What's genuinely missing is any BATCH/bulk-payload variant of this (a single API call updating many positions/employees at once, as opposed to one call per record) — grouped with the Feature 18.5 bulk Annotation below for that narrower gap." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_6 a sd:UserStory ;
+    sd:requirementId "18.5.6" ;
+    sd:title "Validate API Submissions and Return Errors" ;
+    sd:statement "As the MiEdWorkforce System, I want to validate API-submitted records and return error messages so that external systems can correct issues." ;
+    sd:acceptanceCriteria "Validates all incoming API records against Position Roster rules; rejects erroring records with standardized error messages; valid records update the roster; validation results included in the API response; error responses don't block processing of other valid records; all outcomes logged." ;
+    sd:satisfiedBy staff:Op_CreatePosition, staff:Op_UpdatePosition, staff:Op_UpdatePositionStatus ;
+    sd:notes "Partial satisfaction, same basis as Req_18_5_5: the external-client-accessible single-record operations do return standard validation errors (400 Bad Request per staff:Seq_CreateNewPosition/Seq_UpdatePositionStatus), but there is no batch-submission response shape (per-record success/error array within one API response) to satisfy the 'partial successes in one call' half of this story." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_7 a sd:UserStory ;
+    sd:requirementId "18.5.7" ;
+    sd:title "Download Roster Data in Upload-Compatible Formats" ;
+    sd:statement "As a School District User, I want to download the position roster data in formats that match the upload options so that I can update the file offline and re-upload it." ;
+    sd:acceptanceCriteria "Export options match upload-allowable formats (CSV, XML); exported data includes all fields needed for the bulk template; export logged with user ID and timestamp; export matches current roster state; file structured for upload compatibility." ;
+    sd:notes "No satisfiedBy: identical underlying gap to Req_18_3_6 — no export/download operation exists in staffing-api.ttl. Grouped with it in the coverage-gap Annotation below rather than duplicated." ;
+    sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No export/download sd:ApiOperation for Position Roster data (or any Staffing aggregate) exists anywhere in staffing-api.ttl, despite being described twice in this FDD (18.3.6 for historical rosters, 18.5.7 for an upload-compatible re-import format) and directly confirmed by a wireframe (Wireframe10's circled download icon on the Positions list). A real, wireframe-confirmed gap." ;
+    oa:hasTarget staff:Req_18_3_6, staff:Req_18_5_7 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "staffing-domain.md's own methods list for updating the org chart explicitly promises three input paths — 'Online / Bulk file / API' — and this FDD's own Feature 18.5 and 18.2.6 describe bulk-file-upload, batch/multi-record API ingestion, and multi-select bulk status updates in detail (18.1.1/18.5.1-18.5.4/18.5.8/18.5.9, plus 18.2.6's bulk status-update variant). Only the 'Online' (single-record, per-operation) path is modeled anywhere in staffing-api.ttl/staffing-sequences.ttl. There is no bulk-file-upload endpoint, no batch/multi-record API payload shape, and no multi-select bulk-write sequence for Positions anywhere in the converted Staffing surface — a substantial, confirmed gap (not a documentation oversight, since the domain doc itself promises this capability), spanning nearly all of Feature 18.5 plus 18.2.6. staff:Op_CreatePosition/Op_UpdatePosition/Op_UpdatePositionStatus are already external-client-accessible per staffing-api.ttl's own file header, so the SINGLE-record half of API-based ingestion (18.5.5/18.5.6) is real and satisfied — see those Requirements' own sd:notes; only the BULK/batch half of the picture (file upload entirely, and multi-record API payloads) is missing." ;
+    oa:hasTarget staff:Req_18_2_6, staff:Req_18_5_1, staff:Req_18_5_2, staff:Req_18_5_3, staff:Req_18_5_4, staff:Req_18_5_8, staff:Req_18_5_9 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_8 a sd:UserStory ;
+    sd:requirementId "18.5.8" ;
+    sd:title "Maintain Consistency Across Online, Bulk File, and API Updates" ;
+    sd:statement "As the MiEdWorkforce System, I want consistent update rules across online editing, bulk file uploads, and API submissions so that the Position Roster behaves predictably regardless of method." ;
+    sd:acceptanceCriteria "Same validation rules apply to online, bulk, and API updates; identical outcomes regardless of input method; conflicts between methods resolved consistently (e.g. later submission wins within the working window); all updates tracked in the audit log with method source (online/bulk/API)." ;
+    sd:notes "No satisfiedBy: this story presupposes the bulk-file and batch-API paths exist to BE consistent with the online path — since neither is modeled (see the Feature 18.5 bulk-ingestion Annotation above), there is nothing yet to reconcile. Grouped into that same Annotation rather than treated as an independent gap." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_5_9 a sd:UserStory ;
+    sd:requirementId "18.5.9" ;
+    sd:title "Log All Data Input Actions" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all update actions performed via bulk file and API so that data traceability and audit compliance are maintained." ;
+    sd:acceptanceCriteria "Bulk uploads logged with user ID, file name, timestamp, processing result; API submissions logged with external system ID, timestamp, processing result; logs capture both successes and rejections; logs accessible to authorized admin users for audit purposes." ;
+    sd:notes "No satisfiedBy for the bulk-file half (same missing surface as Req_18_5_1); the API half is partially covered by the general logging behavior on the existing single-record external-client operations, but there is no distinct bulk/API-specific log view. Grouped into the Feature 18.5 bulk-ingestion Annotation above." ;
+    sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirements — Feature 18.6: Email/Communication (out-of-scope for Staffing)
+#################################################################
+
+staff:Req_18_6_1 a sd:UserStory ;
+    sd:requirementId "18.6.1" ;
+    sd:title "Notify User of Upcoming Deadlines" ;
+    sd:statement "As an Authorized User, I want to receive an email notification about upcoming deadlines so that I can ensure the Position Roster is submitted on time." ;
+    sd:acceptanceCriteria "Sends email via a Staffing-Data-Administrator-defined template when a deadline threshold is met; identifies authorized recipients; email includes the deadline date and a link to the submission area; also shown as a dashboard alert; notifications logged." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_6_2 a sd:UserStory ;
+    sd:requirementId "18.6.2" ;
+    sd:title "Alert User to Newly Identified Data Quality Issues" ;
+    sd:statement "As an Authorized User, I want to receive communication alerting me to new data quality issues that require my review." ;
+    sd:acceptanceCriteria "Triggers a communication event on new post-validation/QR errors or warnings; sends templated email directing the user to the issue location; shows a dashboard alert; both logged for audit." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_6_3 a sd:UserStory ;
+    sd:requirementId "18.6.3" ;
+    sd:title "Notify User When Action Is Required" ;
+    sd:statement "As an Authorized User, I want the system to communicate when my specific action is required on the Position Roster data so that I can complete the workflow." ;
+    sd:acceptanceCriteria "Sends templated email directing to the relevant workflow step when action is required; places a conspicuous dashboard action item; alert persists until the task is complete; notifications logged with the required-action type." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_6_4 a sd:UserStory ;
+    sd:requirementId "18.6.4" ;
+    sd:title "Display Dashboard Alerts for Critical Action Items" ;
+    sd:statement "As the MiEdWorkforce System, I must use alerts displayed on dashboards to draw attention to critical action items so that users can quickly identify urgent tasks." ;
+    sd:acceptanceCriteria "Dashboard alert generated for upcoming deadlines, new data quality issues, or required action; appears prominently in the dashboard alerts area; each alert links to the relevant workflow section; persists until resolved; creation/resolution logged." ;
+    sd:definedIn staff:Fdd18Doc .
+
+staff:Req_18_6_5 a sd:UserStory ;
+    sd:requirementId "18.6.5" ;
+    sd:title "Log All Communications and Alerts" ;
+    sd:statement "As the MiEdWorkforce System, I want to log all communications and dashboard alerts so that audit compliance and data traceability are maintained." ;
+    sd:acceptanceCriteria "Outgoing emails logged with sender system ID, recipient, timestamp, template used; dashboard alerts logged with timestamp, type, triggering condition; logs accessible only to authorized admin staff; retained per state/agency standards." ;
+    sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 18.6 (email notifications and dashboard alerts for deadlines, data-quality issues, and required actions) is owned by Business Specification #6 (Alerts, Emails and Communications), per this FDD's own Dependencies section naming it explicitly ('The functionality will be supported... by the specifications defined in Alerts, Emails and Communications (6.0)'). comm:CommunicationsContext already subscribes to several of Staffing's own events (staff:CollectionCertifiedEvent, staff:CollectionOpenedEvent, staff:CollectionExceptionApprovedEvent/DeniedEvent, etc.) — corroborating, not contradicting, this scoping. Dashboard-alert display specifically also implicates dash:DashboardsContext (a stub-only bounded context per CONVENTIONS.md's registry), consistent with the FDD 11/16 and FDD 29 passes' prior treatment of the same landing-page/dashboard split." ;
+    oa:hasTarget staff:Req_18_6_1, staff:Req_18_6_2, staff:Req_18_6_3, staff:Req_18_6_4, staff:Req_18_6_5 ;
+    sd:status "resolved" ; sd:definedIn staff:Fdd18Doc .
+
+#################################################################
+# Requirement — Business Specifications-only feature never promoted to Addendum numbering
+#################################################################
+
+staff:Req_18_BizSpec_DuplicatePosition a sd:UserStory ;
+    sd:requirementId "BizSpec (unnumbered)" ;
+    sd:title "Duplicate/copy an existing position" ;
+    sd:statement "As a School District User, I want the option to 'duplicate' or 'copy' an existing position to create a new position, so that I don't have to re-enter shared metadata for a similar role." ;
+    sd:acceptanceCriteria "User may edit or modify a copied/duplicated position prior to submission; a copied/duplicated position can be deleted prior to submission; once successfully submitted, it may not be deleted." ;
+    sd:notes "This is a real, wireframe-independent Business Specifications feature (own paragraph, own save/delete-before-submission rules distinct from 18.2.3's general working-window-deletion rule) that was never given its own Feature/story number in the Addendum's 18.1-18.6 breakdown — the same situation FDD 29's review found for three of its own Business-Specifications-only capabilities. No satisfiedBy: no 'duplicate/copy position' operation or sequence step exists anywhere in staffing-api.ttl/staffing-sequences.ttl — staff:Op_CreatePosition creates from a blank form only. Genuine coverage gap." ;
+    sd:definedIn staff:Fdd18Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "'Duplicate/copy an existing position' is described in the FDD's Business Specifications prose with its own distinct rules (editable and deletable before submission, immutable once submitted) but was never promoted to a numbered Addendum story, and no corresponding operation exists in staffing-api.ttl. A real, if minor, coverage gap and a documentation-completeness gap in the FDD itself (a described capability with no formal story or wireframe)." ;
+    oa:hasTarget staff:Req_18_BizSpec_DuplicatePosition ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd18Doc .

@@ -1,0 +1,412 @@
+# FDD 14 review — "14 - Professional Learning - Admin" (subtitle: Features 14.1-14.7).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Professional
+# Learning graph (proflearning-domain.ttl/proflearning-permissions.ttl/
+# proflearning-api.ttl/proflearning-sequences.ttl, all loaded together), plus
+# communications-api.ttl/-permissions.ttl/-capability.ttl (Alerts, Email Templates),
+# documents-capability.ttl (StagingFile/BulkOperation, for file-queue content),
+# reporting-api.ttl/-capability.ttl (admin report management), and
+# iam-api.ttl/-sequences.ttl (Identity Resolution / Identity Administrator worklist) for
+# cross-domain satisfaction checks. Read fdd-review/28-professional-learning-processing's
+# already-completed sibling pass in full before starting this one — several of this
+# file's findings directly close forward-references that proflearning-domain.ttl's own
+# Open-Question Annotations already planted, citing "14-professional-learning-admin
+# review" by name (Question_IdpAggregateGap, Question_ScechBalanceQueryVsEvents,
+# Question_ConfigurableWorklistStatuses) — see the relevant Requirements below for how
+# each is addressed.
+#
+# Source: "14 - Professional Learning - Admin.docx" (subtitle "14.0 Professional Learning
+# (14.1 - 14.7)"). Read the .md sibling first, then unzipped the .docx for
+# comments.xml/commentsExtended.xml and word/media (13 images). Two sibling folders in
+# the same FDD directory hold older/adjacent material: "Old- Professional Learning/" (an
+# earlier, pre-Addendum draft of this same FDD, plus separate old sub-drafts for Admin
+# Screens 14.1 and Worklist 14.3) and "Professional Learning/" (assorted internal
+# requirements/wishlist/vision documents, not FDD-formatted). Neither was separately
+# ingested — the current "14 - Professional Learning - Admin.docx" is the live,
+# signed-off document and its Addendum is the authoritative numbering; the older
+# subfolder material is superseded working history, consistent with how FDD 28 treated
+# its own "TBDeleted_" superseded draft.
+#
+# Structure and what's used as the Requirement unit:
+# - A dense "Business Specifications" prose section (page-management, worklists, alerts/
+#   notifications, email templates, document-upload/file-queue admin, business-rules/
+#   question-set admin, historical data, dashboards, reports) and a "HIGH LEVEL
+#   SCENARIOS" paraphrase table (16 rows, numbered 1-16 by "Ref") restate the same
+#   ground at coarser grain — the HLS table is skipped per CONVENTIONS.md (duplicative).
+# - An "Addendum" with real numbered stories is the primary Requirement unit: Feature
+#   14.1 Admin Screens (14.1.1-14.1.2), 14.2 Historical Data (14.2.1-14.2.4), 14.3
+#   Worklist (14.3.1-14.3.2), 14.7 Identity Management Integration (14.7.1-14.7.4) — 12
+#   numbered stories total. Features 14.4 (Email/Comm), 14.5 (Dashboard), and 14.6
+#   (Document upload) have NO numbered stories at all — each is a short prose paragraph
+#   explicitly deferring its own substance to another Business Specification or FDD.
+#   Modeled as three plain sd:Requirement instances (not sd:UserStory — they aren't
+#   narrative) carrying that deferral text, each with an "out-of-scope"/"rejected"
+#   Annotation, same treatment FDD 28 used for its own non-narrative Req_28_2.
+# - The Business Specifications prose describes several substantial admin capabilities
+#   that are NEVER promoted to an Addendum number at all (Alerts/Notifications config,
+#   Email Template config, Question Set admin, Reports/report-settings admin) — the same
+#   "described in Business Specs, never promoted to the Addendum's own numbering"
+#   pattern FDD 28/29 already documented for their own domains. Modeled below with
+#   synthetic plrn:Req_14_BizSpec_* IDs. A fifth prose capability — a cross-cutting
+#   "Business Rule Management" admin surface (assign validation/question sets to
+#   workflows, set severity, edit validation text, produce a public validation-codes
+#   report) — does NOT get a synthetic Requirement at all: it corresponds to Business
+#   Specification #4 (Business Rule Management), which — per this file's own reporting,
+#   NOT an edit to GAPS.md — has no bounded context or admin surface anywhere in the 11
+#   converted domains (already flagged from FDD 29's Dependencies section); forcing a
+#   Requirement node with no possible satisfiedBy/rejection target would violate
+#   CONVENTIONS.md's "Things NOT yet in the solution design at all" rule. Distinguished
+#   here from the narrower, already-registered qset:QuestionSetContext stub (Question
+#   Set framework), which DOES get a Requirement (plrn:Req_14_BizSpec_QuestionSetAdmin)
+#   since it has a real, if minimal, stub position in the graph already.
+#
+# CROSS-CUTTING FDD-28 RELATIONSHIP (explicitly requested for this review): FDD 14 does
+# NOT itself describe the Sponsor/Program application approve-reject workflow (it
+# correctly defers that to FDD 26/28's own numbering via 14.1.1's nav-only bullet list
+# and 14.6's explicit "see Feature 26.3/28.3" pointer) — no new evidence for or against
+# plrn:Question_SponsorApprovalWorkflowContradiction or FDD 28's Coupons-and-Payments
+# finding from this pass either way. But FDD 14 STRONGLY EXTENDS FDD 28's "no Program/
+# ProgramApplication-level audit log" finding into a much broader one: nearly every
+# admin capability this FDD describes — Alerts ("Versioning and audit details"), Email
+# Templates ("Versioning and audit details"), file-queue processing ("View audit details
+# of uploaded files"), Dashboards ("with audit details, ... Audit details will be stored
+# and viewable"), Reports ("with audit details stored"), and historical data itself
+# ("administrator processing details") — independently asserts the same "audit trail on
+# every admin action" expectation FDD 28 already found missing for Program applications
+# specifically. Across proflearning/communications/documents/reporting, only
+# comm:AlertAggregate (via comm:AlertVersion) actually models anything resembling this;
+# everything else FDD 14 names has no audit/versioning counterpart anywhere. See the
+# shared coverage-gap Annotation below (targeting Req_14_2_1, Req_14_3_1/14_3_2,
+# Req_14_BizSpec_ReportsAdminConfig) rather than repeating this finding per-story.
+#
+# Comments (21 total, via comments.xml): most are minor ("Etc." needs detail, two
+# reports of a broken hyperlink, an internal-only remark marked "no longer relevant") and
+# not modeled individually. Four are load-bearing and modeled as Annotations below:
+# comment 28 (Dontje, 2026-03-18) explicitly flags that 14.1.1's own bullet list needs
+# individual user stories that were never written (Question_Feature141BulletsNeverPromoted);
+# comments 24/681365075 (Dontje/Doherty-quoting-Sinha, 2026-03-18/2026-04-06) flag that a
+# Worklist-feature wireframe is a REUSED, uncustomized Credentialing screen — confirmed
+# directly by viewing it (Question_ReusedCredentialingWorklistWireframe); comment
+# 1996490306 (Doherty quoting Sinha, 2026-04-06) states wireframes for these stories were
+# still being gathered as of that date — well after the document's own 08/04/2025
+# signoff, the same post-signoff-revision pattern FDD 28/29 already found in their own
+# sibling documents (folded into this file's header rather than a separate Annotation);
+# and comment 715111818 (Doherty quoting Sinha, 2026-04-06) flags that specific SCECH-hour
+# validation thresholds/caps were added to 14.7.2's text with no corroborating reference
+# in any other FDD (Question_UnconfirmedScechThresholds). Comments 6/22 (Ross, duplicate,
+# 2026-01-14) — "worklists will be limited to worklist management in the UI" — are used
+# as corroborating evidence on Req_14_3_1/14_3_2 rather than a separate Annotation.
+#
+# Wireframes: the .md carries no "Wireframe N" captions at all (unlike FDD 28) — the
+# Business Specifications prose is pure text. The .docx's word/media folder holds 13
+# images with no in-text captions to map them to. Three were viewed to establish the
+# general shape: image1.png is a genuine, on-topic "Professional Learning Program
+# Applications" worklist with Unresolved/Resolved tabs — a clean match for 14.3.1/14.3.2
+# — extracted as wireframe-01. image6.jpg, by contrast, is a "Worklist Management" screen
+# whose own breadcrumb and content ("Credentialing Data > Worklist Management",
+# "Desktop/Dashboard Credentialing Worklist") are Credentialing's, not Professional
+# Learning's — a reused, uncustomized wireframe from a different domain, directly
+# confirming comment 24/681365075's own suspicion (see
+# Question_ReusedCredentialingWorklistWireframe below) — extracted as wireframe-02 for
+# that reason, not as a positive content match. image12.png is the same higher-fidelity
+# Coordinator-facing Attendance/Evaluations "{Program_Name}" screen FDD 28's own review
+# already extracted and flagged as reused Sponsor-side reference material outside that
+# FDD's (and this FDD's) own PL-Admin actor scope — not re-extracted here to avoid
+# duplicating FDD 28's own wireframes/ folder; see that file's WireframeAddendumADoc. The
+# remaining 10 images were sampled by position, not individually described, per
+# CONVENTIONS.md's depth-calibration guidance, and were consistent with the same
+# reused/generic-screen pattern rather than revealing a distinct undocumented feature.
+#
+# Tracked changes: not inspected in detail for this pass — comments.xml's own dated
+# entries (several "Added" comments from Dontje, 2026-03-18) already show which passages
+# are late additions without needing a full w:ins/w:del reconstruction.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix iam:   <urn:solutiondesign:instance:iam:> .
+@prefix qset:  <urn:solutiondesign:instance:questionsets:> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+plrn:Fdd14Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/14 - Professional Learning - Admin Users/14 - Professional Learning - Admin.docx" ;
+    sd:notes "Covers Features 14.1-14.7 (document's own subtitle: '14.0 Professional Learning (14.1 - 14.7)'). Authors Caitlin Groom / Vidhya Punniyamoorthy; approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/04/2025 per the signoff table — but comments.xml contains dated entries through 2026-04-06, well after that signoff date (same post-signoff-revision pattern FDD 28/29 already found in their own sibling documents), including a reviewer comment stating wireframes for these stories were STILL being gathered as of 2026-04-06. Two sibling folders hold superseded/adjacent working material not separately ingested — see this file's header note." .
+
+plrn:Wireframe14_1Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/14-proflearning-admin-users/wireframes/wireframe-01-program-applications-worklist.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Learning Program Applications' worklist with Unresolved/Resolved tabs, a search field, filter/export controls, and a results table (Program Name, Program #, Application #, Start Date, Submit Date, Status) with a pagination footer showing 6115 items. Directly corroborates 14.3.1 (worklist page for Processing staff) and 14.3.2's 'categorized by Resolved and Unresolved' AC exactly." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Wireframe14_2Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/14-proflearning-admin-users/wireframes/wireframe-02-reused-credentialing-worklist-management.jpg" ;
+    sd:notes "Confirmed by viewing: a 'Worklist Management' screen whose own breadcrumb reads 'Dashboard > Credentialing Data > Worklist Management' and whose table rows are 'Desktop Credentialing Worklist', 'Dashboard Full Credentialing Worklist', 'Dashboard Component Credentialing Worklist', 'Mobile Worklist' — Credentialing content, not Professional Learning, with no Professional-Learning-specific relabeling visible anywhere on the screen. This is a reused, uncustomized wireframe from a different domain's FDD, confirming comment 24 (Dontje) and comment 681365075 (Doherty, quoting Sinha)'s own suspicion that this screen was generic and might need PL-specific customization — see Question_ReusedCredentialingWorklistWireframe below." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirements — Feature 14.1: Admin Screens
+#################################################################
+
+plrn:Req_14_1_1 a sd:UserStory ;
+    sd:requirementId "14.1.1" ;
+    sd:title "Access a dedicated Professional Learning administrative area" ;
+    sd:statement "As a Professional Learning Administrator, I want to access a dedicated administrative area, so that I can manage Professional Learning system pages, applications, validations, reports, and availability." ;
+    sd:acceptanceCriteria "The system provides an accessible administrative page for Professional Learning. The page provides the administrator navigation and access to manage: Public Professional Resources; the SCECH Sponsor application form; the SCECH Program application form; the SCECH Attendee reporting page; the Individual Level Professional Learning component." ;
+    sd:satisfiedBy plrn:ProfessionalLearningSponsorAggregate, plrn:ProfessionalLearningProgramAggregate ;
+    sd:notes "This is a navigation-shell story: it names five destinations an admin area links to, not a distinct capability of its own. Public Professional Resources has its own dedicated story (14.1.2); the SCECH Sponsor/Program application forms are FDD 26/28's own review-and-decision workflows (Feature 28.1/28.4, reviewed in that sibling pass — the SponsorApplication gap FDD 28 already found is neither corroborated nor newly evidenced by this nav-only reference). satisfiedBy loosely names the two aggregates this nav area fronts, not a distinct 'admin home page' node (this level of design doesn't model site navigation/menu structure as its own graph element). GENUINE, FDD-SELF-ACKNOWLEDGED GAP: comment 28 (Dontje, 2026-03-18) on this exact passage says the remaining bullets each need their own user story the way Public Professional Resources got 14.1.2 — and none was ever written for the SCECH Attendee reporting page or the Individual Level Professional Learning component specifically. See Question_Feature141BulletsNeverPromoted." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 28 (Dontje, 2026-03-18), on 14.1.1's own bullet list: 'As Public Professional Resources has it's own user story (14.1.2), the remainder of the list each needs a user story as well.' Never acted on: no Addendum number exists anywhere in this document for the SCECH Attendee reporting page or the Individual Level Professional Learning component specifically (the Sponsor/Program application form bullets are at least covered by FDD 26/28's own numbering, even if not by this FDD's). This is the FDD's own review process flagging an incomplete promotion from Business-Specification-prose to Addendum-numbered story — the same 'described, never promoted to a number' pattern FDD 28/29 found repeatedly in their own domains, but here surfaced as an explicit, still-open reviewer comment rather than something this review had to infer." ;
+    oa:hasTarget plrn:Req_14_1_1 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_1_2 a sd:UserStory ;
+    sd:requirementId "14.1.2" ;
+    sd:title "Manage the content of the public Professional Learning Resources pages" ;
+    sd:statement "As a Professional Learning Administrator, I want to manage and maintain the content of the Public Professional Learning Resources pages, so that users have accurate and helpful information when searching for sponsors and programs." ;
+    sd:acceptanceCriteria "The system provides an administrative interface to maintain public Professional Learning Resources (SCECH Sponsor and Program searches). The system allows the administrator to add, edit, and remove hyperlinks and associated text. The system allows the administrator to define and manage page text, including headings and informational announcements. The system allows the administrator to upload and manage User Support materials. The system allows the administrator to manage configurations for the Search Results table. The system allows the administrator to define and manage Error and Validation text displayed to end users." ;
+    sd:notes "GENUINE COVERAGE GAP: this is a content-management-system (CMS) capability layered on top of the public catalog search (plrn:Op_SearchCatalog, FDD 31.5) — editable hyperlinks/headings/announcements/support materials/search-result-column config/validation text — and no such page-content-management aggregate, entity, or API operation exists anywhere in proflearning-domain.ttl, proflearning-api.ttl, or documents-capability.ttl (the closest adjacent capability, docs:DocumentAggregate, manages uploaded files, not editable page text/hyperlinks). Distinct from plrn:Op_SearchCatalog itself, which serves the search results but has no notion of admin-configurable page chrome around it. satisfiedBy left unasserted." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No page-content-management (CMS) aggregate/entity/API exists anywhere in proflearning-domain.ttl, proflearning-api.ttl, or documents-capability.ttl for the editable hyperlinks/headings/announcements/support-materials/search-result-column-config/validation-text this story describes for the public Professional Learning Resources pages. Not previously flagged by any earlier proflearning conversion pass — a new finding from this FDD." ;
+    oa:hasTarget plrn:Req_14_1_2 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirements — Feature 14.2: Historical Data
+#################################################################
+
+plrn:Req_14_2_1 a sd:UserStory ;
+    sd:requirementId "14.2.1" ;
+    sd:title "View historical Professional Learning data for educators, sponsors, and programs" ;
+    sd:statement "As a Professional Learning Admin, I want to view historical Professional Learning data for educators, sponsors, and programs, so that I can reference legacy records and maintain continuity." ;
+    sd:acceptanceCriteria "The system incorporates historical Professional Learning data. The system displays historical Professional Learning data migrated from legacy systems. The historical data set includes: records for all educators; records for all sponsors; records for all programs; administrator processing details. Users can search and filter these historical records within the administrative interface." ;
+    sd:satisfiedBy plrn:Op_ListPrograms, plrn:Op_GetSponsor ;
+    sd:notes "PARTIAL: viewing/searching current sponsor and program records is a real, modeled capability (plrn:Op_ListPrograms, plrn:Op_GetSponsor), but two distinct things this AC also requires are unmodeled: (1) 'migrated from legacy systems' implies a legacy-data-migration/backfill process — no such BatchJob or migration concept exists anywhere in proflearning-domain.ttl or proflearning-sequences.ttl (a genuine gap, not previously flagged by the FDD 28 pass, which had no reason to look for it); (2) 'administrator processing details' as part of the historical record is the same audit-trail gap FDD 28 already found for Program applications specifically, now independently asserted for historical data generally — see this file's header note and the shared coverage-gap Annotation below." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_2_2 a sd:UserStory ;
+    sd:requirementId "14.2.2" ;
+    sd:title "Access specific Sponsor and Program details from historical records" ;
+    sd:statement "As a Professional Learning Admin, I want to access specific Sponsor and Program details from historical records, so that I can review past program offerings and sponsor history." ;
+    sd:acceptanceCriteria "The system provides a view of historical Sponsor details. Historical Professional Learning data includes Sponsor details and Program details. The system provides functionality to access and view Sponsor Program details from the historical data set." ;
+    sd:satisfiedBy plrn:Op_GetSponsor, plrn:Op_GetProgram ;
+    sd:notes "Clean match for the 'view details' half — plrn:Op_GetSponsor and plrn:Op_GetProgram already serve this. This story doesn't itself distinguish 'historical' (past/inactive) records from current ones the way 14.2.1 emphasizes migration; no separate historical-archive read path is needed beyond the existing get operations, which don't filter out inactive/withdrawn/expired records." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_2_3 a sd:UserStory ;
+    sd:requirementId "14.2.3" ;
+    sd:title "Verify historical Professional Learning data for credential renewal accuracy" ;
+    sd:statement "As a Professional Learning Admin, I want to view and verify historical Professional Learning data, so that I can ensure accuracy for educator credential renewal processes." ;
+    sd:acceptanceCriteria "The Admin can access historical data to verify its accuracy against legacy records. The historical data is structured to support credential renewal calculations (e.g., counting toward 150 hours)." ;
+    sd:notes "This is precisely the FDD-14-side evidence plrn:Question_ScechBalanceQueryVsEvents (proflearning-domain.ttl, Open Question #8) already anticipated by name ('See 14-professional-learning-admin review, Discrepancy #1'): that Annotation flags a genuine architectural disagreement over whether an educator's running SCECH balance for credential-renewal purposes is served by a live query or by Credentialing's own event-maintained tally. 14.2.3's AC ('structured to support credential renewal calculations, e.g., counting toward 150 hours') confirms the underlying business need is real and admin-visible, but says nothing about mechanism — it neither resolves the live-query-vs-events question nor introduces a third option. Recorded as corroborating evidence, not a resolution; see the Annotation immediately below." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Discrepancy #1 (this FDD-14 review's own numbering, cross-referenced by proflearning-domain.ttl's plrn:Question_ScechBalanceQueryVsEvents, which named this review in advance): 14.2.3 confirms credential-renewal-accuracy verification of historical SCECH data is a real, admin-facing need ('structured to support credential renewal calculations, e.g., counting toward 150 hours'), but does not itself state whether that structure is a live query or an event-maintained running balance — it neither corroborates nor resolves the disagreement already on record between credentialing-sequences.md's assumed GET /scech-hours live query and proflearning-domain.md's own Downstream table, which says Credentialing maintains its own balance via event subscription. Recorded here to close the forward reference plrn:Question_ScechBalanceQueryVsEvents made to this review by name; the underlying question remains open." ;
+    oa:hasTarget plrn:Req_14_2_3 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Discrepancy #1 also covers plrn:Question_IdpAggregateGap (proflearning-domain.ttl, Open Question #7), which likewise named this review in advance ('the only source describing IDP at all is FDD 17... See 14-professional-learning-admin review, Discrepancy #1'). Checked directly against this FDD's full text (Business Specifications, HLS table, Addendum, and comments.xml): FDD 14 does NOT mention an Individual Development Plan / IDP anywhere, under any name. This is a negative result worth recording explicitly rather than silently — it confirms Question_IdpAggregateGap's own premise (no FDD in this Professional Learning folder describes IDP) rather than surfacing the missing content the forward reference may have anticipated finding here. The IDP aggregate-vs-document-category question remains exactly as open as proflearning-domain.ttl already stated." ;
+    oa:hasTarget plrn:Req_14_2_1 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_2_4 a sd:UserStory ;
+    sd:requirementId "14.2.4" ;
+    sd:title "View historical SCECH history and attendance records for specific educators" ;
+    sd:statement "As a Professional Learning Admin, I want to view the historical SCECH history and attendance records for specific educators, so that I can audit or verify their professional learning progress." ;
+    sd:acceptanceCriteria "The system displays historical attendance records for professional learning sessions. The system displays historical SCECH history for a selected educator. The admin can filter this history by date or program." ;
+    sd:satisfiedBy plrn:Op_GetSessionRoster, plrn:AttendanceRecord ;
+    sd:notes "Session-level attendance/SCECH data is real and modeled (plrn:Op_GetSessionRoster, plrn:AttendanceRecord, plrn:SCECHAward) — but there is no cross-session, educator-centric 'attendance and SCECH history for this one educator across all programs' query anywhere in proflearning-api.ttl; the only educator-scoped SCECH view described anywhere in this project's source docs is credentialing's own disputed GET /scech-hours (see plrn:Question_ScechBalanceQueryVsEvents). satisfiedBy names the closest real building block, not a full match; filtering 'by date or program' across an educator's full history would need a new, educator-scoped aggregation endpoint that doesn't exist today." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirements — Feature 14.3: Worklist
+#################################################################
+
+plrn:Req_14_3_1 a sd:UserStory ;
+    sd:requirementId "14.3.1" ;
+    sd:title "Administrative page to manage worklists for Processing staff and Sponsors" ;
+    sd:statement "As a Professional Learning Admin, I need an administrative page to manage worklists used by Professional Learning Admin Processing staff and Sponsors." ;
+    sd:acceptanceCriteria "The administrative page for Professional Learning worklist management is accessible. The administrator can manage existing worklists for Professional Learning Admin Processing staff. The administrator can manage existing worklists for Sponsors." ;
+    sd:notes "Confirmed by Wireframe 14.1 (plrn:Wireframe14_1Doc): a real 'Professional Learning Program Applications' worklist screen exists in the wireframe set with Unresolved/Resolved tabs, matching this feature's shape. See the shared Annotation below (also covering 14.3.2) for the substantive gap: no admin-configurable worklist-DEFINITION mechanism (as opposed to the worklist screen itself, which is real) exists anywhere." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_3_2 a sd:UserStory ;
+    sd:requirementId "14.3.2" ;
+    sd:title "Edit predefined worklists by adding/removing data fields and columns" ;
+    sd:statement "As a Professional Learning Admin, I need the ability to edit predefined worklists by adding or removing data fields and columns so that I can customize the information displayed for processing staff and sponsors." ;
+    sd:acceptanceCriteria "The Professional Learning Admin can access the administrative page for Professional Learning worklist management. Upon entering the \"edit\" screen, the administrator can add predefined data fields to the display results of the processing worklist. The system allows for the adding and/or removal of existing data fields or columns from the worklist view and will be applied once clicking \"Save\". Worklists will be categorized by \"Resolved\" and \"Unresolved\" items. Worklists include the ability to display progress for tasks utilizing visual indicators for \"Resolved\" versus \"Unresolved\" items." ;
+    sd:notes "Confirmed by Wireframe 14.1 (plrn:Wireframe14_1Doc)'s own Unresolved/Resolved tabs, matching this AC precisely. Coverage-gap Annotation below (Coverage Gap re: Feature 14.3) closes the forward reference plrn:Question_ConfigurableWorklistStatuses (proflearning-domain.ttl, Open Question #12) already made to this review by name." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Coverage Gap re: Feature 14.3 (this FDD-14 review's own label, cross-referenced by proflearning-domain.ttl's plrn:Question_ConfigurableWorklistStatuses, which named this review and this exact label in advance). That Annotation asked whether 14.3's 'define new statuses and modify displayed columns' language describes genuine admin-configurable status/column definitions beyond the current ApplicationReviewStatus/RequestStatus enums, or is just imprecise phrasing for filtering. Reviewed directly against this FDD's own text and comments.xml: 14.3.2's AC is unambiguous about PER-VIEW COLUMN customization (add/remove predefined data fields/columns, applied on Save) and RESOLVED/UNRESOLVED CATEGORIZATION with visual progress indicators — genuinely more than filtering an existing status enum, but comment 6/22 (Ross, 2026-01-14, duplicate) — 'Reviewed on 12/10/25 that worklists will be limited to worklist management in the UI' — is new evidence narrowing the scope: this is UI-level view/column customization over already-modeled status data (ApplicationReviewStatus/RequestStatus), not a request for admins to author entirely new backend status VALUES. No worklist-view-definition or column-configuration mechanism exists anywhere in proflearning-domain.ttl/proflearning-api.ttl regardless of that narrower reading — the gap stands, just scoped down from 'new status taxonomy' to 'admin-configurable view/column definitions', which is itself still unmodeled." ;
+    oa:hasTarget plrn:Req_14_3_1, plrn:Req_14_3_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 24 (Dontje, 2026-03-18) on the Worklist wireframe: 'Is this wireframe representative of the general functionality, and if so will it be customized for PL admin?' Comment 681365075 (Doherty, 2026-04-06, quoting Sinha): 'This wireframe was originally meant for PL Admin. Can we get more insights on the changes that are needed here?' Comment 1996490306 (Doherty, 2026-04-06, quoting Sinha) responds: 'Noted as an action item. We are having internal discussions to gather the wireframes for these user stories. I'll be updating these user stories once the wireframes are complete.' Confirmed by directly viewing the referenced wireframe (plrn:Wireframe14_2Doc): it is a 'Worklist Management' screen whose own breadcrumb and row content ('Credentialing Data', 'Desktop/Dashboard Credentialing Worklist') are Credentialing's, not Professional Learning's — genuinely reused and, as of the document's latest comment thread, NOT yet customized. An open, FDD-self-acknowledged wireframe gap, not something this review is inferring." ;
+    oa:hasTarget plrn:Req_14_3_1, plrn:Req_14_3_2 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirement — Feature 14.4: Email/Comm (no numbered stories — a short prose paragraph
+# explicitly deferring the underlying logic to Business Specification #6)
+#################################################################
+
+plrn:Req_14_4 a sd:Requirement ;
+    sd:requirementId "14.4" ;
+    sd:title "Email/Comm (scope deferral to Business Specification #6)" ;
+    sd:statement "All underlying logic for sending, tracking, and displaying emails, alerts and notifications are derived from Business Specification #6 (Alerts, Emails & Communications). This feature is strictly limited to the configuration of these tools (defining what is sent) specifically for the Professional Learning module. Additionally, Business Specification #4 (Business Rules Management) will specify when and to whom it is sent." ;
+    sd:notes "Not a user story — a prose scope-deferral paragraph with no numbered sub-stories, same treatment as FDD 28's Req_28_2. The underlying send/track/display logic is correctly out-of-scope here (Communications' own domain, real and converted). But the Business Specifications prose elsewhere in this same document describes substantial PL-specific CONFIGURATION content this paragraph says IS in scope (alerts admin, email template admin) that was never promoted to an Addendum number — see plrn:Req_14_BizSpec_AlertsNotificationsAdminConfig and plrn:Req_14_BizSpec_EmailTemplateAdminConfig below, which carry that content instead of leaving it unaccounted for." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 14.4's own text explicitly defers the underlying email/alert send-track-display mechanics to Business Specification #6 (Communications, a real converted domain) and the send-trigger timing/audience logic to Business Specification #4 (Business Rule Management, which has no converted counterpart at all per this file's own reporting). Correctly out-of-scope for FDD 14 itself; the PL-specific configuration surface this paragraph claims IS in scope is separately modeled via the BizSpec-only Requirements below rather than left unaccounted for." ;
+    oa:hasTarget plrn:Req_14_4 ; sd:status "resolved" ; sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirement — Feature 14.5: Dashboard (no numbered stories — defers to Business
+# Specification #3, a stub-only bounded context per CONVENTIONS.md's registry)
+#################################################################
+
+plrn:Req_14_5 a sd:Requirement ;
+    sd:requirementId "14.5" ;
+    sd:title "Dashboard (scope deferral to Business Specification #3)" ;
+    sd:statement "All underlying logic for the display, organization, and rendering of the dashboard is derived from Business Specification #3 (Dashboards). This feature is strictly limited to the configuration of these elements (defining which tiles and reports are available to whom) specifically for the Professional Learning workflow." ;
+    sd:notes "Not a user story — a prose scope-deferral paragraph, same treatment as Req_14_4/Req_14_6. Business Specification #3 (Dashboards) corresponds only to dash:DashboardsContext, a minimal sd:status \"stub\" bounded context minted by the earlier FDD 11/16 pilot pass, per CONVENTIONS.md's registry — no real dashboard-configuration aggregate/API exists to satisfy even the PL-specific configuration slice this paragraph claims is in scope (define available tiles, set per-role access for Educators/Sponsor/Coordinator, define reports per tile, set worklist availability by role — all from the Business Specifications prose, HLS row 14). Not modeled as a separate BizSpec-only Requirement (unlike Alerts/Email Templates/Reports) because, unlike Communications/Reporting, Dashboards has no real API surface at all to check coverage against — same treatment GAPS.md already gives FDD 29's own dashboard finding." ;
+    oa:hasTarget dash:DashboardsContext ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Feature 14.5 explicitly defers dashboard rendering/organization to Business Specification #3 and limits its own scope to which tiles/reports are configured for Professional Learning. Correctly out-of-scope for FDD 14's own Addendum. The underlying Dashboards capability itself remains a stub (dash:DashboardsContext, sd:status \"stub\") with no real conversion anywhere in this project — consistent with, not a new instance of, the dashboard gap already on record from the FDD 29 review (see GAPS.md)." ;
+    oa:hasTarget plrn:Req_14_5 ; sd:status "resolved" ; sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirement — Feature 14.6: Document upload (no numbered stories — points elsewhere,
+# AND explicitly excludes file-queue management from admin scope entirely)
+#################################################################
+
+plrn:Req_14_6 a sd:Requirement ;
+    sd:requirementId "14.6" ;
+    sd:title "Document upload (scope pointer to 26.3/28.3; file-queue management excluded)" ;
+    sd:statement "All user stories regarding the uploading of supporting documentation and bulk attendee data files can be found within user stories associated with Feature 26.3: Professional Learning - Sponsor - Document upload. Additionally, all user stories pertaining to the ability to view and verify uploaded supporting documentation can be found within user stories associated with Feature 28.3: Professional Learning - Processing - Document Upload. The requirements for the Professional Learning Admin to manage file queues (e.g., resetting \"stuck\" files) and toggle upload availability should be considered outside scope of an administrative task. These functions are considered as technical management and maintenance tasks to be handled by developers." ;
+    sd:notes "Not a user story — a prose scope-pointer/exclusion paragraph, same treatment as Req_14_4/14_5. Distinct from those two in also containing an outright REJECTION (file-queue management is explicitly excluded from the admin role, full stop, not merely deferred to another FDD). See the discrepancy Annotation below: this rejection directly contradicts this same document's own, much more detailed Business Specifications prose, which describes exactly this file-queue-management capability (view queue, reset/cancel/delete stuck files, filter by status, view audit details) as an ADMIN-facing capability at length." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Feature 14.6's Addendum text explicitly excludes Professional Learning Admin file-queue management (viewing/resetting/cancelling/deleting stuck files, toggling upload availability) as a 'technical management and maintenance task to be handled by developers' — not the admin's job at all. But this same document's own Business Specifications prose (and HLS rows 9-10) describes, in substantial detail, an ADMINISTRATIVE page for exactly this: 'Ability to view and manage Professional Learning File Queues including ability to cancel, reset and view uploaded files', 'View file queues with file status and details... \"Reset\" a file that is \"stuck\" in the queue... Delete a file(s) in the queue... View audit details of uploaded files.' The Addendum's later, more considered exclusion should be treated as authoritative over the earlier prose (the same 'the numbered Addendum reflects the final position' precedence FDD 28 established for its own Sponsor-editability contradiction), but the contradiction itself is worth recording since a stale export/summary reading only the Business Specifications section would build the wrong (admin-facing) capability. Note also that documents-capability.ttl's docs:StagingFileAggregate — which already models exactly this technical pipeline (functionalArea constrained to {staffing, epp, proflearning}, states Scanning/Uploaded/Processed/Failed/Infected, 7-day auto-delete) — would be the natural backing mechanism if this WERE in admin scope; it exists today purely as backend infrastructure with no admin-facing view/reset/delete surface, consistent with 14.6's own 'developer task' framing." ;
+    oa:hasTarget plrn:Req_14_6 ;
+    sd:impact "M" ; sd:status "resolved" ; sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Requirements — Feature 14.7: Identity Management Integration
+#################################################################
+
+plrn:Req_14_7_1 a sd:UserStory ;
+    sd:requirementId "14.7.1" ;
+    sd:title "Use Unique ID matching to associate SCECH attendee data with educator profiles" ;
+    sd:statement "As the MiEdWorkforce System, I must utilize Unique ID matching to associate SCECH attendee data with educator profiles, so that attendance is attributed to the correct individual." ;
+    sd:acceptanceCriteria "The system validates the Unique ID provided in the attendee file upload against the Identity Management system. The system confirms that the Unique ID exists and is active. The system links the attendance record to the verified educator profile associated with the Unique ID." ;
+    sd:satisfiedBy iam:Op_GetUserByUniqueId, plrn:Rule_AttendeeValidUniqueId, plrn:Attendee ;
+    sd:notes "Clean match: plrn:Rule_AttendeeValidUniqueId already states this exact requirement ('Only educators with a Unique ID... can be added to program attendance rosters') and is enforced against iam:Op_GetUserByUniqueId per proflearning-domain.ttl's own Dependency on IAM for 'Educator Unique ID validation.'" ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_7_2 a sd:UserStory ;
+    sd:requirementId "14.7.2" ;
+    sd:title "Award reported SCECHs to session attendees upon Unique ID confirmation" ;
+    sd:statement "As the MiEdWorkforce System, I must award reported SCECHs to session attendees upon successful Unique ID confirmation, so that the educators receive credit for their participation." ;
+    sd:acceptanceCriteria "The system automatically awards the reported SCECHs to the attendee's profile once the Unique ID match is confirmed. If the Unique ID is invalid or cannot be matched, the record produces an error and SCECHs are not awarded." ;
+    sd:satisfiedBy plrn:Rule_DefaultScechEqualsMax, plrn:Attendee, plrn:SCECHAward ;
+    sd:notes "Good match on substance: plrn:Rule_DefaultScechEqualsMax already models automatic SCECH awarding on attendee-roster entry, and plrn:Rule_AttendeeValidUniqueId's gate means an unmatched Unique ID never reaches the roster in the first place, satisfying the 'no award without a valid match' half. UNCONFIRMED ASSUMPTION flagged in review: comment 715111818 (Doherty, 2026-04-06, quoting Sinha) on this exact passage says 'The validations for the SCECH Hours have been added. Please confirm as the FDDs do not contain any references to these specific thresholds or caps' — i.e., the FDD's own author isn't sure the specific numeric thresholds/decimal-place rules added to this text are corroborated anywhere else. See Question_UnconfirmedScechThresholds below." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 715111818 (Doherty, 2026-04-06, quoting Sinha) on 14.7.2: 'The validations for the SCECH Hours have been added. Please confirm as the FDDs do not contain any references to these specific thresholds or caps.' A related comment 37 (Dontje, 2026-03-18) elsewhere in the same document — 'Added; needs more detail around not exceeding the max and rules around the decimal places, etc.' — points at the same open concern. plrn:SCECHAllocation (MaxGeneral/MaxCollege/MaxCareer/MaxMilitary) is the closest existing modeled concept for a 'maximum' cap, but neither it nor any business rule in proflearning-domain.ttl specifies decimal-place handling for awarded SCECH amounts. Recorded as an unconfirmed-assumption per the FDD's own reviewers' explicit uncertainty, not resolved by this pass." ;
+    oa:hasTarget plrn:Req_14_7_2 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_7_3 a sd:UserStory ;
+    sd:requirementId "14.7.3" ;
+    sd:title "Admin visibility to confirm accuracy of Professional Learning records" ;
+    sd:statement "As a Professional Learning Admin, I need visibility into the process to confirm the accuracy of Professional Learning details and awarded records within the system." ;
+    sd:acceptanceCriteria "The Professional Learning Admin can access the system to confirm the accuracy of Professional Learning records. The administrator can view awarded SCECH records to confirm accuracy. The administrator can view error details of processed files." ;
+    sd:satisfiedBy plrn:Op_GetSessionRoster ;
+    sd:notes "PARTIAL: viewing awarded SCECH records is covered by plrn:Op_GetSessionRoster's own AttendeeRecord projection. 'View error details of processed files' has no clean counterpart: docs:BulkOperationAggregate's docs:BulkOperationItem entity does carry a per-item error message/reason field, and docs:StagingFileAggregate models Failed/Infected states for the bulk-import pipeline proflearning's own attendee-file uploads would use — but no admin-facing operation exposing either of those error details is documented in proflearning-api.ttl or documents-api.ttl specifically for this use. Same class of gap as this file's header-note audit-log finding, but distinct (file-processing errors, not action audit trail)." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_7_4 a sd:UserStory ;
+    sd:requirementId "14.7.4" ;
+    sd:title "Flag Unique ID matching failures and route identity resolution to the Identity Administrator" ;
+    sd:statement "As the MiEdWorkforce System, I must flag attendee records that fail Unique ID matching or require identity resolution, so that records that were not processed can be identified." ;
+    sd:acceptanceCriteria "If a provided Unique ID is invalid or results in an identity conflict (Near Match), the system flags the record as an error/pending in the file queue. The system prevents SCECHs from being awarded for these flagged records. Detailed identity resolution tasks (if applicable) are routed to the Identity Administrator worklist, not the Professional Learning Admin." ;
+    sd:satisfiedBy iam:Op_ListIdentityResolutionRequests, iam:Op_AdminResolveIdentityRequest ;
+    sd:notes "STRONG, PRECISE MATCH — the best-covered story in this FDD: iam-domain.ttl/iam-sequences.ttl already model exactly this 'Near Match' concept end-to-end (Mi-Key identity matching returning Match/No-Match/Near Match, an IdentityResolutionRequest entity, and a dedicated Identity Administrator review queue via iam:Op_ListIdentityResolutionRequests/iam:Op_AdminResolveIdentityRequest) — this story's explicit scope boundary ('routed to the Identity Administrator worklist, not the Professional Learning Admin') is precisely the architecture IAM's own domain conversion already committed to for every other domain's Near Match cases (Staffing's Business-User-Request-New-ID flow is the closest documented analogue). The 'prevents SCECHs from being awarded' half is covered by plrn:Rule_AttendeeValidUniqueId's own gate. Minor gap: no explicit SequenceReference/Dependency ties proflearning's attendee-file-upload path to iam's IdentityResolutionRequest submission specifically (the existing Dependency to iam:Op_GetUserByUniqueId in proflearning-domain.ttl models a direct lookup, not a Near-Match-capable submission flow) — worth a future proflearning-sequences.ttl update, not modeled as a separate Annotation given how minor it is relative to the rest of this match." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Business-Specification-only capabilities — described in the Business Specifications
+# prose but never given a number anywhere in the Addendum. Same treatment FDD 28/29 used
+# for their own BizSpec-only features (synthetic plrn:Req_14_BizSpec_* IDs).
+#################################################################
+
+plrn:Req_14_BizSpec_AlertsNotificationsAdminConfig a sd:UserStory ;
+    sd:requirementId "14-BizSpec-AlertsNotificationsAdminConfig" ;
+    sd:title "Manage system alerts and notifications for Professional Learning" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, using the framework of alerts and notifications (Epic 6.0), I will manage alerts and notifications for Professional Learning, so that users see timely, correctly-targeted system messages." ;
+    sd:acceptanceCriteria "Create and manage system alert text with versioning. Set system effective dates for alerts and notifications. Set Authorized User Roles to receive the alert. View and manage the system event/trigger that utilizes the alert. View existing alerts in a table with filter options; results include Alert Name, Status, Expiration Date, Action, and Versioning/audit details." ;
+    sd:satisfiedBy comm:Op_ListAlerts, comm:Op_CreateAlert, comm:Op_ResolveAlert, comm:AlertAggregate ;
+    sd:notes "GOOD MATCH: comm:AlertAggregate already models versioning (comm:AlertVersion) and role-based targeting (comm:AlertRoleTarget) alongside comm:Op_ListAlerts/Op_CreateAlert/Op_ResolveAlert — covering most of this AC directly. PARTIAL GAP: unlike the Email Template permissions (which have explicit per-functional-area variants — comm:Perm_ProflearningTemplatesView/Create/Edit/Activate), Alerts are gated only by generic comm:Perm_AlertsView/Perm_AlertsCreate with no Proflearning-specific scoping — meaning any Alerts admin can currently manage any domain's alerts, not just Professional Learning's own, which is a narrower authorization model than this AC implies ('Professional Learning Administrator' specifically). Not previously flagged by any earlier proflearning or communications conversion pass." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_BizSpec_EmailTemplateAdminConfig a sd:UserStory ;
+    sd:requirementId "14-BizSpec-EmailTemplateAdminConfig" ;
+    sd:title "Manage email templates for Professional Learning" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, using the framework for email communications (Epic 6.0), I will create and manage email templates for Professional Learning, set effective dates, define trigger events, view historical use, and resend historical emails." ;
+    sd:acceptanceCriteria "Create/manage email templates; set effective dates; set authorized recipient roles; define the triggering system event; view historical use of templates (each sent instance, usage counts, trigger point); resend a historical email with a CC option. View existing templates in a table with filter options; results include Email Template Name, Template Group, Template Status, Expiration Date, Action, and Versioning/audit details." ;
+    sd:satisfiedBy comm:Op_ListTemplates, comm:Op_CreateTemplate, comm:Op_UpdateTemplate, comm:Op_ActivateTemplateVersion, comm:Op_SearchEmailHistory, comm:Op_ResendEmail ;
+    sd:notes "STRONG MATCH, the best-covered BizSpec-only item in this FDD: communications-permissions.ttl already defines a full Proflearning-specific permission set for exactly this (comm:Perm_ProflearningTemplatesView/Create/Edit/Activate/Delete, comm:Perm_ProflearningEmailsViewHistory/Resend), and communications-api.ttl's comm:Op_ListTemplates/Op_CreateTemplate/Op_UpdateTemplate/Op_ActivateTemplateVersion (with versioning via comm:Op_CreateTemplateVersion/Op_ListTemplateVersions) plus comm:Op_SearchEmailHistory/Op_ResendEmail cover template management, versioning, and resend-with-CC end-to-end. Minor documentation gap: 'count of uses, trigger point' as an aggregated usage-statistics view isn't explicitly modeled as its own projection — comm:Op_SearchEmailHistory returns individual sent-email records, from which such stats could be derived, but no dedicated stats endpoint exists. Confirms, and gives much more detail to, FDD 28's own observation (Req_28_1_4's notes) that Communications' permission catalog already treats proflearning as a first-class gated functional area." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_BizSpec_QuestionSetAdmin a sd:UserStory ;
+    sd:requirementId "14-BizSpec-QuestionSetAdmin" ;
+    sd:title "Define and manage Question Sets and validations for Professional Learning processes" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, on an administrative page with audit details stored, I will define and manage the Question Sets and validations for Professional Learning processes: add new questions, modify existing questions, update decision trees, and manage text." ;
+    sd:acceptanceCriteria "Add new question. Modify existing question. Update decision tree. Manage text. Per comment 13 (Caswell, 2025-12-04): the question set management page should include explicit functionality for viewing, editing, and activating/deactivating questions/sets." ;
+    sd:notes "GENUINE COVERAGE GAP, confirmed at the stub level: qset:QuestionSetContext is already registered as a minimal sd:status \"stub\" bounded context (proflearning-domain.ttl's own conversion stubbed it because proflearning explicitly does NOT own the Question Set framework, only consumes it for evaluation templates) with exactly one operation, qset:GetQuestionSetsOperation — a read-only GET for consuming existing question sets, itself unconfirmed against any real questionsets-api.yml. Nothing resembling question CREATE/UPDATE/activate-deactivate, decision-tree authoring, or text management exists anywhere. This is the one BizSpec-only item in this FDD that genuinely has no possible satisfiedBy target today, even a partial one — distinguished from the broader 'Business Rule Management' prose content (assign validation to workflow, set severity, date-field admin), which isn't modeled as a Requirement at all since it maps to Business Specification #4, which has no bounded context in this project whatsoever (see this file's header note; report to GAPS.md, not an edit made here)." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Question Set admin management (add/edit/activate-deactivate questions, decision-tree authoring) has no CRUD/authoring capability anywhere — only a single read-only stub operation (qset:GetQuestionSetsOperation) exists on the already-stubbed qset:QuestionSetContext. Unlike this file's other coverage gaps, there is no partial match to point at even loosely; every part of this story is unmodeled. High confidence this is real, needed functionality: proflearning-domain.ttl's own plrn:EvaluationTemplateAggregate explicitly depends on the Question Set framework for its question content, and comment 13 (Caswell, 2025-12-04) shows this FDD's own reviewers pushed for MORE explicit CRUD/activation detail here, not less." ;
+    oa:hasTarget plrn:Req_14_BizSpec_QuestionSetAdmin ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .
+
+plrn:Req_14_BizSpec_ReportsAdminConfig a sd:UserStory ;
+    sd:requirementId "14-BizSpec-ReportsAdminConfig" ;
+    sd:title "Manage Professional Learning reports and report settings" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, on an administrative page with audit details stored, I will manage the reports and report settings related to Professional Learning: define report availability (including future/immediate retirement), define report access by authorized user roles, search existing reports, create ad-hoc and custom reports, provide export/download options, and manage report resources (page text and links)." ;
+    sd:acceptanceCriteria "Define report availability and allow future/immediate retiring. Define report access by authorized user roles. Search existing reports. Create ad-hoc and custom reports. Export/download options. Manage report resources, including page text and links. Audit details will be stored." ;
+    sd:satisfiedBy rpt:Op_AdminListReports, rpt:Op_AdminCreateReport, rpt:Op_AdminGetReport, rpt:Op_AdminUpdateReport, rpt:Op_AdminUpdateReportStatus, rpt:ReportDefinitionAggregate ;
+    sd:notes "GOOD MATCH for catalog administration: rpt:Op_AdminListReports/Op_AdminCreateReport/Op_AdminGetReport/Op_AdminUpdateReport/Op_AdminUpdateReportStatus already cover defining, updating, retiring, and searching report catalog entries, gated by rpt:Perm_CatalogManage. PARTIAL GAP on 'create ad-hoc and custom reports' specifically: reporting-capability.ttl's own rpt:Rule_ReportDefinitionsOwnedOutsideApplication states report definitions are Power-BI-authored artifacts registered into the catalog, not built ad-hoc inside this admin UI — 'create ad-hoc and custom reports' as literally described (build a new report on the fly) is architecturally at odds with reporting's own governance model, not merely unbuilt. Also ties to this file's header-note audit-log finding ('Audit details will be stored') — no versioning/audit mechanism is modeled on rpt:ReportDefinitionAggregate itself." ;
+    sd:definedIn plrn:Fdd14Doc .
+
+#################################################################
+# Cross-cutting audit-log finding (extends FDD 28's Program-application-scoped finding
+# to a general, admin-surface-wide pattern — see this file's header note)
+#################################################################
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "FDD 28's review already found no Program/ProgramApplication-level audit log anywhere in proflearning-domain.ttl (described 4 separate times in that one FDD). This FDD independently names 'audit details' as an expected feature of nearly every OTHER admin capability it describes too: Alerts ('Versioning and audit details' table column), Email Templates ('Versioning and audit details' table column), historical data ('administrator processing details'), file-queue processing ('View audit details of uploaded files' — even though 14.6 excludes file-queue management from admin scope, the audit-visibility expectation is stated independently in the Business Specifications prose), Dashboards ('with audit details, ... Audit details will be stored and viewable'), Reports ('with audit details stored'), and Worklists (via the shared Coverage-Gap-re-Feature-14.3 Annotation). Across proflearning/communications/documents/reporting, only comm:AlertAggregate (via comm:AlertVersion) actually models anything resembling a change-history/versioning mechanism; everything else this FDD names has none. This extends FDD 28's finding from 'no Program-application audit log' to 'no general admin-action audit/versioning mechanism anywhere in Professional Learning's admin surface' — a materially bigger gap than FDD 28 alone would suggest, independently confirmed by a second FDD looking at a completely different set of admin screens." ;
+    oa:hasTarget plrn:Req_14_2_1, plrn:Req_14_3_1, plrn:Req_14_3_2, plrn:Req_14_BizSpec_ReportsAdminConfig ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn plrn:Fdd14Doc .

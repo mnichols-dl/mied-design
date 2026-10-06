@@ -1,0 +1,343 @@
+# FDD 12 review — "12 - System Administration - Admin Users" (Feature 12.1-12.4) —
+# ingested per abox/mied-v3/fdd-review/CONVENTIONS.md.
+#
+# IMPORTANT SCOPE CORRECTION vs. the assignment brief: this FDD folder's title ("Admin
+# Users") and its numbering block ("System Administration") invited the assumption it
+# would land in `iam` (Identity & Access Management), alongside FDD 01's own admin-user
+# content and its two flagged contradictions (No-User-Group-Layer,
+# Impersonation-Feature). Having read the full document (the .md, the unzipped .docx's
+# comments.xml, and all 8 embedded wireframes), that assumption does not hold: this FDD
+# is NOT an IAM/identity FDD at all. Its own Dependencies section explicitly punts ALL
+# User Authorization content (roles, groups, security forms, impersonation, etc.) to FDD
+# 1 ("The functionality will be supported and defined by the business specifications...
+# in User Authorization (1)") and its 20 numbered Addendum stories (12.1.1-12.1.7,
+# 12.2.1-12.2.3, 12.3.1-12.3.5, 12.4.1-12.4.5) never once mention Groups, Roles, or
+# impersonation/"View As"/"Emulate" (confirmed by grep across the .md, document.xml, and
+# comments.xml — the FDD's own Business Specifications prose repeats the "User groups"
+# / "Define user groups/role" phrase twice, but only as an un-numbered restatement of
+# FDD 1's own dependency, not as new content of this FDD's own). See
+# "RELATIONSHIP TO FDD 01" below for the explicit non-finding this produces.
+#
+# What this FDD actually is: a cross-cutting "shared System Administration console"
+# spec, sibling to FDD 5 (System Administration - Credentialing) and FDD 10 (System
+# Administration - Staffing Administration) per its own Dependencies list. Its four
+# Features span FOUR different homes, none of which is `iam`:
+# - Feature 12.1 (Managing Credential Use of Assignment Codes) — an admin-maintained
+#   SCED/Grade-Setting/CTE-CIP -> allowable-endorsement mapping catalog used to audit
+#   Staffing assignments against Credentialing endorsements, plus the action-item alert
+#   loop when a new credential/endorsement/assignment type needs mapping. Modeled here
+#   under `cred:` (credentialing owns the Endorsement side; `staff:` is cross-referenced
+#   for the assignment side) since Endorsement is the entity being mapped TO.
+# - Feature 12.2 (Manage Public [Portal] Landing Page) — modeled under `pub:`
+#   (publicportal), an existing stub-only sd:BoundedContext (declared in
+#   credentialing-domain.ttl, already referenced by the FDD 31 pass) with no real CMS
+#   model of its own.
+# - Feature 12.3 (Admin Update Links / internal-dashboard content & messaging admin) —
+#   modeled under `dash:` (dashboards), an existing stub-only sd:BoundedContext
+#   (declared in solution.ttl, already referenced by the FDD 11/16 and FDD 29 passes)
+#   with no real CMS model of its own.
+# - Feature 12.4 (Data Dictionary) — NOT modeled as Requirement nodes at all. Per
+#   CONVENTIONS.md's "Things NOT yet in the solution design at all" section: an
+#   auto-generated-from-system-metadata data dictionary/reference manual (database
+#   mappings, field dependencies, user guides, process-flow diagrams, versioned export)
+#   has no corresponding bounded context anywhere in the 11 real domains OR the 6
+#   registered stub-only contexts (refdata/publicportal/audit/dataquality/
+#   questionsets/dashboards) — `refd:ReferenceDataContext` is about business reference
+#   *data* (lookup codes), a different concept entirely from a system-schema catalog.
+#   This is a genuine "no vocabulary position at all" case, not merely an unimplemented
+#   feature of an existing context, so per CONVENTIONS.md no Req_12_4_x nodes were
+#   minted. Reported to the requester as a GAPS.md candidate instead (see this session's
+#   final report — GAPS.md itself is intentionally NOT edited by this pass).
+#   Noteworthy from reading it anyway: 12.4.2's own acceptance criteria are internally
+#   contradictory ("enforces required content presence for user guide sections before
+#   saving" vs., two lines later, "shall allow the administrator to save the reference
+#   manual with empty or deleted user guide content") and review comment 1690776070
+#   (Doherty/Yashi, 2026-04-28) confirms this is a live, NOT-yet-resolved scope
+#   disagreement ("this is basically 'as a user I want the entire system documented.'
+#   It's too broad"), not a stale draft — worth carrying forward if 12.4 is ever picked
+#   up once Data Dictionary gets a real home.
+# - Also missing from the numbered Addendum entirely: 12.4.3 ("...maintain process flow
+#   mappings and diagrams in the reference manual...") is present in the .docx body but
+#   was dropped by the pre-generated .md extraction (a real extraction gap, not a
+#   document gap) — caught only because full-text `document.xml` was checked; the .md
+#   read alone would have shown 12.4 skipping straight from 12.4.2 to 12.4.4.
+#
+# RELATIONSHIP TO FDD 01 (per explicit instruction to check this): this FDD does NOT
+# corroborate, contradict, or extend either of FDD 01's two high-impact findings
+# (iam:Question_NoUserGroupLayerContradiction, the User-Group layer; or
+# iam:Question_ImpersonationFeatureContradictsOmission, the impersonation/"View As"
+# feature). It is silent on both — no numbered story, wireframe, or review comment in
+# this document mentions Groups as a first-class admin-managed construct, or
+# impersonation/"View As"/"Emulate" in any form (confirmed by direct text search across
+# the .md, document.xml, and comments.xml — the one "view as" grep hit was a false
+# positive inside "available for review as part of..."). This is itself worth recording
+# precisely because the folder's own title invited the opposite expectation: a
+# System-Administration-titled FDD that describes a real, wireframed admin console
+# (see wireframe-02 below) and STILL never touches either contested area is mild
+# negative evidence that those two features live entirely within FDD 1's own scope,
+# not evidence either way about which side of either contradiction is correct.
+#
+# Source material read:
+# - "12 - System Administration - MiEdWorkforce Admin.docx" (primary; .md sibling read
+#   first, then the .docx unzipped for word/comments.xml, commentsExtended.xml, and the
+#   full document.xml body text, which caught the missing-from-.md 12.4.3 story above).
+#   High Level Scenarios table (15 rows) restates the same Business Specifications
+#   prose the numbered Addendum below already covers at finer grain — skipped per
+#   CONVENTIONS.md.
+# - Review comments (20 total): mostly short "add/update scenario" authoring notes with
+#   no decision content. Two threads are substantive and folded into the relevant
+#   story's own sd:notes rather than raised as separate Annotations, given their scale:
+#   id 35/36 (Groom/Doherty, 2026-04) — Groom asks to discuss action-item status
+#   throughout the resolution lifecycle at 12.1.6; Doherty's reply is just "Noted" — a
+#   real, still-open design question, folded into Req_12_1_6's notes rather than a
+#   dedicated Annotation given its narrow scope. id 340970065 (Doherty/Yashi, 2026-04) —
+#   confirms and explains the default-date-behavior AC lines already present in 12.3.3's
+#   visible text (start date defaults to now, end date defaults to indefinite) — a
+#   resolved clarification, not an open question. id 25 (Doherty/Yashi) — the same
+#   "wireframes are deliberately reused across features for design consistency" caveat
+#   already documented in the FDD 01 pass, confirmed again here (see wireframe notes
+#   below). id 47/48/1690776070 (Dontje/Doherty, 2026-04) — the 12.4.2 self-contradiction
+#   described above (not modeled as a Requirement-targeting Annotation since Feature
+#   12.4 isn't modeled at all here, but recorded above for the record).
+# - Wireframes: 8 embedded images (word/media/image1.png-image8.png), all viewed (small
+#   enough set that full coverage was practical, unlike the 30-wireframe FDD 01 case).
+#   4 extracted to wireframes/ below as the load-bearing ones:
+#   - wireframe-01 (word/media/image2.png, embedded at 12.1.1): the "Add Endorsement"
+#     admin screen's Requirements tab (Grade Levels/Codes, Test Codes, Certificates,
+#     Temporary Credentials) — this is credentialing's EXISTING endorsement-definition
+#     editor, not a purpose-built SCED/CIP-mapping screen; corroborates the "reused
+#     wireframe" comment thread (id 25) and is itself evidence the
+#     admin-defines-a-reusable-mapping-table concept (distinct from editing one
+#     Endorsement's own requirements) was never concretely designed.
+#   - wireframe-02 (word/media/image4.png, embedded at 12.2.1's high-level "System
+#     Administration" landing/menu): a genuinely useful structural artifact — a
+#     6-tile admin console (Integration Management, Worklist Management, Communication
+#     Management, Business Rules [System Rules & Validations, Question Sets], Pages &
+#     Content [Pages, Documents & Files], Report Management). Independently corroborates
+#     two existing GAPS.md entries from the FDD 02/29 passes (Interfaces & Integrations
+#     Setup / FDD 8, and Business Rule Management / FDD 4, both still unconverted) and
+#     confirms "Pages & Content" is this FDD's own name for the public/dashboard content
+#     administration modeled below as `pub:`/`dash:` coverage gaps.
+#   - wireframe-03 (word/media/image5.png, embedded at 12.2.2): the actual public
+#     landing-page content-management screen (rich-text editor over the real MiLogin
+#     landing-page copy also seen in wireframe-06 of the FDD 01 pass) — confirms this is
+#     a concretely-designed CMS surface, not vague narrative, strengthening rather than
+#     softening the Question_PublicPortalCmsNotModeled gap below (a real screen exists,
+#     nothing in the graph backs it).
+#   - wireframe-04 (word/media/image8.png, embedded at 12.4.2): a "Documents & Files"
+#     list screen under Credentialing's own admin breadcrumb (Dashboard > Credentialing
+#     > Credential Data & Management > Documents & Files) — another reused-wireframe
+#     instance (a credentialing document list standing in for "user guide" content),
+#     consistent with the id-25 comment thread; not itself evidence for or against the
+#     Data Dictionary gap since Feature 12.4 isn't modeled here.
+#   4 not extracted (viewed but not load-bearing beyond confirming reuse): image1.png
+#   (public landing page content, near the Assumptions section — the same MiLogin
+#   landing-page copy as wireframe-03/wireframe-06-of-FDD-01), image3.png (a duplicate
+#   crop of image2.png/wireframe-01 with a highlight box), image6.png (an internal
+#   dashboard hyperlink-maintenance screen, structurally identical in kind to
+#   wireframe-03), image7.png (a dashboard-builder "Add Section"/"Add Widget" layout
+#   tool at 12.3.2 — a real, further piece of evidence for the dash: coverage gap, not
+#   separately extracted since wireframe-03's finding already covers the same
+#   conclusion for a sibling feature).
+#
+# Every one of the 20 real numbered stories in Features 12.1-12.3 is accounted for as
+# Satisfied or a genuine coverage-gap (this FDD's own text raises nothing that reads as
+# out-of-scope/rejected within these three Features — that treatment is reserved for
+# Feature 12.4 above, handled at the whole-feature level via GAPS.md rather than
+# per-story Annotations).
+
+@prefix sd:      <urn:solutiondesign:ontology:> .
+@prefix oa:      <http://www.w3.org/ns/oa#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix cred:    <urn:solutiondesign:instance:credentialing:> .
+@prefix staff:   <urn:solutiondesign:instance:staffing:> .
+@prefix comm:    <urn:solutiondesign:instance:communications:> .
+@prefix pub:     <urn:solutiondesign:instance:publicportal:> .
+@prefix dash:    <urn:solutiondesign:instance:dashboards:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+cred:Fdd12Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/12 - System Administration - Admin Users/12 - System Administration - MiEdWorkforce Admin.docx" ;
+    sd:notes "Covers Features 12.1-12.4 (Managing Credential Use of Assignment Codes; Manage Public Landing Page; Admin Update Links [internal dashboard]; Data Dictionary). Authors Beth Dontje, Caitlin Groom, Vidhya Punniyamoorthy, Molly Chapman (creation 01/17/2025, modified 08/04/2025); approved by Caitlin Groom (PO) and Beth Dontje (PO) 08/04/2025 — but comments.xml contains dated entries through 2026-04-28, meaning the document continued to be actively revised well after its nominal approval (same post-signoff-revision pattern already noted in the FDD 01 and FDD 29 passes)." .
+
+cred:WireframeAddEndorsementMapping a sd:SourceDocument ;
+    sd:docType "wireframe" ;
+    sd:section "wireframes/wireframe-01-add-endorsement-mapping.png" ;
+    sd:notes "word/media/image2.png, embedded at 12.1.1. Credentialing's existing 'Add Endorsement' Requirements-tab editor (Grade Levels/Codes, Test Codes, Certificates, Temporary Credentials) — a reused screen, not a purpose-built SCED/CIP-to-endorsement mapping-catalog UI. See review comment id 25 (Doherty/Yashi): wireframes are deliberately reused across features 'to maintain design consistency and speed up development.'" ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:WireframeSystemAdministrationConsole a sd:SourceDocument ;
+    sd:docType "wireframe" ;
+    sd:section "wireframes/wireframe-02-system-administration-console.png" ;
+    sd:notes "word/media/image4.png, embedded at the Feature 12.2 introduction. A 6-tile 'System Administration' console: Integration Management, Worklist Management, Communication Management, Business Rules (System Rules & Validations, Question Sets), Pages & Content (Pages, Documents & Files), Report Management. Independently corroborates two existing GAPS.md entries (Interfaces & Integrations Setup / FDD 8; Business Rule Management / FDD 4, both still unconverted as of this pass) and names 'Pages & Content' as this FDD's own term for the pub:/dash: content-administration surfaces modeled below as coverage gaps." ;
+    sd:definedIn cred:Fdd12Doc .
+
+pub:WireframePublicLandingPageCms a sd:SourceDocument ;
+    sd:docType "wireframe" ;
+    sd:section "wireframes/wireframe-03-public-landing-page-cms.png" ;
+    sd:notes "word/media/image5.png, embedded at 12.2.2. A rich-text CMS editor over the real MiEdWorkforce/MiLogin public landing-page copy (the same landing-page content also depicted in the FDD 01 pass's wireframe-02). Confirms 12.2's public-landing-page administration is a concretely designed screen, not vague narrative — strengthens rather than weakens Question_PublicPortalCmsNotModeled below, since a real screen exists with nothing in the graph backing it." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:WireframeDocumentsAndFiles a sd:SourceDocument ;
+    sd:docType "wireframe" ;
+    sd:section "wireframes/wireframe-04-documents-and-files.png" ;
+    sd:notes "word/media/image8.png, embedded at 12.4.2 (Data Dictionary user-guide maintenance, not itself modeled as a Requirement here — see file header). A Credentialing 'Documents & Files' list screen (Dashboard > Credentialing > Credential Data & Management > Documents & Files) standing in as the placeholder illustration — another instance of the reused-wireframe pattern (comment id 25), not a purpose-built Data Dictionary/reference-manual screen." ;
+    sd:definedIn cred:Fdd12Doc .
+
+#################################################################
+# Requirements — Feature 12.1: Managing Credential Use of Assignment Codes
+#################################################################
+
+cred:Req_12_1_1 a sd:UserStory ;
+    sd:requirementId "12.1.1" ;
+    sd:title "Define SCED-to-endorsement mapping" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to define mappings between SCED codes and allowable endorsements, so that the system can identify educator assignments that are out of alignment with credential requirements." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to access the 'Add Endorsement' administrative screen. The system allows the System Administrator to select SCED as the mapping type. The system allows the System Administrator to enter or select a valid SCED code as assignment criteria. The system allows the System Administrator to select one or more allowable endorsements associated with the SCED code. The system includes all active credential types, including temporary credentials, in the list of allowable endorsements. The system validates that required mapping inputs are provided before allowing the mapping to be saved. Upon save, the system stores the mapping and makes it available for audit and validation processes. Audit details are stored including Time/Date stamp and User ID." ;
+    sd:notes "No satisfiedBy asserted — see Question_AssignmentEndorsementMappingNotModeled below. wireframe-01 (cred:WireframeAddEndorsementMapping, viewed) shows the screen actually embedded here is credentialing's existing per-Endorsement Requirements editor (grade bands, test codes, certificate/permit checkboxes) — a real, useful screen, but for editing ONE cred:EndorsementDefinitionAggregate's own requirements, not for authoring a reusable, admin-maintained SCED-code -> endorsement-set mapping catalog distinct from any single endorsement's definition. Confirms (rather than resolves) the gap." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_2 a sd:UserStory ;
+    sd:requirementId "12.1.2" ;
+    sd:title "Define Grade/Educational-Setting-to-endorsement mapping" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to define mappings between grade levels and educational settings to allowable endorsements, so that educator placement can be evaluated across different instructional environments." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to select Grades/Educational Setting as the mapping type. The system allows the System Administrator to define grade level and educational setting criteria. The system allows the System Administrator to associate one or more allowable endorsements to the defined criteria. The system includes all active credential types, including temporary credentials, when defining allowable endorsements. The system prevents saving if required criteria or endorsements are not defined. The system saves valid mappings and applies them to placement audit logic. Audit details of the mapping are stored including Time/Date stamp and User ID." ;
+    sd:notes "No satisfiedBy asserted — same mapping-catalog gap as 12.1.1, see Question_AssignmentEndorsementMappingNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_3 a sd:UserStory ;
+    sd:requirementId "12.1.3" ;
+    sd:title "Define CTE-CIP-to-endorsement mapping" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to define mappings between CTE CIP codes and allowable endorsements, so that career and technical education assignments can be audited for appropriate placement." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to select CTE CIP as the mapping type. The system allows the System Administrator to define a CIP code as assignment criteria. The system allows the System Administrator to associate allowable endorsements with the CIP code. The system includes all active credential types, including temporary credentials, in the endorsement selection. The system validates that both assignment criteria and endorsements are present before saving. Saved mappings are applied to identify CTE placement records that are out of alignment. Audit details of the mapping are stored including Time/Date stamp and User ID." ;
+    sd:notes "No satisfiedBy asserted — same mapping-catalog gap as 12.1.1, see Question_AssignmentEndorsementMappingNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_4 a sd:UserStory ;
+    sd:requirementId "12.1.4" ;
+    sd:title "Apply mappings to identify out-of-alignment placement records" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want the system to use defined assignment-to-endorsement mappings to identify records that are out of alignment, so that audit and corrective actions can occur." ;
+    sd:acceptanceCriteria "The system applies defined mappings during employee and credential audit processes. The system identifies individual records that do not meet the defined placement criteria. The system makes out-of-alignment records available for review through audit reports or worklists. The system does not modify educator assignment data as part of this identification process." ;
+    sd:notes "No satisfiedBy asserted. staff:Rule_EndorsementAlignmentForTeaching ('A Teacher position assignment with reported course details (SCED code and grade span) requires the employee to hold endorsements covering that content area and grade level') is a real, closely-related mechanism enforced by staff:AssignmentAggregate — but it is a real-time, single-assignment BLOCKING check at assignment-creation time, not a batch/audit-report identification of already-existing out-of-alignment records against an admin-maintained mapping catalog, and it isn't driven by anything resembling the SCED/Grade-Setting/CIP mapping tables 12.1.1-12.1.3 ask for (the rule presumably checks endorsement coverage directly, with no separate mapping-table indirection). Grouped with 12.1.1-12.1.3 under Question_AssignmentEndorsementMappingNotModeled below since the audit-report capability this story asks for depends on the same missing mapping catalog." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_5 a sd:UserStory ;
+    sd:requirementId "12.1.5" ;
+    sd:title "Receive action item when a new credential/endorsement/assignment type is added" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to receive an action item when a new credential, endorsement, or assignment type is added by another administrator, so that required placement mappings can be defined." ;
+    sd:acceptanceCriteria "When a Credential Admin or Staffing Admin adds a new credential, endorsement, or assignment type, the system generates a Dashboard Notification/Alert that requires action for the System Administrator. The notification includes identifying information about the newly added item. The notification requires acknowledgment and resolution by the System Administrator. The notification remains active until the required placement mappings are defined or the item is otherwise resolved." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:Seq_DashboardAlertCreationAndDisplay, comm:Op_CreateAlert ;
+    sd:notes "Good match on mechanism: comm:AlertAggregate's own role/scope-targeted, event-triggered dashboard-alert model (comm:Seq_DashboardAlertCreationAndDisplay: an arbitrary domain event on the EventBus triggers alert creation, targeted by role, with an action link, persisting until resolved) is exactly this story's shape. One real, narrower gap: no SequenceReference or subscribesTo edge currently wires a specific credentialing/staffing event (e.g. cred:EndorsementDefinitionCreatedEvent, which adt:AuditContext and refd:ReferenceDataContext already subscribe to) into this alert-creation path — the generic mechanism exists, but this specific trigger isn't concretely connected to it. Not raised as a separate Annotation given how much of the story the generic mechanism otherwise covers." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_6 a sd:UserStory ;
+    sd:requirementId "12.1.6" ;
+    sd:title "Resolve action items by defining required mappings" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to resolve action items by defining required assignment-to-endorsement mappings, so that the system remains aligned with current credential and assignment definitions." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to access alerts/notifications regarding missing mappings from their dashboard or notification area. The system allows the System Administrator to review the details of the item (credential, endorsement, or assignment) requiring mapping. The system allows the System Administrator to define the appropriate mappings using the existing mapping interface. The system automatically clears/resolves the alert once the required mappings are saved (or provides a mechanism to dismiss if the mapping is not applicable). The system records the resolution/modification in the audit." ;
+    sd:satisfiedBy comm:Seq_UserResolvesDashboardAlert, comm:Op_ResolveAlert ;
+    sd:notes "Good match for the alert-resolution half (comm:Seq_UserResolvesDashboardAlert's own ownership-validated, audit-timestamped resolve flow). The 'define the appropriate mappings using the existing mapping interface' half depends on the same missing mapping catalog as 12.1.1-12.1.4 (Question_AssignmentEndorsementMappingNotModeled) — not re-targeted by that Annotation since the dominant, alert-specific half of this story is solidly covered. Review comment id 35/36 (Groom/Doherty, 2026-04-15): Groom asks to discuss 'action items, and the status throughout the resolution process' — Doherty's reply is only 'Noted,' leaving open exactly what intermediate status states (e.g. In Progress, Escalated) an action item can hold beyond comm:AlertState_Active/Resolved/Expired. A real, still-open design question, not resolved by this pass." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Req_12_1_7 a sd:UserStory ;
+    sd:requirementId "12.1.7" ;
+    sd:title "Retain audit details for mapping changes" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want the system to retain audit details for changes made to assignment-to-endorsement mappings, so that traceability and compliance requirements are met." ;
+    sd:acceptanceCriteria "The system records changes made to assignment-to-endorsement mappings. The system retains historical information about when mappings were created or updated. The system records the specific Username/User ID of the administrator who made the change. Audit history is available for review as part of compliance and reporting needs." ;
+    sd:notes "No satisfiedBy asserted: an audit trail over mapping changes presupposes the mapping entity itself, which doesn't exist — see Question_AssignmentEndorsementMappingNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+cred:Question_AssignmentEndorsementMappingNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 12.1.1-12.1.4 and 12.1.7 ask for an admin-maintained, reusable mapping catalog (SCED code, Grade/Educational-Setting, CTE CIP code -> one or more allowable endorsements) used to bulk-identify existing Staffing assignments that are out of alignment with Credentialing endorsement requirements, plus an audit trail over changes to that catalog. Nothing in credentialing-domain.ttl or staffing-domain.ttl models this as a distinct entity: the closest real mechanism, staff:Rule_EndorsementAlignmentForTeaching (enforced by staff:AssignmentAggregate), is a real-time, per-assignment BLOCKING validation at assignment-creation time — structurally different from an admin-configurable mapping table plus a batch audit process over already-existing records. cred:EndorsementDefinitionAggregate models what an endorsement itself allows (grade band, required assessments) but has no notion of 'which SCED/CIP codes may use this endorsement,' the inverse relationship this FDD's mapping catalog needs. wireframe-01 (cred:WireframeAddEndorsementMapping, viewed) reinforces this: the screen embedded at 12.1.1 is credentialing's existing single-Endorsement Requirements editor, not a purpose-built mapping-catalog UI, meaning this capability was never concretely designed on the wireframe side either. Distinct from any User-Group/impersonation concern — this is a Credentialing/Staffing cross-domain modeling gap with no relationship to FDD 01's IAM findings." ;
+    oa:hasTarget cred:Req_12_1_1, cred:Req_12_1_2, cred:Req_12_1_3, cred:Req_12_1_4, cred:Req_12_1_7 ;
+    sd:references staff:Rule_EndorsementAlignmentForTeaching, cred:EndorsementDefinitionAggregate ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn cred:Fdd12Doc .
+
+#################################################################
+# Requirements — Feature 12.2: Manage Public [Portal] Landing Page
+#################################################################
+
+pub:Req_12_2_1 a sd:UserStory ;
+    sd:requirementId "12.2.1" ;
+    sd:title "Manage public landing page text and user support materials" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to manage page text, headings, and user support materials on the Public System Landing page, so that members of the public have accurate and current information." ;
+    sd:acceptanceCriteria "The system provides an administrative interface for the System Administrator to add, edit, or remove headings, text, announcements, and user support materials on the public landing page. When the administrator submits changes, the system publishes the updates directly to the live page without requiring a secondary system approval workflow." ;
+    sd:notes "No satisfiedBy asserted — see Question_PublicPortalCmsNotModeled below. wireframe-03 (pub:WireframePublicLandingPageCms, viewed) shows a concretely-designed rich-text CMS screen over the real MiEdWorkforce/MiLogin landing-page copy (matching the FDD 01 pass's own wireframe-02 content) — a real, wireframed feature, not vague narrative." ;
+    sd:definedIn cred:Fdd12Doc .
+
+pub:Req_12_2_2 a sd:UserStory ;
+    sd:requirementId "12.2.2" ;
+    sd:title "Add and update public landing page hyperlinks" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to add and update hyperlinks and their associated text on the Public System Landing page, so that users can be properly directed to appropriate external resources (such as CEPI or MDE web pages)." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to add new external or internal URLs along with their corresponding display text. The system allows the System Administrator to edit or remove existing hyperlinks. Links configured by the administrator display appropriately on the unauthenticated public landing page." ;
+    sd:notes "No satisfiedBy asserted — see Question_PublicPortalCmsNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+pub:Req_12_2_3 a sd:UserStory ;
+    sd:requirementId "12.2.3" ;
+    sd:title "Configure public landing page maintenance/downtime messages" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to configure and display system maintenance or downtime messages on the Public System Landing page, so that users are informed when the system is inaccessible before they attempt to log in." ;
+    sd:acceptanceCriteria "The system allows the System Administrator to enter and display specific maintenance text/announcements (e.g., notifying users of the time and date of a production deployment or system downtime). The system displays this maintenance message on the public landing page, which serves as the 'door' users land on if they are redirected from MiLogin while the main application is closed." ;
+    sd:notes "No satisfiedBy asserted — see Question_PublicPortalCmsNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+pub:Question_PublicPortalCmsNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 12.2.1-12.2.3 describe a concrete admin CMS for the public, unauthenticated MiEdWorkforce landing page: free-text content editing with direct-to-live publishing (no approval workflow), hyperlink management, and maintenance/downtime messaging. pub:PublicPortalContext is a stub-only sd:BoundedContext (declared in credentialing-domain.ttl per CONVENTIONS.md's registry, sd:status \"stub\") with no Aggregate, ApiOperation, or Sequence of its own anywhere in the project — this FDD is the first pass to describe concrete admin-facing behavior for it (the FDD 31 pass only ever treated it as passive UI chrome hosting a search link, not as something with its own admin/content-management surface). wireframe-03 (viewed) shows this is a real, designed screen, not aspirational narrative. This mirrors the treatment iam:Req_01_1_3 gave the same landing page from the login-routing side (a minor, UI-only gap folded into notes there since it was one narrow AC bullet among many) — but here the ENTIRE Feature is landing-page content administration, large enough relative to this FDD's total size to warrant its own Annotation rather than a notes-only mention." ;
+    oa:hasTarget pub:Req_12_2_1, pub:Req_12_2_2, pub:Req_12_2_3 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn cred:Fdd12Doc .
+
+#################################################################
+# Requirements — Feature 12.3: Admin Update Links (internal dashboard content)
+#################################################################
+
+dash:Req_12_3_1 a sd:UserStory ;
+    sd:requirementId "12.3.1" ;
+    sd:title "Update internal-dashboard hyperlinks" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to update hyperlinks displayed on the internal dashboard, so that internal users are routed correctly to relevant internal system pages and resources." ;
+    sd:acceptanceCriteria "When the System Administrator has the appropriate role permissions and accesses the dashboard maintenance area, the system allows selection of hyperlink content for update. The system allows the System Administrator to enter or modify a hyperlink URL. The system validates the hyperlink format before allowing the change to be saved. If the hyperlink URL is malformed, the system displays a validation error and prevents saving. Upon saving a valid hyperlink, the system updates the hyperlink for all relevant internal users. The system records audit details for the hyperlink update." ;
+    sd:notes "No satisfiedBy asserted — see Question_DashboardCmsNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+dash:Req_12_3_2 a sd:UserStory ;
+    sd:requirementId "12.3.2" ;
+    sd:title "Manage internal-dashboard text, headings, and subheadings" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to define and manage text, headings, and subheadings displayed on the internal dashboard, so that administrative announcements and informational content are communicated effectively to internal users." ;
+    sd:acceptanceCriteria "When the System Administrator accesses the dashboard maintenance area with appropriate permissions, the system allows selection of text, heading, or subheading content for update. The system allows the System Administrator to enter or edit dashboard text content. The system enforces system-defined character limits on text and verbiage fields. If the entered text exceeds the allowed character limit, the system displays a validation error and prevents saving. Upon saving valid content, the system updates the dashboard display for all relevant internal users. The system stores audit details capturing Modified By, Modified On, and the content changes." ;
+    sd:notes "No satisfiedBy asserted — see Question_DashboardCmsNotModeled below. Embedded wireframe (image7.png, viewed but not extracted) shows a real drag-and-drop dashboard-section/widget-layout builder ('Add Section' with 1/2/3-column layouts, 'Add Widget' placeholders) — further evidence this is a concretely designed feature, not narrative text." ;
+    sd:definedIn cred:Fdd12Doc .
+
+dash:Req_12_3_3 a sd:UserStory ;
+    sd:requirementId "12.3.3" ;
+    sd:title "Update internal-dashboard system messages and notifications" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to update system messages and notifications displayed on the internal dashboard, so that internal users receive timely and relevant system information upon login." ;
+    sd:acceptanceCriteria "When the System Administrator navigates to the dashboard messaging maintenance area, the system allows selection of system message or notification content for update. The system allows the System Administrator to define or modify the message text displayed on the dashboard. The system allows the System Administrator to define optional effective start and end dates for the message. If an effective start date/time is not provided, the system shall default to the current system date and time, making the message active immediately upon saving. If an effective end date/time is not provided, the system shall leave the message active indefinitely until it is manually deactivated or removed by an administrator. The system applies the message configuration only within the defined effective date range, when provided. Upon saving, the system updates the dashboard messaging for all relevant internal users. The system records audit details for the message configuration change, specifically capturing the 'Modified By' user and 'Modified On' date/timestamp." ;
+    sd:notes "No satisfiedBy asserted — see Question_DashboardCmsNotModeled below. Note for the record (not itself a gap): the default-date AC lines here (start defaults to now, end defaults to indefinite) were added mid-review per comment thread id 39/340970065 (Dontje asks 'what happens if optional dates aren't selected?'; Doherty/Yashi confirms the defaults and states the AC was updated accordingly) — a resolved clarification captured directly in the visible text above, not an open question. This story's own 'system messages/notifications' concept is distinct from, but adjacent to, comm:AlertAggregate's dashboard-alert model (Feature 12.1.5/12.1.6's satisfiedBy) — a targeted, per-user, action-oriented alert vs. this story's untargeted, broadcast-to-all-internal-users banner message with an effective date range; not the same aggregate, and comm:AlertAggregate has no all-users broadcast mode or date-range-based (vs. expiration-based) activity window, so it would not by itself satisfy this story even if credited." ;
+    sd:definedIn cred:Fdd12Doc .
+
+dash:Req_12_3_4 a sd:UserStory ;
+    sd:requirementId "12.3.4" ;
+    sd:title "Configure aging parameters for unread dashboard alerts" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want to configure the aging parameters for unread alerts and messages on the internal dashboard, so that users are presented with relevant and recent notifications." ;
+    sd:acceptanceCriteria "When the System Administrator has appropriate permissions and accesses the alert parameter configuration area, the system allows selection of system-defined alert parameters. The system allows the System Administrator to enter or select a value for the alert aging timeframe. If the entered value is non-numeric or outside allowed limits, the system displays a validation error and prevents saving. Upon saving a valid value, the system applies the updated parameter to govern how alerts and messages are displayed on dashboards. The system records audit details for the parameter change." ;
+    sd:notes "No satisfiedBy asserted. This one is closer to comm:AlertAggregate territory than 12.3.1-12.3.3 (comm:Seq_DashboardAlertCreationAndDisplay's own key decision already states a configured default expiration period of 30 days) — but that expiration value is documented as a fixed sequence-level default, not an admin-configurable system parameter exposed via any ApiOperation, so still no real satisfiedBy target. Grouped with 12.3.1-12.3.3/12.3.5 under Question_DashboardCmsNotModeled below rather than called out as a narrower, closer-to-satisfied gap, since no operation exists either way." ;
+    sd:definedIn cred:Fdd12Doc .
+
+dash:Req_12_3_5 a sd:UserStory ;
+    sd:requirementId "12.3.5" ;
+    sd:title "Retain audit history for dashboard configuration changes" ;
+    sd:statement "As a MiEdWorkforce System Administrator, I want the system to store audit history for all dashboard structure and messaging configuration changes, so that traceability and compliance requirements are met." ;
+    sd:acceptanceCriteria "The system records audit details for each dashboard configuration change, including hyperlinks, text, headings, messages, and alert parameters. The system associates each change with the System Administrator role; the Modified By and Modified On will be stored. The system retains audit records for historical review and compliance purposes. Audit records are read-only and cannot be modified by administrators." ;
+    sd:notes "No satisfiedBy asserted: an audit trail over dashboard-configuration changes presupposes the configuration entities themselves, which don't exist — see Question_DashboardCmsNotModeled below." ;
+    sd:definedIn cred:Fdd12Doc .
+
+dash:Question_DashboardCmsNotModeled a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 12.3.1-12.3.5 describe a concrete admin CMS for the internal (authenticated-user) dashboard: hyperlink maintenance, text/heading/subheading content, broadcast system messages with an effective date range, alert-aging parameter configuration, and an audit trail over all of it. dash:DashboardsContext is a stub-only sd:BoundedContext (declared centrally in solution.ttl per CONVENTIONS.md's registry, sd:status \"stub\") with no Aggregate, ApiOperation, or Sequence of its own — consistent with how the FDD 11/16 and FDD 29 passes already found this same stub referenced only passively (rendering credential-landing-page content, persisting per-user widget-arrangement preferences) and never as something with its own admin-configuration surface. This FDD is the first pass to describe that admin surface directly and in a comparable amount of detail to a real Feature (5 numbered stories, 2 wireframes viewed including a real drag-and-drop widget-layout builder) — worth flagging for whoever eventually picks up an actual Dashboards/FDD-03 conversion, since this content-administration half is currently invisible to anyone who only reads the FDD 02/03-family Dependencies chain." ;
+    oa:hasTarget dash:Req_12_3_1, dash:Req_12_3_2, dash:Req_12_3_3, dash:Req_12_3_4, dash:Req_12_3_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn cred:Fdd12Doc .

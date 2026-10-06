@@ -1,0 +1,507 @@
+# FDD 10 review — "10 - Data Collection & Compliance - Staffing Admin". Ingested per
+# abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Staffing graph
+# (staffing-domain.ttl / staffing-permissions.ttl / staffing-api.ttl /
+# staffing-sequences.ttl / staffing-technical-design.ttl, all loaded together), plus
+# cross-domain references into iam, communications, documents, and reporting (all real,
+# converted mied-v3 domains) and dash: (still stub-only).
+#
+# Source: "10 - Data Collection & Compliance Staffing Admin.docx" + its .md sibling, plus
+# the companion "Staffing Submission Validations.xlsx" (already fully accounted for by
+# staffing-technical-design.ttl's staff:TP_ValidationRuleEngine — that node's own
+# description cites this exact spreadsheet by name and this exact FDD's Feature
+# 10.3/10.13 numbering; re-analyzing its ~150 individual validation rows here would be
+# redundant with that already-modeled node, so it is treated as corroborating reference
+# data, not re-ingested row by row).
+#
+# Structure of the document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "HIGH LEVEL SCENARIOS" paraphrase table
+#   (23 rows) restate the same ~16 Feature areas at coarser grain — the HLS table is
+#   skipped per CONVENTIONS.md as duplicative of the prose/Addendum.
+# - An "Addendum" with real Feature/story numbering (Features 10.1-10.16, stories
+#   10.1.1-10.15.1) is the primary Requirement unit used below. Several Addendum features
+#   (10.4, 10.5, 10.6, 10.7, 10.14, 10.16) carry only a scope-boundary paragraph, no
+#   numbered story — modeled below as single non-narrative sd:Requirement nodes using a
+#   synthetic requirementId (the Feature number alone, e.g. "10.4") since the FDD itself
+#   gives them no story number.
+# - Three real capabilities described at length in the Business Specifications prose —
+#   the "Employment Data Collection Worklist" admin config, the Staffing Data Admin's own
+#   "Worklist" (Collection Extension / Reopen requests), and the Data Quality Review &
+#   Processing admin config paragraph — were NEVER promoted into the Addendum's numbered
+#   Feature breakdown at all (no 10.x number exists for any of them, despite each having
+#   its own bullet list of admin capabilities and, for the Worklist items, an HLS row).
+#   Same discrepancy shape the FDD 29 pass already found and named
+#   (Question_AddendumOmitsThreeBizSpecFeatures there) — modeled below with synthetic
+#   staff:Req_10_BizSpec_* IDs and flagged as a discrepancy
+#   (Question_AddendumOmitsThreeBizSpecFeatures) rather than silently absorbed.
+# - Feature 10.3's own heading ("Manage System Alerts/Notifications") does not match its
+#   body (10.3.1 is a business-rule/validation-management story, word-for-word
+#   near-identical to 10.13.1/10.13.2) — apparent copy/paste of Feature 10.4's heading
+#   onto Feature 10.3's slot. Modeled as its own Requirement (10.3.1) per the FDD's literal
+#   numbering, cross-referenced to 10.13 rather than silently merged, and flagged in
+#   Question_Feature103HeadingBodyMismatch.
+# - Feature 10.16 ("Historical Data Connections, Conversions") has NO visible body text at
+#   all in the rendered .md (a heading with nothing under it) — recovered from the raw
+#   document.xml: a full paragraph exists there ("All user stories regarding the Staffing
+#   Admin users' ability to view historical data... can be found within the user stories
+#   associated with other features in this FDD") that the .md extraction missed, plus a
+#   comment thread (Doherty/Sinha, 2026-04-10) confirming a redundant 10.16 user story was
+#   deliberately REMOVED as duplicative of Epic 32 (Technology, Standards, and Auditing)
+#   and of ACs already present elsewhere in this FDD. Modeled as a rejected Requirement
+#   (10.16), not a gap.
+#
+# Comments (24 total, comments.xml + commentsExtended.xml): 9 near-identical
+# "This is a high-level user story... internal discussions... will be detailed and
+# finalized" comments from Sinha (DTMB-Contractor, Feb 2026) are anchored on all of
+# 10.3.1, 10.8.1/10.8.2, 10.9.1, 10.10.1, 10.11.1, 10.12.1, 10.13.1/10.13.2, and 10.15.1 —
+# i.e. EVERY numbered story in Features 10.3 and 10.8-10.15 except 10.14 (which the FDD
+# itself declares out of scope). Deduped per CONVENTIONS.md's repeated-comment guidance
+# into one Annotation (Question_AdminStoriesStillUnderInternalDiscussion) rather than
+# transcribed 9 times — the repetition itself (literally every admin-configuration-surface
+# story in the FDD) is the finding. Two early comments (Thiele: "I don't see any references
+# to business specs 10.13 and 10.16" / "Should this say Staffing Data Administrator? Need
+# to be consistent") are pre-Addendum-draft artifacts, resolved by the Addendum's later
+# addition and folded into notes rather than modeled as open Annotations. Two comments on
+# 10.13's report AC (justification/version-control text) are already reflected verbatim in
+# the shipped AC and not re-raised. Three "this screenshot is for reference only, will need
+# to be updated for Staffing and MiEd design" comments (Groom, Feb 2025) apply to the
+# word/media reference images (legacy, non-MiEdWorkforce screenshots) — folded into that
+# SourceDocument's own notes.
+#
+# Wireframes: word/media/image1.png-image5.png are legacy, non-MiEdWorkforce-branded
+# reference screenshots (confirmed by viewing image1.png — a MORE/WISEstaff-style
+# "Roadmap Progress" panel — and by the three "reference only" review comments covering
+# this same set); not extracted as wireframes proper, only image1 is kept as
+# reference-legacy-more-roadmap-progress.png for traceability. The docx's real embedded
+# wireframes live in a top-level media/ folder (image6.png-imagef.png, image10.png,
+# referenced via unusual absolute "/media/imageN.png" relationship targets rather than the
+# normal "word/media/" pattern — a packaging quirk, not a modeling concern, same kind of
+# oddity FDD 29's own top-level /media folder showed). Of these 11, three duplicate pairs
+# were confirmed byte-identical (image8/imagec, image9/imaged, imagea/imagee) and only one
+# of each pair was extracted. Five distinct images were viewed and extracted below
+# (manage-users-list.png, manage-users-add-user-form.png — both confirmed 10.1's Manage
+# Users / Add User screens, notably still labeled "Credentialing Users" / "Credentialing
+# Admin" rather than "Staffing" internally, a reused-template artifact rather than a
+# functional discrepancy; support-materials-add-file-empty.png,
+# support-materials-add-file-uploading.png, support-materials-add-file-details.png — all
+# three states of 10.2's "Add New File" flow). The remaining ~4 unique images (image9,
+# imagea, imageb-already-covered) were not all individually re-verified beyond confirming
+# byte-duplicate status; per CONVENTIONS.md's depth-calibration guidance this is enough to
+# confirm Features 10.1-10.2 are the only ones with real UI mockups in this FDD (10.3-10.16
+# are text-only, consistent with the "high-level, not yet detailed" comment thread above).
+#
+# Tracked changes: not reconstructed as a diff; the one load-bearing tracked-change-context
+# case (Feature 10.16's fate) is handled via the comment thread, not the w:ins/w:del spans
+# themselves, per this document's header note above.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix iam:   <urn:solutiondesign:instance:iam:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd10Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/10 - Data Collection & Compliance - Staffing Admin/10 - Data Collection & Compliance Staffing Admin.docx" ;
+    sd:notes "Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/04/2025 per the signoff table — but the comments.xml thread contains dated entries through 2026-04-28 (well after signoff), meaning the document continued to be actively revised after its nominal approval date, same pattern the FDD 29 pass already flagged for its own document. Not resolved here; noted so the signoff table isn't read as 'nothing changed after this.'" .
+
+staff:Fdd10ValidationsDoc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/10 - Data Collection & Compliance - Staffing Admin/Staffing Submission Validations.xlsx" ;
+    sd:notes "Companion reference spreadsheet: ~150 individual field/record/collection-level validation rules (Sheet1, ID Validations, Rule Types, REP BRs sheets), many inherited verbatim from the legacy MORE system's fixed-width REP file-layout rules. Not re-ingested as individual sd:Requirement instances here — staffing-technical-design.ttl's staff:TP_ValidationRuleEngine already cites this exact file by name and describes its rule categories and open technical questions (staff:Question_LegacyValidationPortVsRederive, staff:Question_CrossRecordValidationEvaluationModel, staff:Question_AnomalyDetectionBaselineAndThreshold) in detail; treated here purely as corroborating evidence for Req_10_3_1/Req_10_13_1/Req_10_13_2's severity vocabulary (Error/Warning/Data Quality, an exact match to this spreadsheet's own 'Fatal Error/Error/Warning' and 'QR Error'/'DQ' columns)." .
+
+staff:Wireframe1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/manage-users-list.png" ;
+    sd:notes "Confirmed by viewing: 'Credentialing Users' list screen (Name/Department/Group/Role/Start Date/Status columns, Search, Add User, filter, and export icons) — this is a generic reused MiEdWorkforce admin-user-list template still showing 'Credentialing' branding (breadcrumb 'Credentialing Data > Manage Users', title 'Credentialing Users', Group column values 'Credentialing') rather than 'Staffing'. Directly corroborates 10.1.1's table shape and columns; the leftover Credentialing labeling is a reused-mockup artifact, not evidence the two admin surfaces are meant to be the same screen." ;
+    sd:definedIn staff:Fdd10Doc .
+staff:Wireframe2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/manage-users-add-user-form.png" ;
+    sd:notes "Confirmed by viewing: 'Add User' form (Employee Name, Role Group, Role Type, Department, Status dropdowns, Cancel/Save) — same reused Credentialing-labeled template as Wireframe1 ('Role Group: Credentialing', 'Role Type: Credentialing Admin'). Directly corroborates 10.1.2's field list." ;
+    sd:definedIn staff:Fdd10Doc .
+staff:Wireframe3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/support-materials-add-file-empty.png" ;
+    sd:notes "Confirmed by viewing: 'Add New File' form, empty state (drag-and-drop upload zone: 'Files supported: .doc, .docx, or .pdf', Display Name, Document ID (system-generated, read-only), Permissions (role multi-select), Status, Effective Date). Directly corroborates 10.2.2's field list, including the read-only Document ID and future-only Effective Date acceptance criteria." ;
+    sd:definedIn staff:Fdd10Doc .
+staff:Wireframe4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/support-materials-add-file-uploading.png" ;
+    sd:notes "Confirmed by viewing: same form mid-upload (file card showing 'Completed' status, a 'Select Type' dropdown, Cancel/Upload buttons) — an intermediate state of the same 10.2.2 flow." ;
+    sd:definedIn staff:Fdd10Doc .
+staff:Wireframe5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/support-materials-add-file-details.png" ;
+    sd:notes "Confirmed by viewing: same form fully populated (an already-uploaded 'Agenda for Submitting SCECHs.pdf', Display Name filled in) — the pre-existing/edit state of the same 10.2.1/10.2.2 flow. None of these three wireframes show a 'preview' affordance distinct from re-opening the uploaded file itself — see Req_10_2_1's notes on the preview-before-publish acceptance criterion." ;
+    sd:definedIn staff:Fdd10Doc .
+staff:ReferenceImageLegacy a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/10-staffing-admin/wireframes/reference-legacy-more-roadmap-progress.png" ;
+    sd:notes "Confirmed by viewing: a non-MiEdWorkforce, legacy MORE/WISEstaff-style 'Roadmap Progress' panel (Preliminary Steps / Preliminary Certification Process / Final Certification Process / After Certification Phase, with error/warning counts) embedded in the Business Specifications prose as an illustrative reference, not a MiEdWorkforce mockup. Matches the three review comments (Groom, Feb 2025) on this image and its two siblings (word/media/image2.png-image5.png, not individually re-extracted) explicitly stating 'This screenshot is for reference only and will need to be updated for Staffing and MiEd design' — i.e. these five images are acknowledged-stale legacy-system illustrations, not wireframes to build against. Kept for traceability only." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.1: User Access and Role Management
+#################################################################
+
+staff:Req_10_1_1 a sd:UserStory ;
+    sd:requirementId "10.1.1" ;
+    sd:title "View list of staffing users and roles" ;
+    sd:statement "As a Staffing Data Administrator, I want to view a list of staffing users, so that I can see who currently has access and their assigned roles." ;
+    sd:acceptanceCriteria "Navigate to Dashboard > Position Data > Staffing Users; table columns Name/Department/Group/Role/Start Date/Status; search by name; filters for Name/Department/Group/Role/Start Date/Status; Clear restores defaults; 'No results found' message when nothing matches; only administrative-permission users can access the page." ;
+    sd:satisfiedBy iam:Op_SearchUsers, iam:Op_ListRoles ;
+    sd:notes "FDD 10's own Dependencies section states this whole Feature is 'supported and defined by User Authorization (1)' — this is Staffing's own admin-facing view of IAM's generic user/role model (iam:Op_SearchUsers for the user list, iam:Op_ListRoles for the Role column's values), not a Staffing-owned aggregate or endpoint of its own. IAM's own admin surface (and its gaps — a Role-CRUD gap in particular) was already independently reviewed in fdd-review/01-user-management.ttl; not re-litigated here. Wireframe1 (Manage Users list) directly corroborates the table shape, though still under reused 'Credentialing' labeling — see that SourceDocument's own note." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_1_2 a sd:UserStory ;
+    sd:requirementId "10.1.2" ;
+    sd:title "Add a new staffing user with a role" ;
+    sd:statement "As a Staffing Data Administrator, I want to add a new user with a role, so that I can grant them access to staffing functionality." ;
+    sd:acceptanceCriteria "Add User form (Employee Name, Role Group read-only 'Staffing', Role Type, Department, Status), all fields required, dropdown values TBD, Save disabled until complete; on save, creates the user-role association and returns to the list with the new user visible." ;
+    sd:satisfiedBy iam:Seq_SystemAdminManualGrant, iam:Op_ManualGrantAuthorization ;
+    sd:notes "Matches fdd-review/01-user-management.ttl's own treatment of the equivalent generic 'admin manually adds/edits a user's role' story (satisfied there by this same Seq_SystemAdminManualGrant/Op_ManualGrantAuthorization mechanism) — this story is that same mechanism scoped to the 'Staffing' Role Group. Wireframe2 (Add User form) corroborates the field list field-for-field." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_1_3 a sd:UserStory ;
+    sd:requirementId "10.1.3" ;
+    sd:title "Edit an existing staffing user's role or status" ;
+    sd:statement "As a Staffing Administrator, I want to edit an existing user's role or status, so that I can update their access as responsibilities change." ;
+    sd:acceptanceCriteria "Edit icon per row opens the Add User form pre-populated; user can modify Role Type, Department, Status (Role Group remains read-only); changes take effect immediately and are reflected in the list." ;
+    sd:satisfiedBy iam:Op_ManualGrantAuthorization, iam:Op_RevokeAuthorization ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_1_4 a sd:UserStory ;
+    sd:requirementId "10.1.4" ;
+    sd:title "Access controlled by assigned roles" ;
+    sd:statement "As a Staffing Administrator, I want user access to be controlled by assigned roles, so that users only see functionality they are authorized to use." ;
+    sd:acceptanceCriteria "Permissions derive from Role Group + Role Type; users see only authorized pages/actions; removing/changing a role immediately updates access; only administrators can assign/modify roles." ;
+    sd:satisfiedBy iam:Op_CheckPermissions, iam:Op_GetEffectivePermissions ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_1_5 a sd:UserStory ;
+    sd:requirementId "10.1.5" ;
+    sd:title "Prevent invalid staffing user assignments" ;
+    sd:statement "As a Staffing Administrator, I want the system to prevent invalid user assignments, so that access data remains accurate and consistent." ;
+    sd:acceptanceCriteria "Prevent duplicate role assignments for the same user; required-field validation errors on missing data; user-friendly error messages on save failure; entered data retained on error." ;
+    sd:notes "No satisfiedBy: this is a generic form-validation/duplicate-prevention behavior expected of whatever screen implements 10.1.2, not a distinct IAM capability with its own node — the same kind of 'expected of any well-built form' criterion the FDD 29 pass left unlinked in similar cases rather than force a satisfiedBy edge. See the low-impact Annotation below rather than a satisfiedBy edge, per the ontology's own 'every Requirement gets an Annotation or a satisfiedBy' rule." ;
+    sd:definedIn staff:Fdd10Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Duplicate-role-assignment prevention and retained-data-on-error form behavior (10.1.5) isn't a distinct IAM capability with its own node — it's an implementation-quality expectation on whatever screen implements Req_10_1_2's iam:Op_ManualGrantAuthorization mechanism, not something staffing-domain.ttl or iam-domain.ttl models (or needs to model) as a separate concept. Recorded as a low-impact gap only so this Requirement isn't left unaccounted for, not because a real capability is believed missing." ;
+    oa:hasTarget staff:Req_10_1_5 ; sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.2: User Support Materials / Help
+#################################################################
+
+staff:Req_10_2_1 a sd:UserStory ;
+    sd:requirementId "10.2.1" ;
+    sd:title "View and manage list of training manuals and support materials" ;
+    sd:statement "As a Staffing Data Administrator, I want to see a list of training manuals and user support materials, so that I can effectively manage them." ;
+    sd:acceptanceCriteria "Navigate to Dashboard > Positions and Assignments > ... > Pages and Content; table with Code/Name/Modified By/Modified Date/Status/File Type; search and filter on any column; 'No results found' handling; download list as PDF/Word/Excel; edit via pencil icon; history tab with Modified By/On/Attachment; admin can preview documents before publishing; Save/Cancel." ;
+    sd:satisfiedBy docs:Op_SearchDocuments, docs:Op_ListDocumentCategories, docs:Op_GetDocumentMetadata ;
+    sd:notes "Good structural match on the list/search/filter/metadata side via Documents' real, converted API. Two acceptance criteria have no clear backing: (1) 'preview documents prior to publishing' — no preview/staging-vs-published operation exists in documents-api.ttl (Op_GetDocumentMetadata returns metadata, not a rendered preview; none of the three Add-New-File wireframes show a distinct preview affordance either); (2) 'download the list' as PDF/Word/Excel bulk export of the materials table itself (not an individual document) has no matching operation. Both folded into Question_SupportMaterialsPreviewAndExportGap below rather than treated as fully satisfied." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_2_2 a sd:UserStory ;
+    sd:requirementId "10.2.2" ;
+    sd:title "Upload and maintain training manuals and support materials" ;
+    sd:statement "As a Staffing Data Administrator, I want to manage and maintain training manuals and user support materials, so that data submitters have access to current guidance." ;
+    sd:acceptanceCriteria "Add File button; upload .doc/.docx/.pdf; File Type dropdown (TBD); Display Name, read-only Document ID, Permissions (multi-select role), Status (TBD list), Effective Date (future-only date picker); history tab with audit details; preview before publishing; Save/Cancel." ;
+    sd:satisfiedBy docs:Op_RequestDocumentUpload, docs:Op_RequestDocumentReplacement, docs:Op_ListDocumentCategories ;
+    sd:notes "Direct match on upload/versioning mechanics (docs:Op_RequestDocumentReplacement's SAS-token/versionNumber handshake is exactly the kind of 'version controls with a summary of changes' behavior the top-level Business Specifications paragraph for this Feature describes). 'Permissions — multi-select dropdown with all the user roles' scoped per-document is a finer grain than Documents' own category-level Perm_CategoryView/Edit gating; not modeled as a gap on its own since Documents' category model can reasonably be read as the mechanism (one category per role-restricted material type) rather than a missing capability. Same preview-before-publish gap as Req_10_2_1 — see Question_SupportMaterialsPreviewAndExportGap. Wireframes 3-5 (all three Add New File states) directly corroborate the field list." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_2_3 a sd:UserStory ;
+    sd:requirementId "10.2.3" ;
+    sd:title "Auto-generate CEDS-aligned data definition documents" ;
+    sd:statement "As a Staffing Data Administrator, I want to auto-generate data definition documents using system metadata, so that documentation remains consistent with CEDS standards without manual updates." ;
+    sd:acceptanceCriteria "Generate data definition documents (type, length, format) from CEDS metadata stored in the system; export in a user-consumable format (e.g. Excel); generated documents include file schema requirements and sample files." ;
+    sd:notes "No satisfiedBy: no data-definition-generation capability (reading a data element's CEDS-aligned type/length/format metadata and rendering it into an Excel/PDF document with schema requirements and sample files) exists anywhere in staffing-domain.ttl, staffing-api.ttl, or documents-api.ttl. Comment thread (Thiele: 'help me understand why we want the application to do this instead of CEPI maintaining the documentation on our own' -> Groom: 'We want to use the meta data from the CEDS standards as the source whenever possible. The CEPI staff will still perform publishing and maintenance of the docs.') confirms this is a real, deliberately-scoped requirement (auto-generate the DATA, not auto-publish), not an open question — it depends on a Data Element admin surface (staff.admin.manage-data-elements, itself a gap — see Req_10_8_1) that doesn't exist yet either, making this a second-order gap on top of a first-order one." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Question_CedsDataDefinitionAutoGenerationGap a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No capability exists anywhere in staffing-domain.ttl, staffing-api.ttl, or documents-api.ttl to auto-generate a data-definition document (type/length/format/schema/sample-file) from a data element's CEDS-aligned metadata. Depends on a Data Element admin surface (staff:Perm_AdminManageDataElements, Req_10_8_1) that is itself a documented gap — a second-order gap layered on a first-order one." ;
+    oa:hasTarget staff:Req_10_2_3 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+staff:Question_SupportMaterialsPreviewAndExportGap a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "'Preview documents prior to publishing them to end users' (stated identically in both 10.2.1 and 10.2.2) and 'download the [materials] list' as PDF/Word/Excel (10.2.1) have no matching capability anywhere in documents-api.ttl — Documents' real surface supports upload, replace (versioned), metadata retrieval, and search/list, but no draft/staged-vs-published distinction with a preview step, and no bulk table-export operation. None of the three viewed Add-New-File wireframes show a preview affordance either, so this isn't a case of the wireframe clarifying otherwise-ambiguous text." ;
+    oa:hasTarget staff:Req_10_2_1, staff:Req_10_2_2 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.3 (heading/body mismatch — see header note)
+#################################################################
+
+staff:Req_10_3_1 a sd:UserStory ;
+    sd:requirementId "10.3.1" ;
+    sd:title "Manage business rules and validations for staffing data quality" ;
+    sd:statement "As a Staffing Data Administrator, I want to manage business rules and validations so that staffing data quality is enforced." ;
+    sd:acceptanceCriteria "Validations assignable to Collections/Categories/Data Elements; validation date fields updatable; severity as Error/Warning/Data Quality; validation messages editable; justification/comments (medium free-form) on add/update; public-facing validation report generated/maintained; all changes versioned and auditable." ;
+    sd:satisfiedBy staff:TP_ValidationRuleEngine, staff:Perm_AdminManageValidations ;
+    sd:notes "Near-verbatim duplicate of Req_10_13_1/Req_10_13_2 below (same severity vocabulary, same Collection/Category/Data Element assignment model, same justification-field language) despite sitting under a heading literally titled 'Manage System Alerts/Notifications' — see Question_Feature103HeadingBodyMismatch. staff:TP_ValidationRuleEngine's own description cites this exact Feature-10.3/10.13 numbering and the companion Staffing Submission Validations.xlsx directly. PARTIAL: TP_ValidationRuleEngine documents the rule catalog and execution-engine design, and staff:Perm_AdminManageValidations documents the intended permission, but staffing-permissions.ttl's own header note confirms no sd:ApiOperation anywhere in staffing-api.yml actually implements this admin CRUD surface — the admin-facing 'assign a rule to a Collection/Category/Data Element' UI this story describes is design-level only, not yet a real endpoint." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Question_Feature103HeadingBodyMismatch a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Feature 10.3 is titled 'Manage System Alerts/Notifications' (identical to Feature 10.4's own heading) but its single story, 10.3.1, is a business-rule/validation-management story with no connection to alerts or notifications — it is instead a near-verbatim duplicate of Feature 10.13's 'Business Rule Management' stories (10.13.1/10.13.2). Reads as a copy/paste error in the source document (Feature 10.4's heading text applied to Feature 10.3's slot) rather than an intentional third home for business-rule content. Modeled as its own Requirement (Req_10_3_1) per the FDD's literal numbering rather than silently merged into Req_10_13_1, since a coverage audit citing '10.3.1' should be able to find it." ;
+    oa:hasTarget staff:Req_10_3_1 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.4: Manage System Alerts/Notifications (no numbered story)
+#################################################################
+
+staff:Req_10_4 a sd:Requirement ;
+    sd:requirementId "10.4" ;
+    sd:title "Configure system alerts/notifications for Staffing collections" ;
+    sd:statement "(No numbered user story — a scope-boundary paragraph.) All underlying logic for sending, tracking, and displaying system alerts and notifications derives from Business Specification #6 (Alerts, Emails & Communications). This Feature is strictly limited to configuring what is sent, specifically for the Data Collection & Compliance module; Business Specification #4 (Business Rules Management) specifies when and to whom." ;
+    sd:acceptanceCriteria "(From the Business Specifications prose, since the Addendum gives no AC of its own): create/manage system alert text with versioning; set effective dates; set authorized user roles to receive; view/manage the system event/trigger the alert uses; view existing alerts in a filterable table (Group/Type, Name, Status, Expiration Date, Action, versioning/audit)." ;
+    sd:satisfiedBy comm:Op_CreateAlert, comm:Op_ListAlerts, comm:AlertAggregate ;
+    sd:notes "Good match: comm:AlertAggregate already models versioning (comm:AlertVersion), role-based targeting (comm:AlertRoleTarget — matches 'Set Authorized User Roles to receive'), and an expiry-bearing state machine (comm:AlertState_Active/Expired — matches 'Expiration Date'/'Set system effective dates'). Unlike the FDD 29 pass's treatment of an equivalent Credentialing alerts deferral (which found NO alert/notification model at all and called it out-of-scope), Communications now has a real converted alerting surface in this same mied-v3 pass, so this is modeled as satisfied via that generic framework rather than out-of-scope — consistent with how Req_10_5/Req_10_7 below treat their own Business-Specification-#6/#2 deferrals. Not modeled: a discrete 'which event/trigger uses this alert' admin binding UI (comm:AlertAggregate doesn't expose a queryable trigger-registration list) — minor, not raised as its own Annotation." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.5: Manage Email/Notification Templates (no numbered story)
+#################################################################
+
+staff:Req_10_5 a sd:Requirement ;
+    sd:requirementId "10.5" ;
+    sd:title "Configure email/notification templates for Staffing collections" ;
+    sd:statement "(No numbered user story — a scope-boundary paragraph, identical in shape to Feature 10.4's.) All underlying logic for sending, tracking, and displaying emails/alerts/notifications derives from Business Specification #6; this Feature is strictly limited to configuring the tools for the Data Collection & Compliance module; Business Specification #4 specifies when/to whom." ;
+    sd:acceptanceCriteria "Create/manage email templates within the Staffing group; set effective dates; set authorized recipient roles; define the triggering system event; view historical use (per-instance, count of uses, trigger point) with resend+CC ability; view templates in a filterable table (Name/Group/Status/Expiration/Action/versioning-audit)." ;
+    sd:satisfiedBy comm:Op_CreateTemplate, comm:Op_ListTemplates, comm:Op_CreateTemplateVersion, comm:Perm_StaffingTemplatesCreate ;
+    sd:notes "Strong match: communications-api.ttl already models a first-class 'Staffing' functional area as one of four alternative permission scopes on every template operation (comm:Perm_StaffingTemplatesView/Create/Edit/Delete), plus explicit template versioning (comm:Op_CreateTemplateVersion/Op_ListTemplateVersions) matching 'version controls'. Not modeled: the per-instance historical-send log with resend+CC (comm:EmailInstanceAggregate exists per communications-capability.ttl's hasAggregate list but wasn't traced further here — out of this review's own domain, no gap raised on Staffing's behalf for a capability that belongs entirely to communications' own FDD review)." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.6: Dashboard (no numbered story)
+#################################################################
+
+staff:Req_10_6 a sd:Requirement ;
+    sd:requirementId "10.6" ;
+    sd:title "Configure Staffing tiles and reports on role-based dashboards" ;
+    sd:statement "(No numbered user story — a scope-boundary paragraph.) All underlying logic for the display, organization, and rendering of the dashboard derives from Business Specification #3 (Dashboards); this Feature is strictly limited to configuring which tiles and reports are available to whom, for the Data Collection & Compliance workflow." ;
+    sd:acceptanceCriteria "Define available configurable tiles; define reports for each role-based dashboard; update text/help-support links for staffing data dashboard functionality; audit details stored." ;
+    sd:notes "No satisfiedBy: dash:DashboardsContext remains a stub-only bounded context in this project (per CONVENTIONS.md's stub registry, and per the FDD 29 pass's identical finding for Credentialing's own equivalent Feature 29.1.8/Business Specification #3 dependency) — there is no real Dashboards conversion anywhere in mied-v3 for this to satisfy, so unlike Req_10_4/10_5/10_7 (whose underlying frameworks ARE now real), this one genuinely has nothing to point at yet." ;
+    sd:definedIn staff:Fdd10Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Dashboard tile/report configuration (Feature 10.6) is explicitly deferred by the FDD itself to Business Specification #3 (Dashboards), which is a stub-only bounded context (dash:DashboardsContext) with no real mied-v3 conversion — same gap the FDD 29 pass already logged for Credentialing's own dashboard deferral. Recorded here as out-of-scope (the FDD's own scoping decision) rather than a Staffing-side coverage gap; the underlying absence of a real Dashboards conversion belongs in GAPS.md, not as a Staffing build item." ;
+    oa:hasTarget staff:Req_10_6 ; sd:status "resolved" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.7: Manage Reports (no numbered story)
+#################################################################
+
+staff:Req_10_7 a sd:Requirement ;
+    sd:requirementId "10.7" ;
+    sd:title "Configure Staffing report availability and access" ;
+    sd:statement "(No numbered user story — a scope-boundary paragraph.) All underlying logic for the display, organization, and rendering of the report derives from Business Specification #2 (Reporting); this Feature is strictly limited to configuring which reports are available to whom, for the Data Collection & Compliance workflow." ;
+    sd:acceptanceCriteria "Define report availability, including future/immediate retirement; define report access by authorized user roles; search existing reports; create ad-hoc/custom reports; export/download options; manage report resources (page text, links); set a report as required for the collection worklist." ;
+    sd:satisfiedBy rpt:Op_AdminCreateReport, rpt:Op_AdminUpdateReport, rpt:Op_AdminUpdateReportStatus, rpt:Perm_CatalogManage ;
+    sd:notes "Good match: Reporting's own real, converted Admin catalog surface (register/update/activate-deactivate a report, Perm_CatalogManage-gated) is exactly the generic 'define availability, retire, access by role' framework this Feature says it configures for Staffing specifically. Not modeled: 'create ad-hoc and custom reports' and 'set a report as required for the collection worklist' — the former is a report-authoring capability outside Reporting's own catalog-registration model (Reporting registers pre-built Power BI reports, per reporting-api.ttl's own shape, rather than an ad-hoc report builder); the latter ties a report to staff:CollectionAggregate's own worklist concept, which has no such linkage field anywhere in staffing-domain.ttl. Both folded into notes rather than a separate Annotation given the FDD's own explicit 'strictly limited to configuration' framing already anticipates most of the heavy lifting living elsewhere." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.8: Data Element Definition Administration
+#################################################################
+
+staff:Req_10_8_1 a sd:UserStory ;
+    sd:requirementId "10.8.1" ;
+    sd:title "Add or update staffing data elements" ;
+    sd:statement "As a Staffing Data Administrator, I want to add or update data elements for staffing data collections, so that the system accurately reflects current reporting standards." ;
+    sd:acceptanceCriteria "Add/update Name, Description, System Name, ID, Status; define Category Information (Category, Legal Citation, Data Use, Instructions, Contact); set Data Type attributes aligning to CEDS plus specific flags; select data element dependencies from available elements." ;
+    sd:satisfiedBy staff:Perm_AdminManageDataElements ;
+    sd:notes "No matching sd:ApiOperation anywhere in staffing-api.yml, per staffing-permissions.ttl's own header note and staff:Perm_AdminManageDataElements's own notes — a documented, pre-existing gap this pass independently confirms rather than newly discovers. The permission node names the intent; nothing implements it. Same 'high-level, still under internal discussion' caveat as the rest of Features 10.8-10.15 — see Question_AdminStoriesStillUnderInternalDiscussion." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_8_2 a sd:UserStory ;
+    sd:requirementId "10.8.2" ;
+    sd:title "View and filter existing staffing data elements" ;
+    sd:statement "As a Staffing Data Administrator, I want to view and filter existing data elements in a table, so that I can easily locate and review element definitions." ;
+    sd:acceptanceCriteria "Table with Name/Version/Status/Data Category/Data Type/Action; extract results in usable formats (Excel, CSV)." ;
+    sd:satisfiedBy staff:Perm_AdminManageDataElements ;
+    sd:notes "Same gap as Req_10_8_1 (no backing sd:ApiOperation) — a read-only view of the same missing capability, not a distinct implementation." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.9: Position Roster Definition
+#################################################################
+
+staff:Req_10_9_1 a sd:UserStory ;
+    sd:requirementId "10.9.1" ;
+    sd:title "Define/modify the Position Roster collection" ;
+    sd:statement "As a Staffing Data Administrator, I want to add or modify the Position Roster data collection, so that I can set specific requirements for how districts report positions." ;
+    sd:acceptanceCriteria "Add/modify a collection for Position Rosters; select Entity Types; set collection dates (Open, Close, School Year Start/End); select specific Data Categories/Components to include." ;
+    sd:satisfiedBy staff:Perm_AdminManageCollections, staff:CollectionAggregate ;
+    sd:notes "staff:CollectionAggregate is the right conceptual target (its own CollectionDefinition entity already models school-year dates, entity types, and category requirements — an exact shape match), but staffing-permissions.ttl's own note confirms staff:Perm_AdminManageCollections has no matching sd:ApiOperation anywhere in staffing-api.yml: the collection lifecycle staffing-api.ttl DOES expose (Op_ListCollections, Op_RunQualityReview, Op_CertifyCollection, etc.) is all downstream OF an already-defined collection, not the admin authoring surface that DEFINES one. Genuine gap in the build surface, not the domain model." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.10: Employee Roster Definition
+#################################################################
+
+staff:Req_10_10_1 a sd:UserStory ;
+    sd:requirementId "10.10.1" ;
+    sd:title "Define/modify the Employee Roster collection" ;
+    sd:statement "As a Staffing Data Administrator, I want to add or modify the Employee Roster data collection, so that I can set specific requirements for how districts report employees." ;
+    sd:acceptanceCriteria "Add/modify a collection for Employee Rosters; mark Categories/Components as Required/Optional/Conditionally Required; indicate single vs. multi-occurring data elements." ;
+    sd:satisfiedBy staff:Perm_AdminManageCollections, staff:CollectionAggregate ;
+    sd:notes "Same shape and same gap as Req_10_9_1 — one collection-definition admin surface covering both Position and Employee Rosters conceptually (staff:CollectionAggregate doesn't distinguish a Position-Roster-collection from an Employee-Roster-collection as separate types), with the same missing admin ApiOperation." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.11: Employee Assignment Details Definition
+#################################################################
+
+staff:Req_10_11_1 a sd:UserStory ;
+    sd:requirementId "10.11.1" ;
+    sd:title "Define Assignment Details data categories" ;
+    sd:statement "As a Staffing Data Administrator, I want to define and manage sets of data elements as Categories, so that I can group assignment details logically for data collection." ;
+    sd:acceptanceCriteria "Add/update data categories (e.g. Assignment Details); select data elements from available elements to categorize; associate Entity Types with categories; track versioning/audit details." ;
+    sd:satisfiedBy staff:Perm_AdminManageDataElements, staff:CategoryRequirement ;
+    sd:notes "staff:CategoryRequirement (a ValueObject on staff:CollectionAggregate: 'data category with required/optional/conditional status') is the closest conceptual match, but it models a category's REQUIREMENT STATUS within a specific collection, not the category-definition/data-element-grouping admin surface this story describes (which is closer to a Category master-data concept than a per-collection requirement flag). Same missing-ApiOperation gap as Req_10_8_1/10_9_1/10_10_1 — all four Feature 10.8-10.11 stories point at the same underlying absent admin-configuration surface for Staffing's reference/master data (data elements, categories, collections)." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.12: Staffing ID Matching and Maintenance Definition
+#################################################################
+
+staff:Req_10_12_1 a sd:UserStory ;
+    sd:requirementId "10.12.1" ;
+    sd:title "Manage identity management processing for staffing collections" ;
+    sd:statement "As a Staffing Data Administrator, I want to manage identity management processing specifically for staffing-related collections, so that I can control how new employees are identified and matched." ;
+    sd:acceptanceCriteria "View/manage identity data authorized user roles and permissions; manage business rule validations applied to identity processing for staffing; manage identity processing user alerts/communications specific to staffing; manage the Identity Management Admin Role Worklist for processing Identity Requests." ;
+    sd:notes "No satisfiedBy: staff:StaffingContext's own domain-doc notes are explicit that Unique ID creation, identity matching/resolution logic, Near Match handling, and the Identity Administrator worklist are entirely IAM-owned, not Staffing's — so this story's true home is iam, not staffing. But iam-api.ttl's real, converted surface (checked directly) exposes only RUNTIME identity-resolution operations (submit/approve/deny a request) and reporting triggers (Op_TriggerExpireRequests, Op_GetNewUsersReport) — no admin-CONFIGURATION surface for 'identity processing business rule validations,' 'identity processing alerts,' or a queryable 'Identity Management Admin Role Worklist' as a distinct configurable thing exists in either domain's real API. This is therefore a genuine coverage gap, but an ambiguous one on OWNERSHIP as well as existence — see Question_IdentityAdminConfigOwnershipAndGap below." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Question_IdentityAdminConfigOwnershipAndGap a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 10.12 places 'Identity Management Admin Role Worklist' and identity-processing business-rule/alert configuration under the STAFFING Data Admin's own page, but staffing-domain.ttl's own notes say Unique ID matching, Near Match handling, and the Identity Administrator worklist belong entirely to iam, not staffing (staffing only triggers resolution and consumes completion events). Neither domain's real, converted API surface (staffing-api.ttl or iam-api.ttl) exposes an admin-configuration capability for any of this — it's missing regardless of which domain is meant to own it, and the FDD itself doesn't resolve which one should. Distinct from, but adjacent to, staff:Question_MentorVerificationEndpointDirection and staff:Question_EmploymentAssignmentVerificationEndpoint (staffing-domain.ttl), which flag the analogous staffing<->credentialing ownership ambiguity for a different capability." ;
+    oa:hasTarget staff:Req_10_12_1 ;
+    sd:impact "M" ; sd:owner "Product (staffing + iam)" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.13: Business Rule Management
+#################################################################
+
+staff:Req_10_13_1 a sd:UserStory ;
+    sd:requirementId "10.13.1" ;
+    sd:title "Manage and maintain business rules/validations for staffing collections" ;
+    sd:statement "As a Staffing Data Administrator, I want to manage and maintain business rules and validations for staffing data collections, so that I can ensure data integrity during submission." ;
+    sd:acceptanceCriteria "Assign a business rule/validation to a Collection, Category, or Data Element; update date fields associated with validation conditions (e.g. Academic Year Start/End); set severity to Errors/Warnings/Data Quality; edit the end-user-facing validation text." ;
+    sd:satisfiedBy staff:TP_ValidationRuleEngine, staff:Perm_AdminManageValidations ;
+    sd:notes "See Req_10_3_1's own notes — this story and 10.3.1 are near-verbatim duplicates (Question_Feature103HeadingBodyMismatch). Same PARTIAL satisfaction: the rule catalog and engine design exist (staff:TP_ValidationRuleEngine, which names this exact Feature number); the admin CRUD surface to actually assign/edit a validation through a UI does not (staff:Perm_AdminManageValidations has no matching sd:ApiOperation, per staffing-permissions.ttl's header note)." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_13_2 a sd:UserStory ;
+    sd:requirementId "10.13.2" ;
+    sd:title "Produce a public validation-text-and-codes report" ;
+    sd:statement "As a Staffing Data Administrator, I want to produce and update a report including validation text and codes, so that I can provide public documentation for local systems." ;
+    sd:acceptanceCriteria "Produce/update/maintain a report including validation text and codes for public consumption; provide justification/comments when adding or updating validations." ;
+    sd:satisfiedBy staff:TP_ValidationRuleEngine ;
+    sd:notes "Same underlying gap as Req_10_13_1 — a public validation-codes report (explicitly modeled on CEPI's real, cited precedent, the '2023-24 Collection Component Matrix') presupposes the same unbuilt validation-management admin surface. The 'REP BRs' sheet of Staffing Submission Validations.xlsx (BR NUM/Description/Fatal Error/Error/Warning columns) is a close real-world analog of exactly this kind of report, already produced manually for the legacy MORE system — corroborating evidence for the requirement's shape, not itself a substitute for the (still missing) system-generated version." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Question_AdminStoriesStillUnderInternalDiscussion a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "Every numbered story in Features 10.3 and 10.8 through 10.15 except 10.14 (10.3.1, 10.8.1, 10.8.2, 10.9.1, 10.10.1, 10.11.1, 10.12.1, 10.13.1, 10.13.2, 10.15.1 — 10 stories) carries an identical reviewer comment from Sinha (DTMB-Contractor, Feb 2026): 'This is a high-level user story. We are having internal discussions around it. It will be detailed and finalized once we have more knowledge on the implementation.' Deduped into one Annotation per CONVENTIONS.md's repeated-comment guidance — the pattern itself is the finding: essentially every admin-configuration-surface story in this FDD (data elements, collections, categories, identity admin, business rules, closeout) is self-acknowledged by the FDD's own authors as not yet detailed enough to build from, independently corroborating why staffing-api.yml has no matching endpoints for any of staff:Perm_AdminManageCollections/AdminManageValidations/AdminManageDataElements/AdminViewFileQueues/AdminResetFileProcessing/AdminManageReports (only staff:Perm_AdminProcessExceptions, covering the one Feature — the Admin's own extension/reopen Worklist — that ISN'T on this list, does)." ;
+    oa:hasTarget staff:Req_10_3_1, staff:Req_10_8_1, staff:Req_10_8_2, staff:Req_10_9_1, staff:Req_10_10_1, staff:Req_10_11_1, staff:Req_10_12_1, staff:Req_10_13_1, staff:Req_10_13_2, staff:Req_10_15_1 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.14: Queue Management (API/File Uploads) — explicitly
+# declared out of scope by the FDD itself
+#################################################################
+
+staff:Req_10_14 a sd:Requirement ;
+    sd:requirementId "10.14" ;
+    sd:title "Queue management for API/file uploads — declined as an admin capability" ;
+    sd:statement "(No user-story stem — the FDD's own rationale for excluding this Feature.) 'The requirements for the Staffing Admin to manage file queues (e.g., resetting \"stuck\" files) and toggle upload availability should be considered outside scope of an administrative task. These functions are considered as technical management and maintenance tasks to be handled by developers. All functionality regarding uploading the files as well as reviewing and verifying the uploaded files has been covered within the user stories associated with other Features in this Epic.'" ;
+    sd:notes "The Business Specifications prose (and HLS row 5) originally described this in detail (view file queues with Name/Type/Size/Collection/Input Method/Status/Organization/User, download completed files, view error details, reset/reprocess a stuck file, delete files, filter, view audit details, API configuration) — a full admin surface staff:Perm_AdminViewFileQueues and staff:Perm_AdminResetFileProcessing already name (both, per staffing-permissions.ttl's own note, with no matching sd:ApiOperation, consistent with the FDD's own decision that this belongs to developers, not an admin UI). Comment 12 (Thiele: 'Suggestion: Reset/reprocess a file in the queue already in progress. The reason why we're resetting doesn't really matter.') is an early-draft refinement of the since-removed scope, kept only for context." ;
+    sd:definedIn staff:Fdd10Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Feature 10.14 (file/API queue management: viewing queues, resetting stuck files, deleting queued files, toggling upload availability) is explicitly and deliberately declined by the FDD itself as an ADMIN capability — 'outside scope of an administrative task... to be handled by developers.' A real decision, not a gap: staff:Perm_AdminViewFileQueues and staff:Perm_AdminResetFileProcessing remain in staffing-permissions.ttl (carried forward from the earlier permissions catalog) but are now understood to describe a developer/operations tool, not a product feature to be built for the Staffing Data Administrator persona." ;
+    oa:hasTarget staff:Req_10_14 ; sd:status "resolved" ; sd:definedIn staff:Fdd10Doc .
+
+staff:Question_NoBulkUploadSurfaceConfirmedAgain a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 10.14's own dismissal text asserts that file/API upload functionality 'has been covered within the user stories associated with other Features in this Epic' — but the sibling FDD passes reviewed concurrently in this same wave (18-roster-of-positions, 21-roster-of-employees, 22-employee-assignment-details) each independently found the opposite: staffing-api.ttl has NO bulk-file-upload or batch-API ingestion sd:ApiOperation anywhere for ANY Staffing aggregate (Position, Employee, or Assignment) — every modeled operation across staffing-api.ttl is a single-record REST call, despite staffing-domain.md's own methods list and this FDD's own top-level Description both explicitly promising 'online submission, file extracts from local data systems, and API services.' Three independent FDDs (18, 21, 22) converging on the identical finding, now joined by this FDD's own Feature 10.14 text asserting coverage that doesn't exist, raises this from 'a gap in one document' to a confirmed, systemic absence across the whole Staffing bounded context — the same conclusion staff:Perm_EmployeeRosterBulkUpload's own pre-existing note in staffing-permissions.ttl already flagged in isolation ('No matching bulk-upload endpoint exists anywhere in staffing-api.yml'), now corroborated four times over from four different FDDs. Recommended for GAPS.md as a cross-cutting Staffing finding rather than a per-FDD note." ;
+    oa:hasTarget staff:Req_10_14, staff:Fdd10Doc ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.15: Data Closeout and Processing
+#################################################################
+
+staff:Req_10_15_1 a sd:UserStory ;
+    sd:requirementId "10.15.1" ;
+    sd:title "Configure finalized-data closeout processing" ;
+    sd:statement "As a Staffing Data Administrator, I want to manage the system configurations needed to process finalized data, so that data is correctly moved to the longitudinal database." ;
+    sd:acceptanceCriteria "Configure immediate processing to populate the longitudinal database (CEPI CEDS Data Warehouse) upon collection-set finalization; schedule some or all data closeout processing for a future date; store audit details (Modified By/On) for closeout-configuration changes." ;
+    sd:satisfiedBy staff:BatchJob_CollectionToWarehousePipeline ;
+    sd:notes "Good conceptual match: staff:BatchJob_CollectionToWarehousePipeline's own description cites this exact Feature 10.15 and models the CollectionCertified-triggered extract-to-warehouse pipeline. PARTIAL, and the BatchJob's own sd:errorScenarios note says so directly: 'FDD 10 itself flags this as incomplete... full extract vs. incremental and retry/failure handling are named as open technical questions rather than resolved.' The ADMIN-FACING configuration surface this story specifically asks for (an admin choosing immediate-vs-scheduled-future-date processing per collection) is not itself a distinct sd:ApiOperation anywhere — the BatchJob's own sd:schedule property already flags the scheduling mechanics as staff:Question_WarehousePipelineMechanics (staffing-technical-design.ttl), which this story's own AC independently corroborates rather than introduces new information beyond." ;
+    sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Feature 10.16: Historical Data Connections, Conversions —
+# deliberately emptied out via a since-resolved comment thread (see header note)
+#################################################################
+
+staff:Req_10_16 a sd:Requirement ;
+    sd:requirementId "10.16" ;
+    sd:title "Historical data connections/conversions — folded into other features' ACs" ;
+    sd:statement "(Recovered from document.xml, not visible in the rendered .md — see header note.) 'All user stories regarding the Staffing Admin users' ability to view the historical data relating to this domain can be found within the user stories associated with other features in this FDD.'" ;
+    sd:notes "Comment thread (Groom, 2026-03-16: 'Does this need to be defined within this story? In 13.2 (EPP Admin) Historical data is covered by specific feature development... want to ensure the difference in user story approach is accurate' -> Doherty/Sinha, 2026-04-10: 'this is indeed a redundant user story, as the requirements for Data Migration and Auditing are already comprehensively captured under Epic 32 - Technology, Standards, and Auditing. Also, the processes for viewing that data are already addressed within the Acceptance Criteria of other related user stories within this Epic. This has been removed.') documents a full user story that WAS here being deliberately deleted during review, in favor of the Assumptions section's own 'The system will allow users to view historical/legacy data within MiEdWorkforce' already being satisfied piecemeal by other stories' own ACs (several of the table-view stories above — 10.1.1, 10.2.1, 10.8.2, 10.9's/10.10's collection-history views — already describe viewing prior versions/status). Modeled as rejected rather than a gap: a real, documented decision, not an oversight." ;
+    sd:definedIn staff:Fdd10Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Feature 10.16's own user story content was deliberately removed during review (Doherty/Sinha comment, 2026-04-10) as redundant with Epic 32 (Technology, Standards, and Auditing) and with historical-data-viewing ACs already present in other Features of this same FDD. FDD 32 remains unconverted in mied-v3 as of this pass (same status FDD 02's own review already flagged it as an unconfirmed dependency) — noted for GAPS.md, not modeled as a Staffing-side Requirement gap since the FDD itself says the content belongs elsewhere, not that it's missing entirely." ;
+    oa:hasTarget staff:Req_10_16 ; sd:status "resolved" ; sd:definedIn staff:Fdd10Doc .
+
+#################################################################
+# Requirements — Business-Specification content never promoted to Addendum numbering
+# (same discrepancy shape as FDD 29's Question_AddendumOmitsThreeBizSpecFeatures)
+#################################################################
+
+staff:Req_10_BizSpec_EmploymentCollectionWorklist a sd:Requirement ;
+    sd:requirementId "10.BizSpec.EmploymentWorklist" ;
+    sd:title "Configure the Employment Data Collection Worklist" ;
+    sd:statement "(No user-story stem, no Addendum feature number — Business Specifications prose only, also present as HLS row 12.) On an administrative page, with audit details stored, the Staffing Data Administrator will manage the 'Employment Data Collection Worklist' by entity type and collection." ;
+    sd:acceptanceCriteria "Set worklist availability; set role-based access level; set task requirement (required/optional/conditional); set task deadline; show task progress with visual complete/incomplete indicators; gate certification eligibility on pre-certification task completion; reset the worklist each required collection period; audit details stored." ;
+    sd:notes "No satisfiedBy: no 'collection worklist' concept (a configurable, per-collection checklist of tasks gating certification, distinct from the Collection aggregate's own certification-readiness invariants) exists anywhere in staffing-domain.ttl. staff:CollectionAggregate's invariants ('all pre-certification tasks must be complete before certification allowed') assume such a task list exists but nothing defines what the tasks ARE or how an admin configures them — this story is the missing definitional piece. Genuinely never promoted to the Addendum's own 10.x numbering despite having its own HLS row (12) and a full bullet list in the prose — see Question_AddendumOmitsBizSpecFeatures." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_BizSpec_DataQualityAdmin a sd:Requirement ;
+    sd:requirementId "10.BizSpec.DataQualityAdmin" ;
+    sd:title "Configure Data Quality Review and Processing for staffing collections" ;
+    sd:statement "(No user-story stem, no Addendum feature number — Business Specifications prose only, also present as HLS row 13.) On an administrative page, with audit details stored, the Staffing Data Admin will manage the Data Quality Review and Processing related to the Staffing Data Collections, used by data submitters in Data Quality Review & Processing 19 & 20." ;
+    sd:acceptanceCriteria "Define DQ reports available on the DQ Dashboard (by Collection, User Roles, Status, Severity, Alerts/templates used); view/manage user support resources for DQ review; schedule DQ processing by Date or Event; schedule business-rule-enforcement validation by Date or Event." ;
+    sd:notes "Out of scope for THIS review, not a Staffing-side gap: FDD 10's own Dependencies section names 'Data Quality Review & Processing (19.0)' as the owning epic for this exact capability, and FDD 19/20 was reviewed concurrently in this same wave (fdd-review/19-20-data-quality-review-and-processing/) — deferred there rather than duplicated or guessed at here, consistent with this FDD's own explicit cross-reference. Never promoted to the Addendum's own numbering (no 10.x feature number, despite its own HLS row 13 and full bullet list) — folded into Question_AddendumOmitsBizSpecFeatures below alongside the Worklist omission, though its resolution (defer to 19/20) differs from that one's (genuine gap)." ;
+    sd:definedIn staff:Fdd10Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Data Quality Review & Processing admin configuration (staff:Req_10_BizSpec_DataQualityAdmin) is explicitly owned by FDD 19/20 per this FDD's own Dependencies section; reviewed separately in that concurrent pass, not duplicated here." ;
+    oa:hasTarget staff:Req_10_BizSpec_DataQualityAdmin ; sd:status "resolved" ; sd:definedIn staff:Fdd10Doc .
+
+staff:Req_10_BizSpec_AdminWorklist a sd:UserStory ;
+    sd:requirementId "10.BizSpec.AdminWorklist" ;
+    sd:title "Staffing Data Administrator's own processing worklist" ;
+    sd:statement "(No user-story stem, no Addendum feature number — Business Specifications prose only, also present as HLS row 23.) The Staffing Data Admin will have a Worklist that includes requests submitted by system users for processing, including: Collection extension, Reopen requests, Etc." ;
+    sd:acceptanceCriteria "Worklist surfaces submitted Collection Exception requests (extension) and reopen requests for admin action." ;
+    sd:satisfiedBy staff:Seq_RequestCollectionException, staff:Op_ApproveCollectionException, staff:Op_DenyCollectionException, staff:Perm_AdminProcessExceptions ;
+    sd:notes "The one Business-Specification item omitted from the Addendum that turns out to be FULLY satisfied, not a gap: staffing's own Collection Exception workflow (submit -> staff:Perm_AdminProcessExceptions-gated approve/deny) is exactly this Worklist's 'Collection extension' item. 'Reopen requests' and 'Etc.' beyond exception approval have no distinct backing (no separate reopen-request aggregate/operation exists; staff:CollectionState_Reopened is a state on Collection itself, reachable structurally but with no admin-facing reopen-REQUEST workflow of its own modeled) — a minor partial-coverage note, not a separate Annotation given how directly the core item (Collection extension) matches." ;
+    sd:definedIn staff:Fdd10Doc .
+
+staff:Question_AddendumOmitsBizSpecFeatures a sd:Annotation ;
+    oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Three real capabilities described at length in the Business Specifications prose, each with its own HLS table row (12, 13, 23) and full bullet list of admin behaviors, were never assigned an Addendum feature number at all (the Addendum jumps from Feature 10.1 straight through 10.16 with no slot for the Employment Data Collection Worklist, Data Quality Review & Processing admin, or the Staffing Data Admin's own request-processing Worklist). Same discrepancy shape the FDD 29 pass found and named for its own document (Question_AddendumOmitsThreeBizSpecFeatures there) — apparently a recurring pattern across this FDD suite's Addendum-drafting process, not a one-off. Modeled here as staff:Req_10_BizSpec_EmploymentCollectionWorklist (genuine gap), staff:Req_10_BizSpec_DataQualityAdmin (out-of-scope, deferred to FDD 19/20), and staff:Req_10_BizSpec_AdminWorklist (satisfied) — three different resolutions for three items that share the same drafting omission." ;
+    oa:hasTarget staff:Req_10_BizSpec_EmploymentCollectionWorklist, staff:Req_10_BizSpec_DataQualityAdmin, staff:Req_10_BizSpec_AdminWorklist ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn staff:Fdd10Doc .

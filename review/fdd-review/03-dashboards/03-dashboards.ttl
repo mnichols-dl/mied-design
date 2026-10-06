@@ -1,0 +1,306 @@
+# FDD 03 review — "3 - Dashboard" (Features 3.0-3.7, MiEdWorkforce Dashboards).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against dash:DashboardsContext, which
+# — per abox/mied-v3/CONVENTIONS.md's stub registry and re-confirmed by this pass (grepped
+# `dash:` across the whole abox/mied-v3 tree before writing anything below) — remains a
+# minimal stub (`sd:status "stub"`, declared centrally in mied-v3/solution.ttl) with NO
+# Aggregate/DomainEntity/ApiOperation/Sequence/Permission of its own anywhere in the repo.
+# The only other places `dash:DashboardsContext` is referenced are two other FDDs'
+# out-of-scope Annotations (cred:Req_29_1_8, cred:Req_11_7) deferring their own
+# landing-page/dashboard-preference concerns HERE — this pass is where those deferrals
+# finally get checked against a real target, and confirms there is nothing to find: this
+# file is therefore almost entirely coverage-gap Annotations, not satisfiedBy links, by
+# construction of the project's own stub registry, not from a shortfall in this review.
+# Two nodes in this file do get real satisfiedBy links, into comm: (Communications, a real,
+# already-converted domain) — see Req_03_BizSpec_AlertsInbox below — so this file is NOT
+# loadable standalone; communications-capability.ttl and communications-sequences.ttl must
+# be loaded alongside it for validation.
+#
+# Source documents found in this FDD folder, and how each was used:
+# - "3 - Dashboard.docx" (subtitle "Dashboards (3.1-3.7)") is the actual FDD and the only
+#   one of the three documents in this folder containing numbered stories or an Addendum.
+#   Read the .md sibling first, then unzipped the .docx: no word/media folder exists at all
+#   (zero embedded images/wireframes in this FDD — unlike every other FDD reviewed so far
+#   in this session, which all had at least a handful). 5 comments total (comments.xml +
+#   commentsExtended.xml's w15:paraIdParent thread links), 1 w:ins/1 w:del tracked-change
+#   pair. All five comments and the one tracked change are folded into the relevant
+#   Requirement's own sd:notes below (none rose to a standalone Annotation on its own —
+#   the tracked-change resolution IS the standalone finding worth surfacing, on Req_03_0_7).
+# - "Dashboard.docx" (no .md-visible title; body opens "From 28 Professional Learning –
+#   Admin document") and "Worklist, Dashboard.docx" (actual title "Business Specifications
+#   Title (#27.2 Educator Dashboard, Worklist)") are NOT part of this FDD at all — they are
+#   supplementary/reference material from Professional Learning's own FDD 27/28 filed
+#   alongside FDD 03's own docx, not a second or third numbered FDD to ingest here. This is
+#   not an assumption: "3 - Dashboard.docx" itself has a "References" section pointing to
+#   "Worklist, Dashboard" that carries a live review comment from Groom (CEPI) — "These
+#   links were helpful for internal discussions and not relevant" — i.e. the FDD's own
+#   reviewer explicitly disclaims them as not load-bearing for FDD 03. Neither document has
+#   comments.xml or word/media (no comments, no wireframes, checked directly) and neither
+#   contains any numbered user story of its own — "Dashboard.docx" is unnumbered prose
+#   (an MDE OEE dashboard-card notification list) and "Worklist, Dashboard.docx" pairs
+#   unnumbered Educator-Dashboard/Worklist prose with a "HIGH LEVEL SCENARIOS (PENDING)"
+#   table that is itself boilerplate about Public Credential Search, unrelated to worklist
+#   or dashboard content — evidently a copy-pasted template fragment, not real FDD-27.2
+#   content. Per CONVENTIONS.md's "numbered user story" unit and the reviewer's own
+#   disclaimer, neither produces Requirement nodes here. Their substantive content (a much
+#   more detailed, PL-specific dashboard-card/notification-type catalog and a PL-specific
+#   worklist concept) properly belongs to Professional Learning's own FDD 27/28 review
+#   scope, not Dashboards' — flagged in this pass's closing report for GAPS.md rather than
+#   modeled as if it were FDD 03's own content.
+#
+# Structure of "3 - Dashboard.docx" itself, and what's used as the Requirement unit:
+# - An "Assumptions"/"Dependencies" section lists 29 separate dependency lines, essentially
+#   one per other FDD/Business Specification in the whole MiEdWorkforce catalog — Dashboards
+#   is architecturally the most cross-cutting FDD reviewed in this session so far (every
+#   other domain's own "Dashboard" feature — 10.6, 11.7, 13.5, 14.5, 19.3 — is named as
+#   feeding this one). Not modeled as sd:Dependency RelationshipNodes (that pattern is for
+#   one bounded context's dependency on another's real, converted content; this FDD's own
+#   list is a document-level "everything eventually touches the dashboard" statement, most
+#   of whose 29 targets aren't converted at all) — summarized here in prose instead.
+# - A "Business Specifications" section (unnumbered prose) describes the dashboard's general
+#   shape (role/group/function/user-level tiles, add/remove/resize, an alerts-and-
+#   notifications summary with a linked inbox, an upcoming-reports summary, multi-role
+#   handling, admin-defined presets, a Personnel Search tile, and tile auto-refresh).
+# - A "HIGH LEVEL SCENARIOS" paraphrase table is NOT present in this particular FDD (unlike
+#   most others reviewed this session) — there is nothing to skip on that account here.
+# - An "Addendum" gives the FDD's only real numbered stories: 3.0.1 through 3.0.7 (the
+#   dashboard framework itself — display-on-login, section/widget customization, saved
+#   preferences, auto-refresh), modeled below as sd:UserStory (all seven are in genuine "As
+#   a/an ... I need/want ... so that ..." form). Features 3.1 through 3.7 (one per user
+#   role/audience: School District, Educational Staff, ISD/Auditor, EPP, PL Coordinator,
+#   Credential Admin, Staffing Admin) each carry only a single placeholder sentence — no
+#   numbered sub-stories, no field lists, no wireframes — five of the seven explicitly
+#   deferring their own role-specific widget catalog to that role's own domain FDD (19.3,
+#   13.5, 14.5, 11.7, 10.6), the other two (3.1, 3.2) stating outright that the catalog is
+#   simply "to be determined" with no cross-reference at all. Modeled below as seven plain
+#   sd:Requirement nodes (Req_03_1 - Req_03_7, not UserStory — none is narrative) since each
+#   is individually citable and, for the five with cross-references, individually
+#   accountable via its own out-of-scope Annotation.
+# - Several substantive Business-Specifications-section capabilities were never promoted
+#   into the Addendum's 3.0.x numbering at all — following the precedent the FDD 29 and
+#   FDD 02 passes both already set for their own never-promoted Business-Specification
+#   content, these are modeled below with synthetic dash:Req_03_BizSpec_* IDs rather than
+#   silently dropped: the alerts/notifications summary + inbox, the upcoming-reports
+#   summary, System-Admin-authored preset dashboards, and the Personnel Search tile.
+#
+# The single most notable finding of this pass: Feature 3.6 ("Dashboard - Credential
+# admin") defers its own widget catalog to "feature 11.7 Educator Credentialing –
+# Dashboard" — but the FDD 11/16 pass already reviewed 11.7 in this same session and found
+# it does the exact opposite: cred:Req_11_7's own Annotation (11-16-educator-credentialing/
+# 11-16-educator-credentialing.ttl) defers Credentialing's own dashboard content HERE, to
+# Business Specification #3 (Dashboards), citing a review comment ("This requirement should
+# be moved to #3 dashboards"). Neither FDD actually specifies the Credential-Admin
+# dashboard's own content — each one's own text points at the other. See
+# Question_CircularDashboardContentDeferral below (targets Req_03_6).
+#
+# Wireframes: none exist for this FDD (see above) — no wireframes/ subfolder is created.
+#
+# Validation note: dash: mints no classes of its own in this file beyond Requirement/
+# UserStory/Annotation instances (sd:definedIn dash:Fdd03Doc) — every satisfiedBy target
+# that does exist points into comm: (already real). Load: ontology, mied-v3/solution.ttl,
+# communications-capability.ttl, communications-sequences.ttl, this file.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix iam:   <urn:solutiondesign:instance:iam:> .
+@prefix rpt:   <urn:solutiondesign:instance:reporting:> .
+
+#################################################################
+# Source document
+#################################################################
+
+dash:Fdd03Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/03 - Dashboards/3 - Dashboard.docx" ;
+    sd:notes "Covers Features 3.0(Addendum baseline)-3.7 (the document's own subtitle: 'Dashboards (3.1-3.7)'). Approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/01/2025 per the Review & Sign Offs table, but comments.xml carries entries dated into 2026-03 (Caswell, DTMB-Contractor) — same 'kept revising after nominal signoff' pattern already noted in the FDD 29 review's header, not resolved here beyond flagging it. The folder's other two .docx files ('Dashboard.docx', 'Worklist, Dashboard.docx') are Professional Learning reference material, not part of this FDD — see this file's header comment." .
+
+#################################################################
+# Requirements — Addendum baseline (Features 3.1-3.7 apply to all of them)
+#################################################################
+
+dash:Req_03_0_1 a sd:UserStory ;
+    sd:requirementId "3.0.1" ;
+    sd:title "Dashboard displays immediately upon login with role-based summary" ;
+    sd:statement "As an authorized MiEdWorkforce User, I need the dashboard to display immediately upon login so I have an initial summary of my essential tasks." ;
+    sd:acceptanceCriteria "The system identifies the user's assigned role (e.g., System Administrator, Staffing Administrator, or Credentialing Administrator). The system immediately directs the user to the Dashboard, which serves as the system home page. The system populates dynamic tiles and summaries specific to that role, including progress tracking for tasks and statuses of pending applications. The dashboard must present an initial summary of tasks relevant to the user's role, after submitting any required information." ;
+    sd:notes "No satisfiedBy: no dashboard-rendering, tile-population, or post-login-routing concept exists anywhere in the graph outside this stub file. Comment thread on the 'identifies the user's assigned role' clause (Groom, 351671444: 'Is this where we would need to define that users can have multiple roles and will need ability to set default views, and ability to see tiles across multiple roles?' -> Caswell, 1445230173: 'Yes, this is the place to incorporate that functionality. The handling of multiple roles is also defined under Epic 1 User Mgmt. It was discussed that users would toggle between roles and that the dashboard would update to reflect that user's context.') confirms multi-role toggle behavior belongs here, feeding into Req_03_0_6's own 'switch roles' criterion, and cross-references iam (Epic 1/FDD 01) for the role-holding side. iam:RoleDefinitionAggregate/iam:UserAuthorizationAggregate (already real, mied-v3/iam) model WHICH roles a user holds and WHAT they permit, but neither iam nor anything else models the act of selecting/toggling a current active role for dashboard-rendering purposes or the rendering itself — noted as adjacent infrastructure, not asserted as satisfiedBy since it doesn't actually carry this story out." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Dashboard rendering-on-login (identify role, route to dashboard, populate role-specific tiles/summaries) has no corresponding Aggregate, ApiOperation, or Sequence anywhere in the mied-v3 graph. This is the same landing-page/dashboard concern that BOTH cred:Req_11_7 (FDD 11/16) and cred:Req_29_1_8 (FDD 29) already deferred here as out-of-scope for Credentialing — this pass is the first to actually check the target those deferrals point at, and confirms it is empty. Genuine, foundational, whole-capability gap." ;
+    oa:hasTarget dash:Req_03_0_1 ; sd:impact "H" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_2 a sd:UserStory ;
+    sd:requirementId "3.0.2" ;
+    sd:title "Customize dashboard by adding/removing/modifying sections" ;
+    sd:statement "As an authorized MiEdWorkforce User, I need to be able to customize my dashboard \"sections\" by adding, removing, and modifying \"sections\" within the dashboard layout, so that I can organize my workspace to highlight the most critical visualizations and task management tools for my daily workflow." ;
+    sd:acceptanceCriteria "The user enters the customization mode of the dashboard. A predefined list of available section layouts will display. The user is able to drag predefined section layouts onto the dashboard." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_3 a sd:UserStory ;
+    sd:requirementId "3.0.3" ;
+    sd:title "Remove or modify dashboard sections via a Kebab menu" ;
+    sd:statement "As an authorized MiEdWorkforce User, I need to be able to customize my dashboard \"sections\" by removing and modifying \"widgets\" within the \"sections\" layout, so that I can organize my workspace to highlight the most critical visualizations and task management tools for my daily workflow." ;
+    sd:acceptanceCriteria "The user enters the customization mode of the dashboard. The user selects the Kebab Menu (three dots) within the section that needs to be edited or removed. A menu will pop up with the options to either \"Edit Layout Section\" or \"Remove Section\"." ;
+    sd:notes "Story's own stem text ('removing and modifying \"widgets\"') and its acceptance criteria (which describe editing/removing a SECTION, not a widget) don't match each other — likely a copy/paste of 3.0.5's stem onto 3.0.3's slot; not corrected here per this project's 'quote as-is, don't smooth over' convention, but worth flagging since it could confuse a reader expecting 3.0.3 to be about widgets specifically." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_4 a sd:UserStory ;
+    sd:requirementId "3.0.4" ;
+    sd:title "Add predefined widgets to a dashboard section" ;
+    sd:statement "As a MiEdWorkforce User, I need to customize my dashboard by adding predefined widgets and visualizations, so that I can view the specific data summaries and task management tools relevant to my daily workflow." ;
+    sd:acceptanceCriteria "The user is able to add a widget by selecting \"Add Widget\" within a section. The system will offer predefined widgets for selection. The user must have the ability to add predefined widgets. Mandatory tiles, such as those displaying action items and upcoming deadlines, must be protected from removal." ;
+    sd:notes "'Mandatory tiles ... protected from removal' is a business rule embedded in this story's own AC, not promoted to a standalone sd:BusinessRule — no Aggregate exists yet for it to enforcedBy/appliesTo against, so promoting it now would be a rule pointing at nothing; left as prose here per 'prefer honest gaps over fabrication'." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_5 a sd:UserStory ;
+    sd:requirementId "3.0.5" ;
+    sd:title "Remove or modify predefined widgets via a Kebab menu" ;
+    sd:statement "As a MiEdWorkforce User, I need to customize my dashboard by removing, and modifying predefined widgets and visualizations, so that I can view the specific data summaries and task management tools relevant to my daily workflow." ;
+    sd:acceptanceCriteria "The user selects the Kebab Menu (three dots) within the widget that needs to be edited or removed. A menu will pop up with the options to either \"Edit Widget\" or \"Remove Widget\"." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Dashboard layout/section/widget customization (add, remove, edit, drag-and-drop, protected 'mandatory' tiles) has no corresponding domain model anywhere in the graph. One coherent capability described across four stories; grouped into a single Annotation rather than four near-identical ones, consistent with CONVENTIONS.md's dedupe guidance for closely-related repeated findings." ;
+    oa:hasTarget dash:Req_03_0_2, dash:Req_03_0_3, dash:Req_03_0_4, dash:Req_03_0_5 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_6 a sd:UserStory ;
+    sd:requirementId "3.0.6" ;
+    sd:title "Persist and re-apply dashboard preferences per login and per role" ;
+    sd:statement "As a MiEdWorkforce User, I need my dashboard preferences (layout and tile selection) to be saved and re-applied every time I log in or switch roles." ;
+    sd:acceptanceCriteria "The system must save the dashboard preferences and customizations defined by the user. The system must automatically populate the dashboard using saved preferences and customizations upon log in. If the user toggles between roles (if they possess multiple roles), the system must apply the saved preferences specific to the newly selected role." ;
+    sd:notes "This is the exact capability BOTH cred:Req_29_1_8 (FDD 29, 'Persistent certificate dashboard state') and cred:Req_11_7 (FDD 11/16) already pointed at when deferring their own dashboard-preference concerns as out-of-scope for Credentialing. Confirms, on the receiving end, that the deferral target is genuinely empty — not a documentation lag on Credentialing's side." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No per-user dashboard-preference/customization persistence entity or endpoint exists anywhere in the graph (the same gap two OTHER FDDs' own out-of-scope Annotations already assumed would be filled here: cred:Req_29_1_8, cred:Req_11_7). Independently re-confirmed by a third, direct source — raises confidence this is a real, permanent, whole-capability gap rather than a one-off omission." ;
+    oa:hasTarget dash:Req_03_0_6 ; sd:impact "H" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_0_7 a sd:UserStory ;
+    sd:requirementId "3.0.7" ;
+    sd:title "Automatic dashboard tile refresh" ;
+    sd:statement "As a MiEdWorkforce User, I need to have my dashboard tiles automatically refresh upon navigating to the dashboard and when new data is available." ;
+    sd:acceptanceCriteria "The dashboard tiles must provide the option to refresh automatically at a set interval. The system must automatically refresh dashboard tiles at a standardized, system-defined interval without requiring manual administrative configuration." ;
+    sd:notes "AC's second sentence is the RESULT of a live tracked-change edit, not the document's original text: the original read '...at a set interval. The system must allow administrators to define the set interval for automatic tile refreshing (e.g., 15 minutes).' — Groom's comment on that exact clause (1065075332: 'This should be a set standard without admin control to set interval.') led Caswell to delete it (w:del, 2026-03-05) and insert the current 'standardized, system-defined interval without requiring manual administrative configuration' text (w:ins, same timestamp; a second comment, 863305758, 'Revised. Please resolve this comment if nothing further is needed.', confirms the edit was the intended resolution) — even though neither comment thread was formally marked done in commentsExtended.xml. Quoted here as the POST-edit (current) text, which is also what the .md plain-text extraction garbles ('The system must' then truncates, having apparently rendered the deleted run and dropped the inserted one) — read from document.xml directly to get this right. Also note: this final text now mildly CONTRADICTS the FDD's own Business Specifications section, which still says 'an available tile to refresh automatically at a set interval (e.g. 15 minutes) OR refreshing upon navigation' (implying a user- or admin-configurable interval) — the prose section was never updated to match the Addendum story's own tracked-change revision. Not modeled as a discrepancy Annotation given how minor and clearly-resolved-in-intent it is; noted here instead." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "No tile/widget auto-refresh mechanism (scheduled or navigation-triggered) exists anywhere in the graph." ;
+    oa:hasTarget dash:Req_03_0_7 ; sd:impact "L" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+#################################################################
+# Requirements — Features 3.1-3.7 (per-role dashboard content, each a single
+# placeholder sentence in the source document; no sub-numbered stories, no wireframes)
+#################################################################
+
+dash:Req_03_1 a sd:Requirement ;
+    sd:requirementId "3.1" ;
+    sd:title "Dashboard - School District" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_2 a sd:Requirement ;
+    sd:requirementId "3.2" ;
+    sd:title "Dashboard - Educational Staff" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 3.1 (School District) and 3.2 (Educational Staff) are the only two of the seven per-role dashboard features with no cross-reference to another FDD's own feature number at all — the FDD's OWN text calls the widget catalog 'to be determined' with no pointer anywhere. This is a gap in both the source specification's own maturity and the graph, not just the graph; grouped as one Annotation since both are the identical 'TBD, no pointer' situation." ;
+    oa:hasTarget dash:Req_03_1, dash:Req_03_2 ; sd:impact "L" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_3 a sd:Requirement ;
+    sd:requirementId "3.3" ;
+    sd:title "Dashboard - ISD/Auditor" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined. Additional user stories, as they relate to dashboards relevant to this feature, can be found under feature 19.3 Data Quality Review & Processing – Dashboard." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "ISD/Auditor dashboard content is explicitly deferred, by this FDD's own text, to Feature 19.3 (Data Quality Review & Processing – Dashboard). FDD 19 has not been reviewed in this session and dq:DataQualityContext is itself a stub-only bounded context per mied-v3/CONVENTIONS.md's registry — so the deferral target is currently just as empty as Dashboards' own stub, but the accounting responsibility for this Requirement belongs to whichever future pass reviews FDD 19, not to this one." ;
+    oa:hasTarget dash:Req_03_3 ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_4 a sd:Requirement ;
+    sd:requirementId "3.4" ;
+    sd:title "Dashboard - Educational Preparation Providers" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined. Additional user stories, as they relate to dashboards relevant to this feature, can be found under feature 13.5 Educator Preparation Providers – Dashboard." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "EPP dashboard content is explicitly deferred, by this FDD's own text, to Feature 13.5 (Educator Preparation Providers – Dashboard), owned by epp: (a real, already-converted domain). FDD 13 has not yet been reviewed in this session, so whether epp-domain.ttl/epp-sequences.ttl already model anything answering 13.5 is unconfirmed — accounting responsibility belongs to that future pass." ;
+    oa:hasTarget dash:Req_03_4 ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_5 a sd:Requirement ;
+    sd:requirementId "3.5" ;
+    sd:title "Dashboard - Professional Learning Coordinator" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined. Additional user stories, as they relate to dashboards relevant to this feature, can be found under feature 14.5 Professional Learning – Dashboard." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "PL Coordinator dashboard content is explicitly deferred, by this FDD's own text, to Feature 14.5 (Professional Learning – Dashboard), owned by plrn: (a real, already-converted domain). FDD 14 has not yet been reviewed in this session — accounting responsibility belongs to that future pass." ;
+    oa:hasTarget dash:Req_03_5 ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_6 a sd:Requirement ;
+    sd:requirementId "3.6" ;
+    sd:title "Dashboard - Credential admin" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined. Additional user stories, as they relate to dashboards relevant to this feature, can be found under feature 11.7 Educator Credentialing – Dashboard." ;
+    sd:notes "See Question_CircularDashboardContentDeferral below — 11.7 does not actually contain this content; it points back here." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "CIRCULAR DEFERRAL, not a simple pointer: Feature 3.6 defers the Credential-Admin dashboard widget catalog to 'feature 11.7 Educator Credentialing – Dashboard' — but the FDD 11/16 pass (this same session, fdd-review/11-16-educator-credentialing/11-16-educator-credentialing.ttl) already reviewed 11.7 and found the exact opposite: its own out-of-scope Annotation on cred:Req_11_7 defers Credentialing's dashboard content HERE, to 'Business Specification #3 (Dashboards)', citing a review comment ('This requirement should be moved to #3 dashboards'). Neither FDD's own text actually specifies the Credential-Admin dashboard's widget catalog — each one's Addendum entry just names the other as the source of truth. Net effect is functionally identical to a coverage gap (nothing anywhere defines this content) but the MECHANISM — two FDDs each believing the other already covers it — is the more actionable finding for the client team to resolve, hence 'discrepancy' rather than 'coverage-gap' here." ;
+    oa:hasTarget dash:Req_03_6 ; sd:impact "M" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_7 a sd:Requirement ;
+    sd:requirementId "3.7" ;
+    sd:title "Dashboard - Staffing admin" ;
+    sd:statement "While the framework for widget selection is defined, the specific catalog of available predefined widgets is to be determined. Additional user stories, as they relate to dashboards relevant to this feature, can be found under feature 10.6 Data Collection & Compliance - Staffing – Dashboard." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Staffing-Admin dashboard content is explicitly deferred, by this FDD's own text, to Feature 10.6 (Data Collection & Compliance - Staffing – Dashboard), owned by staff: (a real, already-converted domain). FDD 10 has not yet been reviewed in this session — accounting responsibility belongs to that future pass." ;
+    oa:hasTarget dash:Req_03_7 ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .
+
+#################################################################
+# Requirements — Business Specifications capabilities never promoted into the
+# Addendum's own 3.0.x/3.x numbering (synthetic IDs, same precedent as FDD 29's
+# Req_29_BizSpec_* and FDD 02's Req_02_BizSpec_*)
+#################################################################
+
+dash:Req_03_BizSpec_AlertsInbox a sd:Requirement ;
+    sd:requirementId "3.BizSpec.Alerts" ;
+    sd:title "Dashboard alerts/notifications summary and linked inbox" ;
+    sd:statement "(Business Specifications prose, never promoted to a numbered Addendum story.) The dashboard will display a summary of all alerts and notifications for a specified MiEdWorkforce user, by role, and contain a hyperlink to navigate the user to an Alerts, Emails, and Notifications Inbox." ;
+    sd:acceptanceCriteria "Message preview with Sender, Date Received, Un/Read indicator, and Subject; ability to select and view an entire message; ability to select message(s) to mark as Un/Read; ability to select message(s) to delete; display aging of unread messages based on a specified timeframe (defined by MiEdWorkforce System Administrator, Credentialing Administrator, or Staffing Administrator); Alerts examples given are task-assignment and expiration-window reminders (3/1/6 months out), Emails examples are application-confirmation and expiration-reminder emails, Notifications examples are non-critical FYI items." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:Seq_DashboardAlertCreationAndDisplay, comm:Seq_UserResolvesDashboardAlert, comm:Op_ListAlerts ;
+    sd:notes "Real, substantive partial match — communications-capability.ttl's comm:AlertAggregate is explicitly dashboard-targeted (comm:AlertRoleTarget; its own invariants say 'Dashboard alerts persist until explicitly resolved or expired'), and comm:Seq_DashboardAlertCreationAndDisplay/comm:Seq_UserResolvesDashboardAlert plus comm:Op_ListAlerts/Op_CreateAlert/Op_ResolveAlert carry the creation/display/resolve lifecycle end to end. Partial, not full, satisfaction per the 'partial satisfaction is normal' rule: this Requirement's own richer inbox-UX detail — per-message Un/Read toggling, delete, sender/date-received/subject preview fields, and admin-configurable unread-aging display — has no corresponding entity/field/operation in comm:AlertAggregate or its API (which models Draft/Pending/Active/Resolved/Expired states and a single Resolve action, not a message-inbox CRUD/read-state surface). Also: this business-spec item bundles Alerts, Emails, and Notifications as one inbox, but comm:AlertAggregate is Alert-specific — comm:EmailInstanceAggregate is a separate, distinct aggregate for the Email side, and nothing named 'Notification' as a third, distinct concept from Alert exists at all — a minor terminology/structure gap worth a note, not a separate Annotation." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_BizSpec_ReportsSummary a sd:Requirement ;
+    sd:requirementId "3.BizSpec.ReportsSummary" ;
+    sd:title "Dashboard summary of upcoming reports with preview data" ;
+    sd:statement "(Business Specifications prose, never promoted to a numbered Addendum story.) The dashboard will display a summary of upcoming reports and approximate due dates, along with preview data, for a specified MiEdWorkforce user, by role. Examples: MiSchoolData, school index score, aggregate counts of staff." ;
+    sd:notes "No satisfiedBy: reporting-capability.ttl (rpt:, already real, reviewed as FDD 02) models rpt:ReportDefinitionAggregate and an embed-token/Power-BI-link delivery mechanism, but nothing resembling a scheduled/due-date concept, or a report-preview-data summary distinct from opening the full report itself. This is a genuinely new capability neither Dashboards nor Reporting currently models, not merely an integration gap between two existing pieces." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_BizSpec_PresetAdminDesign a sd:Requirement ;
+    sd:requirementId "3.BizSpec.PresetAdmin" ;
+    sd:title "System Administrator authors preset role/function dashboards" ;
+    sd:statement "(Business Specifications prose, never promoted to a numbered Addendum story.) The MiEdWorkforce System Administrator will have the ability to define/design preset dashboards for specific functions or roles, in which the user can customize from the presets for their role. The predefined and designed dashboards will include the major functions of the assigned user role and permissions." ;
+    sd:notes "No satisfiedBy: distinct admin-side authoring capability (design a preset dashboard template per role/function) from the end-user customization already covered by Req_03_0_2 through Req_03_0_5 — no preset/template concept, admin-facing or otherwise, exists in the graph." ;
+    sd:definedIn dash:Fdd03Doc .
+
+dash:Req_03_BizSpec_PersonnelSearchTile a sd:Requirement ;
+    sd:requirementId "3.BizSpec.PersonnelSearchTile" ;
+    sd:title "Personnel Search dashboard tile (SOM/Business users only)" ;
+    sd:statement "(Business Specifications prose, never promoted to a numbered Addendum story.) The dashboard will have an available tile to allow SOM and Business users to perform a Personnel Search as defined in User Management-Identity Management Person/ID Search 15.4. The Personnel Search will not be viewable to MiLogin Citizen users. Upon clicking search, the system will navigate the user to a detailed view to display the results, in a table, with sorting and filtering." ;
+    sd:notes "No satisfiedBy: this FDD's own Dependencies section names 'User Management-Identity Management Person/ID Search 15.4' as the source of the underlying search itself, but iam-domain.ttl/iam-api.ttl (already real, mied-v3/iam) has no Person/ID-search-named Aggregate, ApiOperation, or Sequence at all (checked directly — no match for 'Personnel'/'Person Search'/'Identity Search' anywhere in iam/), and FDD 15 has not been reviewed in this session. Both halves of this Requirement are therefore currently unaccounted-for: the dashboard TILE (Dashboards' own gap) and the search mechanism it embeds (an iam gap, or an iam FDD-15-review gap — unconfirmed which)." ;
+    sd:definedIn dash:Fdd03Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Three Business-Specifications-only capabilities — an upcoming-reports-with-due-dates dashboard summary, System-Admin-authored preset/template dashboards, and a role-gated Personnel Search tile (which also surfaces an apparent gap in iam's own Person/ID Search 15.4, not yet FDD-reviewed) — are each described in enough narrative and structural detail to be real, intended features, but were never promoted into the Addendum's own 3.0.x/3.x numbering and have no domain-model counterpart anywhere in the graph." ;
+    oa:hasTarget dash:Req_03_BizSpec_ReportsSummary, dash:Req_03_BizSpec_PresetAdminDesign, dash:Req_03_BizSpec_PersonnelSearchTile ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn dash:Fdd03Doc .

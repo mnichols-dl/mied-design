@@ -1,0 +1,404 @@
+# FDD 19+20 review — "19 - Data Quality Review & Processing" and "20.0 - Data Quality
+# Review & Processing - Comments & Flags", ingested as ONE combined pass per
+# fdd-review/CONVENTIONS.md's "Cross-document FDD groups" rule: the two are explicit
+# companions (20's own Dependencies section names "19.0" by number as one of the many
+# functional areas its comment/flag framework serves), reviewed and modeled together
+# rather than as two independent files. Requirement IDs are namespaced by their own
+# source doc's numbering scheme (Req_19_<addendum-number> vs. Req_20_<addendum-number>)
+# so the FDD's own citation numbers are preserved unchanged, same as the 11/16 pass did
+# for its own two-number scheme.
+#
+# Both source docs read via their pre-generated .md siblings first, then their .docx
+# unpacked for word/comments.xml (+ commentsExtended.xml thread links) and word/media:
+# - FDD 19's docx has 14 real review comments and 4 embedded screenshots (image1.jpg-
+#   image4.png), all viewed and confirmed (not assumed from document order — image2.png
+#   and image4.png turned out to be the IDENTICAL generic empty "Dashboard / Add Widget"
+#   placeholder mockup reused at two different stories, confirmed by direct comparison,
+#   not merely by the reviewer's own comment 33 saying so). 5 tracked-change deletions,
+#   0 insertions found via a manual w:ins/w:del scan — nothing load-bearing, not
+#   reconstructed as a diff, consistent with prior passes' depth calibration.
+# - FDD 20's docx has NO comments.xml and NO word/media at all (confirmed by unzip listing)
+#   — a genuinely comment-free, wireframe-free document. Its own Addendum is short enough
+#   (4 stories) that no depth-calibration shortcuts were needed for it.
+# - "Workgroup Materials" subfolder next to FDD 19 (three dated meeting-notes PDFs, a
+#   .pptx, and a "REP_DQ Log" .md/.xlsx) and the top-level "Copy of EOY 2024 REP
+#   Comparison and Review - Final" .md/.xlsx sibling were NOT opened as load-bearing
+#   sources — per CONVENTIONS.md's rule to skip .pptx and only treat an .xlsx as
+#   load-bearing when the FDD text itself names it by title as reference data (a Role
+#   Matrix being the one confirmed exception so far). Neither workbook nor the meeting
+#   notes are named anywhere in FDD 19's own visible text; image1.jpg (see Wireframe19_1
+#   below) independently confirms what the "REP" acronym refers to (the CEPI MSDS Early
+#   Childhood "Collection & Data Quality Summary" review page) without needing to open
+#   those files, so the general shape of the omitted material is corroborated, not blind.
+#
+# What this pass IS: 25 addendum-numbered items total (FDD 19: 19.1.1-19.1.9, 19.2.1-
+# 19.2.6, 19.3.1-19.3.3, 19.4.1-19.4.2, plus 19.5 as a single non-narrative rejected
+# Requirement — 21 items; FDD 20: 20.0.1-20.0.4 — 4 items). FDD 19's own "HIGH LEVEL
+# SCENARIOS" table (18 rows) is skipped per CONVENTIONS.md as duplicative paraphrase of
+# the same Business Specifications content the Addendum numbers individually — cross-
+# checked closely enough to confirm it adds no content beyond the Addendum, unlike some
+# earlier FDDs where the HLS table surfaced its own orphaned detail.
+#
+# The central, whole-pass finding: `dq:DataQualityContext` (mied-v3/CONVENTIONS.md's
+# stub registry) is confirmed, by direct grep across abox/mied-v3, to exist ONLY as a
+# minimal cross-domain stub — `dq:DataQualityContext`, `dq:DataQualityIssueDetectedEvent`,
+# and `dq:GetIssuesOperation`, all minted from OTHER domains' own files (communications',
+# specifically) purely so Communications' own event-subscription/API-call references
+# resolve to something typed. No real dq:Aggregate/dq:Sequence/dq:BusinessRule/dq:ApiSpec
+# exists anywhere. Per this file's own investigation (see header notes below and the
+# individual Requirements), Data Quality is NOT, however, a pure "nothing touches this at
+# all" gap the way a from-scratch stub area usually is — it is a cross-cutting concern
+# that shows up, independently and without coordination, inside THREE other real,
+# already-converted domains:
+#   1. **Staffing** (`staff:`) already has a genuine, narrowly-scoped "data quality
+#      review" implementation — `staff:Seq_CertifyCollection`'s "Run Quality Review" step
+#      (record-level, cross-record, historical, and EEM-alignment validation; justification
+#      capture; loop-until-resolved error handling) plus `staff:Perm_CollectionValidate`
+#      ("Run data quality checks before certification") — but scoped ENTIRELY to Staffing's
+#      own collection-certification workflow, not the generic, admin-configurable,
+#      cross-domain "Data Quality Administrator defines checks once, applied everywhere"
+#      capability FDD 19 actually describes. A review comment on this exact document
+#      (comment 30, quoted in full below) independently confirms this: the reviewer says
+#      this functionality "was originally defined within 10.3- Staffing Admin- Data
+#      Quality Monitoring & Review" and flags that the generic admin-configurable Business
+#      Rule Validation piece (Feature 19.2) still needs a home.
+#   2. **Communications** (`comm:`) already has the real, generic, event-driven notification
+#      HALF of Feature 19.3/19.4 built: `comm:AlertAggregate` (dashboard alerts, resolution
+#      tracking), `comm:EmailTemplateAggregate`/`comm:Seq_EventTriggeredEmailSend` (template-
+#      driven notification), and — most tellingly — an already-declared
+#      `comm:Dependency` (fromContext comm:CommunicationsContext, toContext
+#      dq:DataQualityContext, event-subscription on dq:DataQualityIssueDetectedEvent) whose
+#      OWN sd:notes cites "communications-capability.md BRD 19.4" BY NUMBER — i.e. the
+#      Communications domain's own v1/v3 conversion already read and cross-referenced this
+#      exact FDD 19 feature before this pass ever opened it. The event-CONSUMING /
+#      notification-SENDING half of Feature 19.3/19.4 is real; the event-PRODUCING half
+#      (an actual dq:BusinessRule that evaluates a check and emits
+#      dq:DataQualityIssueDetectedEvent) is not, anywhere.
+#   3. **Communications' own `comm:CommentAggregate`** (a real, generic, already-converted
+#      Aggregate — NOT a stub) is essentially a working implementation of the internal/
+#      external comment framework FDD 20 describes in the abstract: visibility control
+#      (internal never external-visible), audit retention of deleted comments, and
+#      per-process-item scoping. FDD 20's own scope is broader than Comments alone (it
+#      also covers "flags" gating mandatory comments on status changes), and two OTHER
+#      real domains — Professional Practices (`profp:DisclosureInternalRemarks`/
+#      `DisclosureExternalRemarks` on the Disclosure aggregate) and EPP
+#      (`epp:CredentialApplicationReviewAggregate`'s "Application Remarks... required when
+#      action is Deny or Hold" invariant, `epp:ApprovalApplicationReviewAggregate`'s
+#      "Denial requires Remarks to be provided") — appear to have separately, redundantly
+#      hand-rolled the SAME internal/external-visibility-plus-mandatory-on-status-flag
+#      pattern FDD 20 describes generically, rather than consuming comm:CommentAggregate.
+#      See Question_CommentFrameworkModeledRedundantlyAcrossDomains below — this is this
+#      file's single most significant cross-domain finding, on par with the FDD 29 pass's
+#      cover-letter contradiction as "the one worth flagging loudest."
+#
+# Net assessment for GAPS.md (to be merged by the project owner, not edited here): Data
+# Quality Review & Processing's OWN admin-configuration surface (define a check once,
+# category/threshold/aggregation-level/effective-dates, versioned and audited, applied
+# uniformly across every domain's submissions) is a confirmed, still-entirely-unconverted
+# whole capability — genuinely nothing exists anywhere that lets an administrator define
+# a NEW, arbitrary data-quality check the way FDD 19 describes. But it is not a "nobody
+# has thought about this" gap: three real domains have already built narrower, domain-
+# specific instances of pieces of it (validation-before-certification in Staffing,
+# event-driven alerting/notification in Communications, internal/external annotation in
+# Communications/ProfPractices/EPP) without a shared abstraction tying them together.
+# FDD 20's Comments half is much closer to fully covered than FDD 19's Checks half.
+#
+# Wireframes extracted to wireframes/ (FDD 19 only — FDD 20 has none):
+#   wireframes/19-1-msds-early-childhood-example.jpg   (image1.jpg, rId17)
+#   wireframes/19-1-1-empty-dashboard-widget-shell.png (image2.png, rId18 — reused verbatim
+#                                                        as image4.png/rId20 at 19.3.1; not
+#                                                        re-extracted a second time)
+#   wireframes/19-2-1-credentialing-business-rules-page.png (image3.png, rId19)
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dq:    <urn:solutiondesign:instance:dataquality:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix epp:   <urn:solutiondesign:instance:epp:> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix dash:  <urn:solutiondesign:instance:dashboards:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+dq:Fdd19Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/19 - Data Quality Review & Processing/19 - Data Quality Review & Processing.docx" ;
+    sd:notes "Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI) both 08/04/2025 per the signoff table. Review comments in comments.xml carry dates from 2025-12-19 through 2026-03-16, well after the nominal approval date — same pattern the FDD 29 pass already found (approval date is not 'nothing changed after this')." .
+
+dq:Fdd20Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/20 - Data Quality Review & Processing - Comments & Flags/20.0 - Data Quality Review & Processing - Comments and Flags.docx" ;
+    sd:notes "Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/04/2025. Confirmed via unzip: no comments.xml, no word/media — a genuinely clean, comment-free, wireframe-free document, unlike almost every other FDD reviewed in this project so far." .
+
+dq:Wireframe19_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/19-20-data-quality-review-and-processing/wireframes/19-1-msds-early-childhood-example.jpg" ;
+    sd:notes "Confirmed by viewing: NOT a MiEdWorkforce mockup — a live screenshot of the EXISTING legacy CEPI MSDS system ('MSDS - 2024-25 Early Childhood Fall - Kent ISD', 'Collection & Data Quality Summary'), embedded in the Business Specifications prose right after the line 'Example from CEPI MSDS Early Childhood.' Shows exactly the Problem/Impact/Action three-part text structure that 19.1.5/19.2.5 describe in the abstract, and the per-entity/per-category aggregation table 19.2.5's 'Level of Aggregation' criterion describes — i.e. this is reference material showing what MDE/CEPI's CURRENT tooling already does, which MiEdWorkforce is meant to replicate/replace, not a proposed new screen. Also independently explains what the sibling 'Copy of EOY 2024 REP Comparison and Review' workbook (not opened, per this file's header) most likely refers to (REP = the same Early Childhood reporting cycle), without needing to open it." ;
+    sd:definedIn dq:Fdd19Doc .
+dq:Wireframe19_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/19-20-data-quality-review-and-processing/wireframes/19-1-1-empty-dashboard-widget-shell.png" ;
+    sd:notes "Confirmed by viewing: a completely generic, content-free 'Dashboard / Manage Layout' screen — three empty 'Section Name' rows of '+ Add Widget' placeholder tiles, no Data-Quality-specific content of any kind. Embedded once inline within 19.1.1's acceptance criteria (between the District-access bullet and the 'displays a clearly labeled Data Quality Dashboard widget' bullet) and reused VERBATIM (byte-for-byte identical layout, confirmed by direct visual comparison, not just taken on the reviewer's word) as the image embedded at 19.3.1. Reviewer's own comment 33 on the second occurrence says as much ('representative of the general layout of a user's dashboard...applicable to all user stories under feature 19.3') — corroborated here, not merely trusted. The practical implication: no DQ-specific dashboard visual design exists anywhere in this FDD; only a generic, dashboards-capability-owned empty-widget shell." ;
+    sd:definedIn dq:Fdd19Doc .
+dq:Wireframe19_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/19-20-data-quality-review-and-processing/wireframes/19-2-1-credentialing-business-rules-page.png" ;
+    sd:notes "Confirmed by viewing: NOT a Data Quality screen. Breadcrumb reads 'Dashboard > Credentialing > Credential Data & Management > Business Rules', a generic sortable/paginated 'Business Rules' list table (redacted placeholder text, 6115 items, filter+export icons) inside the CREDENTIALING module. Embedded directly within 19.2.1's acceptance criteria ('administrative page...displays all configured data quality checks in a sortable table') despite depicting an unrelated Business Rules admin screen. This is significant, independent visual corroboration of comment 30's own point (see Question_DqAdminOverlapsBusinessRuleManagement below): the FDD's own wireframe author reached for a Business Rule Management mockup to illustrate the Data Quality admin console, suggesting the two capabilities may have been conceived as the same underlying admin-configuration surface (per-domain rule/check definitions, versioned, sortable/filterable table, export) rather than genuinely distinct ones — not a captioning error, since no other 'DQ admin table' mockup appears anywhere in the document." ;
+    sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# Requirements — FDD 19, Feature 19.1: Submission Reports and Data Review
+#################################################################
+
+dq:Req_19_1_1 a sd:UserStory ;
+    sd:requirementId "19.1.1" ;
+    sd:title "District-level dashboard link to Data Quality Dashboard" ;
+    sd:statement "As a MiEdWorkforce user with District level access, I want a link on my main dashboard to navigate to the Data Quality Dashboard." ;
+    sd:acceptanceCriteria "The user must possess District level access to view the Data Quality Dashboard widget. The main dashboard displays a clearly labeled Data Quality Dashboard widget. The Data Quality Dashboard displays dynamic reports reflecting the district's submitted data, including the results of Data Quality checks." ;
+    sd:notes "No satisfiedBy: dq:DataQualityContext and dash:DashboardsContext are both stub-only (sd:status \"stub\"), and Wireframe19_2 (confirmed by viewing) shows only a generic, content-free empty-widget dashboard shell — no DQ-specific widget design exists. A tracked-change-inserted AC bullet on this exact story ('The system immediately directs the user to the main Dashboard, which serves as the system home page') was flagged in review by comment 27 (Groom: 'This requirement does not belong with this story, the login and dashboard availability should be defined within 1.0 User Management and 3.0 Dashboard') — a narrower, already-resolved out-of-scope finding on one AC clause, not the whole story, so not modeled as its own Annotation target; the surviving AC text above already excludes that flagged clause." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_2 a sd:UserStory ;
+    sd:requirementId "19.1.2" ;
+    sd:title "On-demand/ad-hoc Data Quality check execution from the dashboard" ;
+    sd:statement "As an authorized user, I want the ability to run Data Quality checks against the current system data on-demand (ad-hoc) via the Data Quality Dashboard." ;
+    sd:acceptanceCriteria "The Data Quality Dashboard widget includes an accessible option for the authorized user to initiate Data Quality checks. The system executes the Data Quality checks against the current system data immediately upon the user's request (on-demand/ad-hoc functionality)." ;
+    sd:notes "No satisfiedBy: no generic, cross-domain on-demand check-execution capability exists. The closest real analog anywhere in mied-v3 is staff:Seq_CertifyCollection's user-triggered 'Run Quality Review' step, but that is scoped entirely to Staffing's own collection-certification workflow (triggered by a District user preparing to certify one collection), not a general-purpose 'run any DQ check on demand' capability spanning every domain the way this story describes — see the consolidated coverage-gap Annotation below." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_3 a sd:UserStory ;
+    sd:requirementId "19.1.3" ;
+    sd:title "Extract Data Quality results to a consumable file format" ;
+    sd:statement "As an authorized user, I want the option to extract Data Quality results to a consumable file format (i.e., Excel)." ;
+    sd:acceptanceCriteria "The Data Quality Dashboard widget provides a function to extract the results of the Data Quality checks. The extracted results are produced in a common, consumable file format, such as Excel. The extraction includes all Data Quality check information and associated metadata." ;
+    sd:notes "No satisfiedBy: dq:GetIssuesOperation exists only as a stub minted from communications-sequences.ttl's own cross-domain call detail (GET /api/data-quality/issues?ids=...) — a placeholder acknowledging the endpoint's existence for Communications' variable-resolution purposes, not a real, built extraction capability, so not used as a satisfiedBy target (would overclaim coverage that isn't real)." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_4 a sd:UserStory ;
+    sd:requirementId "19.1.4" ;
+    sd:title "Navigate from a Data Quality report to the underlying individual-level record" ;
+    sd:statement "As an authorized user, I want to be able to access the individual level record for data submission correction directly from the Data Quality report view." ;
+    sd:acceptanceCriteria "The Data Quality Dashboard widget presents an option to view individual level records that are flagged for issues as interactive elements (e.g., hyperlinks). Selecting an individual record from the report view navigates the user directly to the individual level record within the data submission component. The user can perform necessary corrections or reviews on the accessed individual record." ;
+    sd:notes "No satisfiedBy: depends on both an unbuilt DQ report view AND, per its own Dependencies section ('Data used by...Data Quality Review & Processing is dependent upon Collection & Compliance (22)'), on FDD 22 (Data Collection & Compliance - Assignment Details), itself one of several unconverted 'Data Collection & Compliance' FDD folders per mied-v3/CONVENTIONS.md — a two-layer gap, neither layer built." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_5 a sd:UserStory ;
+    sd:requirementId "19.1.5" ;
+    sd:title "Display administrator-defined Problem/Impact/Resolution text for a violation" ;
+    sd:statement "As an authorized user, I want to be provided with the associated text defined by the Data Quality Administrator (i.e., Problem, Impact, Resolution) when viewing a violation." ;
+    sd:acceptanceCriteria "When the authorized user views a Data Quality violation, the system displays descriptive text defined by the Data Quality Administrator. The displayed descriptive text includes components such as Problem, Impact, and Resolution statements." ;
+    sd:notes "No satisfiedBy: Wireframe19_1 (the real legacy CEPI MSDS screenshot, confirmed by viewing) shows this exact DESCRIPTION/IMPACT/ACTION three-part text pattern already working in production for the state's current tooling — corroborating that this is a real, well-understood requirement, not speculative — but nothing in mied-v3's own graph models a DQ-check-authored text field of any kind." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_6 a sd:UserStory ;
+    sd:requirementId "19.1.6" ;
+    sd:title "Acknowledge a Data Quality check violation with justification, without changing data" ;
+    sd:statement "As an authorized user, I want to acknowledge Data Quality checks and provide required justifications or comments, so that I can explain data anomalies without changing the data." ;
+    sd:acceptanceCriteria "The system allows the user to formally acknowledge a specific Data Quality check violation. The system provides a text field for the user to enter comments/explanations to justify the offending data. The system enforces justification requirements (Required vs. Optional) based on the settings defined by the DQ Administrator. Submitted justifications are stored and associated with the violation record." ;
+    sd:notes "No satisfiedBy at the generic level this story describes (any DQ check, any domain), but staff:Seq_CertifyCollection already implements the identical acknowledge-plus-justification pattern ('Justification-required conditions exist -> Display justification-required items -> Enter justification text...POST /collections/{id}/justifications...Store justifications linked to collection') scoped entirely to Staffing's own collection certification — the single closest real analog anywhere in mied-v3, not asserted as satisfiedBy since it doesn't implement THIS story's cross-domain scope. See the consolidated coverage-gap Annotation below." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_7 a sd:UserStory ;
+    sd:requirementId "19.1.7" ;
+    sd:title "Auto-clear the Action Item when the violation is resolved" ;
+    sd:statement "As an authorized user, I want the system to clear the associated Action Item when I resolve the issue, so that my worklist accurately reflects remaining tasks." ;
+    sd:acceptanceCriteria "The system clears the Action Item automatically if the user corrects the data and the check passes upon re-run. The system clears the Action Item if the user submits a justification (for checks where justification is allowed). Simply viewing the dashboard does not clear the Action Item if the violation persists without justification." ;
+    sd:notes "No satisfiedBy: no 'Action Item' entity/aggregate of any kind is modeled anywhere in mied-v3 (confirmed by grep across abox/mied-v3/*/*.ttl — zero hits for 'ActionItem'). staff:Seq_CertifyCollection's 'loop until all errors resolved' plus its justification-store step are the same underlying shape (re-run-clears, justification-clears) but, again, scoped to Staffing collection certification only, and that sequence has no explicit 'passive viewing does not clear' negative-case language the way this story does." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_8 a sd:UserStory ;
+    sd:requirementId "19.1.8" ;
+    sd:title "View historical Data Quality checks with status and change details" ;
+    sd:statement "As an authorized user, I want to view historical Data Quality checks and include the details of status and changes." ;
+    sd:acceptanceCriteria "The authorized user can access a view displaying historical Data Quality checks. The historical view includes the details of the status of past checks. The view provides access to audit details (historical notes) related to the checks." ;
+    sd:notes "No satisfiedBy: no versioning/audit-history concept exists for a DQ check (there is no DQ check node at all to version). comm:EmailTemplateAggregate/comm:AlertAggregate both show what a versioned, stateful, audited configuration entity looks like elsewhere in this graph (TemplateVersion, AlertVersion, explicit StateDefinition lifecycles) — cited here only as a structural pattern this capability could follow if built, not as coverage." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_1_9 a sd:UserStory ;
+    sd:requirementId "19.1.9" ;
+    sd:title "Store user comments/explanations for historical review and publication" ;
+    sd:statement "As a Data Quality Administrator, I want the user-provided comments/explanations to be stored and accessible for historical data reviews." ;
+    sd:acceptanceCriteria "All comments and explanations provided by users are permanently stored and retrievable by the Data Quality Administrator. The stored comments are accessible during the review of historical data quality checks. The Data Quality Administrator has the ability to publish these stored comments as needed." ;
+    sd:satisfiedBy comm:CommentAggregate ;
+    sd:notes "PARTIAL match, genuinely close: comm:CommentAggregate is a real (non-stub), already-converted, generic comment framework whose own invariants already say almost exactly this ('Deleted comments remain in the audit trail but are hidden from the UI'; comm:CommentEmailHistory tracks which sent emails included a given comment, which is the closest real analog to 'publish as needed'). The one concrete gap: comm:CommentAggregate's invariant explicitly enumerates the process-item types it applies to as 'CredentialApplication, StaffingRecord, EPPEnrollment' — a Data Quality violation/check is not among them, so extending Comments to cover DQ violations specifically is a small, well-understood addition to an existing real aggregate rather than a from-scratch build. This is genuinely different in kind from every other Feature 19.1/19.2/19.3 story above, which have no real analog at all." ;
+    sd:definedIn dq:Fdd19Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Features 19.1.1-19.1.8 (dashboard link/widget, on-demand execution, extraction, drill-through to individual records, admin-defined violation text, acknowledge-with-justification, auto-clearing Action Items, historical/audit view) collectively describe a generic, cross-domain, admin-configurable Data Quality checking-and-reporting capability that has NO real implementation anywhere in mied-v3 — only the dq:DataQualityContext/dq:DataQualityIssueDetectedEvent/dq:GetIssuesOperation stub triad (minted from Communications' own cross-references, not from any dq: source doc) and dash:DashboardsContext (also stub-only). The closest real analogs that exist anywhere — staff:Seq_CertifyCollection's validation-before-certification workflow (acknowledge/justify/re-run/clear) and staff:Perm_CollectionValidate — are scoped entirely to Staffing's own collection-certification process, not the general capability described here; they are cited in each affected Requirement's own sd:notes rather than asserted as sd:satisfiedBy, to avoid overclaiming coverage that is real but structurally much narrower than what the story asks for. This is a genuine, still-fully-open whole-capability gap for GAPS.md." ;
+    oa:hasTarget dq:Req_19_1_1, dq:Req_19_1_2, dq:Req_19_1_3, dq:Req_19_1_4, dq:Req_19_1_5, dq:Req_19_1_6, dq:Req_19_1_7, dq:Req_19_1_8 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# Requirements — FDD 19, Feature 19.2: Data Processing - Business Rule Validations
+#################################################################
+
+dq:Req_19_2_1 a sd:UserStory ;
+    sd:requirementId "19.2.1" ;
+    sd:title "DQ Administrator administrative page to define and manage data quality processing" ;
+    sd:statement "As a DQ Administrator, I want an administrative page to define and manage data quality processing." ;
+    sd:acceptanceCriteria "The system provides an administrative page for the DQ Administrator role to define and manage data quality processing. The DQ Administrator is granted both View and View/Edit access for this administrative page. The page displays all configured data quality checks in a sortable table. The sortable table includes the Data Quality ID, DQ Category, Title, Description, and Status for each check." ;
+    sd:notes "No satisfiedBy: no admin-configuration surface for defining a DQ check exists anywhere. Wireframe19_3 (confirmed by viewing) — the image actually embedded at this exact story — depicts an unrelated Credentialing > Business Rules admin table, not a Data Quality screen; see Question_DqAdminOverlapsBusinessRuleManagement below, which treats this as significant evidence rather than noise." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_2_2 a sd:UserStory ;
+    sd:requirementId "19.2.2" ;
+    sd:title "Version data quality checks and store audit data for changes" ;
+    sd:statement "As a DQ Administrator, I want the system to version data quality checks and store all audit data for changes applied." ;
+    sd:acceptanceCriteria "The system automatically versions data quality checks when changes are applied. The system stores all audit data for changes made by the Data Quality Administrator. The DQ check details page allows viewing of historical notes and audit details. Notes are required to be entered and stored when submitting changes to a DQ check." ;
+    sd:notes "No satisfiedBy — same whole-capability gap as 19.1.8/19.2.1; there is no DQ check node to version. See Question_DqAdminOverlapsBusinessRuleManagement below." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_2_3 a sd:UserStory ;
+    sd:requirementId "19.2.3" ;
+    sd:title "Set intervals/schedules for running Data Quality checks" ;
+    sd:statement "As a DQ Administrator, I want to set intervals/schedules for running Data Quality checks against system data." ;
+    sd:acceptanceCriteria "The DQ Administrator can set the intervals or schedules for running Data Quality checks against system data. The system runs the Data Quality checks against the current system data based on the set interval/schedule. The DQ Administrator sets the associated Action Item and specifies the users or user roles who will receive the task. The DQ Administrator can configure options for pausing a check, defining justification requirements, and setting a pause/sleep duration." ;
+    sd:notes "No satisfiedBy: this is precisely the shape sd:BatchJob exists for in the ontology (a scheduled/triggered automated process, sd:schedule property) — but no dq:BatchJob or equivalent scheduled check-runner is modeled anywhere; cited here only to note that the ontology already has the right vocabulary position waiting for this, unlike the admin-console pieces above which have no obvious modeling slot yet either." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_2_4 a sd:UserStory ;
+    sd:requirementId "19.2.4" ;
+    sd:title "Analyze current, historical, and cross-system data for Data Quality violations" ;
+    sd:statement "As a DQ Administrator, I want the ability to perform analysis on data referencing current MiEdWorkforce system data, historical data, and data from other data systems." ;
+    sd:acceptanceCriteria "The DQ Administrator can perform analysis on data submitted within MiEdWorkforce to identify violations of the Data Quality validation condition. Data Quality checks performed can reference current MiEdWorkforce system data, historical data, and data from other data systems. The analysis results are displayed within the Data Quality Dashboard in the MiEdWorkforce system. The DQ Administrator dashboard includes summary information about the results, including frequency counts of DQ checks and details of communications and action items sent to users. The DQ Administrator can initiate analysis both at set intervals and on-demand (ad-hoc)." ;
+    sd:satisfiedBy staff:Seq_CertifyCollection, staff:Perm_CollectionValidate ;
+    sd:notes "The ONE genuinely real, well-sourced partial match in this whole file: staff:Seq_CertifyCollection's 'Run Quality Review' step literally executes 'validation rules (record-level, cross-record, historical, EEM alignment)' — current data, historical data, AND an external data system (EEM), matching this story's own three-way reference list almost exactly — and staff:Perm_CollectionValidate's own description is 'Run data quality checks before certification.' A review comment on this exact FDD (comment 30: 'This DQ Admin functionality is needed within the system, this was originally defined within 10.3- Staffing Admin- Data Quality Monitoring & Review. I am ok to leave it here, but we also need the BR Validation functionality...') independently confirms this domain-specific origin, in the reviewer's own words, not an inference made here. What is NOT covered: the admin-configurable, cross-domain, dashboard-displayed generality this story also asks for (frequency counts, communications/action-item summaries, on-demand-vs-scheduled toggle) — Staffing's version is a fixed, hardcoded rule set run at one fixed point in one domain's workflow, not an administrator-authored, reusable check definition." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_2_5 a sd:UserStory ;
+    sd:requirementId "19.2.5" ;
+    sd:title "Configure detailed attributes for each Data Quality check" ;
+    sd:statement "As a DQ Administrator, I want to configure detailed attributes for each Data Quality check, so that the system accurately identifies and routes specific data issues." ;
+    sd:acceptanceCriteria "The Admin can define basic details: Category, Title, Description, Status, Effective Dates, and Associated Data Elements. The Admin can define Data Quality Specifications (logic/thresholds). The Admin can set Justification Expectations (Required vs. Optional) for the check. The Admin can define the Level of Aggregation for the check (Statewide, ISD, District, Building, or Individual). The Admin can define the Text displayed to users (Problem, Impact, Resolution)." ;
+    sd:notes "No satisfiedBy — same admin-configuration-surface gap as 19.2.1/19.2.2. Wireframe19_1's real legacy-system example independently corroborates that a per-entity Level-of-Aggregation breakdown (its table is per-entity/per-FPL-band) and a Problem/Impact/Action text triad are both real, already-practiced requirements in the state's current tooling, not speculative asks — reinforcing that this gap is worth taking seriously for GAPS.md, not a nice-to-have." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_2_6 a sd:UserStory ;
+    sd:requirementId "19.2.6" ;
+    sd:title "Extract all Data Quality check information and metadata" ;
+    sd:statement "As a DQ Administrator, I want to be able to extract all Data Quality Check information and metadata easily (i.e., Excel, SQL)." ;
+    sd:acceptanceCriteria "The system provides a function to easily extract all Data Quality Check information and associated metadata. The extracted information is available in consumable file formats, such as Excel and SQL." ;
+    sd:notes "No satisfiedBy — same admin-configuration-surface gap; duplicate of 19.1.3's extraction ask but for check DEFINITIONS/metadata rather than check RESULTS." ;
+    sd:definedIn dq:Fdd19Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Feature 19.2's admin-configuration surface (19.2.1, 19.2.2, 19.2.3, 19.2.5, 19.2.6 — define/version/schedule/extract arbitrary DQ checks) is not modeled anywhere and has no obvious home even conceptually: it is not clearly Data Quality's own territory versus Business Rule Management's (FDD 4, also unconverted per mied-v3/CONVENTIONS.md). Two independent pieces of evidence surfaced by this pass point the same direction: (1) review comment 30 on this exact document explicitly ties the underlying validation-execution functionality to Staffing FDD 10.3, while separately flagging that the generic 'BR Validation functionality (reviewing the results of BRs to ensure system is enforcing rules appropriately)' still needs a home, possibly 'a report on the admin dashboard'; (2) Wireframe19_3, the image actually embedded at 19.2.1's own acceptance criteria, depicts a Credentialing > Business Rules admin table rather than any Data Quality screen. Together these suggest Feature 19.2's admin console may have been conceived as the SAME underlying capability as Business Rule Management (FDD 4) — a generic, versioned, per-domain rule/check authoring surface — rather than a Data-Quality-specific build. Recommend cross-referencing against FDD 4 when it is eventually ingested, rather than treating 19.2 and FDD 4 as two independent gaps in GAPS.md." ;
+    oa:hasTarget dq:Req_19_2_1, dq:Req_19_2_2, dq:Req_19_2_3, dq:Req_19_2_5, dq:Req_19_2_6 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# Requirements — FDD 19, Feature 19.3: Dashboard
+#################################################################
+
+dq:Req_19_3_1 a sd:UserStory ;
+    sd:requirementId "19.3.1" ;
+    sd:title "Data Quality Administrator dashboard displays summary information" ;
+    sd:statement "As a DQ Administrator, I want the Data Quality Administrator dashboard to display summary information about the results of the Data Quality checks." ;
+    sd:acceptanceCriteria "The Data Quality Administrator dashboard successfully loads upon request. The dashboard displays summary information derived from the results of the Data Quality checks." ;
+    sd:notes "No satisfiedBy: Wireframe19_2 (the image embedded here, byte-identical to the one at 19.1.1 per the reviewer's own comment 33) is a generic content-free widget shell, not a DQ-specific dashboard design; dash:DashboardsContext remains stub-only." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_3_2 a sd:UserStory ;
+    sd:requirementId "19.3.2" ;
+    sd:title "Dashboard summary includes communications, action items, and frequency counts" ;
+    sd:statement "As a DQ Administrator, I want the summary information to include details of communications, assigned action items, and frequency counts of DQ checks." ;
+    sd:acceptanceCriteria "The summary information displayed includes details of communications sent regarding Data Quality issues. The summary information displays details regarding assigned action items and identifies which users were contacted. The dashboard provides frequency counts of the Data Quality checks performed." ;
+    sd:notes "No satisfiedBy, though the raw ingredients for the 'communications sent' half are real elsewhere (comm:EmailInstanceAggregate's full historical send record, comm:AlertAggregate's resolution tracking) — nothing assembles them into a Data-Quality-specific summary dashboard the way this story asks; not asserted as satisfiedBy since neither aggregate is DQ-aware (see 19.1.9's own note on the same enumerated-process-item-types limitation)." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_3_3 a sd:UserStory ;
+    sd:requirementId "19.3.3" ;
+    sd:title "Action Items populate on the landing page/dashboard when a violation occurs" ;
+    sd:statement "As an authorized user, I want Action Items to populate on my landing page/dashboard when a data quality violation occurs." ;
+    sd:acceptanceCriteria "When data submitted by an authorized organization violates Data Quality check specifications, the system automatically assigns an Action Item to the authorized user. The assigned Action Item populates and is viewable on the user's landing page or dashboard. The system notifies the authorized user of the assigned Action Item via email, using the template defined by the Data Quality Administrator." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:DashboardAlertCreatedEvent ;
+    sd:notes "Real, well-sourced PARTIAL match: communications-capability.ttl already declares a live sd:Dependency (fromContext comm:CommunicationsContext, toContext dq:DataQualityContext, mechanism event-subscription, viaEvent dq:DataQualityIssueDetectedEvent) whose own sd:notes cites 'communications-capability.md BRD 19.4' by number — i.e. Communications' own conversion already read and is designed against this exact FDD feature. comm:AlertAggregate (dashboard alerts with role-based targeting and resolution tracking) is the real, generic landing-page/dashboard notification mechanism. What's NOT covered: comm:AlertAggregate targets individual users/roles, not 'the submitting organization' as this story specifically asks, and — as with every other Feature 19.x story — the upstream half (a real dq:BusinessRule that actually evaluates a check and fires dq:DataQualityIssueDetectedEvent) doesn't exist; the event is currently only a typed placeholder Communications subscribes to." ;
+    sd:definedIn dq:Fdd19Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "19.3.1/19.3.2's dashboard-summary content (frequency counts, communications-sent/action-item digest assembled specifically for a Data Quality Administrator) has no real implementation — dash:DashboardsContext remains stub-only and no aggregate assembles the relevant cross-cutting summary. Distinct from 19.3.3, which DOES have a real, cited partial implementation via comm:AlertAggregate (see that Requirement's own sd:satisfiedBy/notes) — grouped separately here rather than folded into the same Annotation, to avoid implying the whole Feature 19.3 is equally uncovered." ;
+    oa:hasTarget dq:Req_19_3_1, dq:Req_19_3_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# Requirements — FDD 19, Feature 19.4: Email/Communication
+#################################################################
+
+dq:Req_19_4_1 a sd:UserStory ;
+    sd:requirementId "19.4.1" ;
+    sd:title "Assign Action Items to submitting organizations on violation" ;
+    sd:statement "As a MiEdWorkforce system, I will assign \"Action Items\" to submitting organizations when data violates Data Quality check specifications." ;
+    sd:acceptanceCriteria "The system runs Data Quality checks against system data at the interval set by the DQ Administrator. When submitted data is in violation of the Data Quality check specifications, the system automatically assigns an \"Action Item\" for the submitting organization. Action Items are assigned upon the return of the Data Quality results. The assigned Action Item is automatically populated on the authorized user's landing page or dashboard." ;
+    sd:satisfiedBy comm:AlertAggregate, comm:DashboardAlertCreatedEvent ;
+    sd:notes "Same partial match and same caveats as 19.3.3 (near-duplicate story, different Feature grouping) — review comment 34 on this exact document, anchored to the 'Feature: 19.4 Email/Communication' heading itself, reads 'Other functionality already covered in epic 6' (epic 6 = Alerts, Emails and Communications, i.e. the real comm: domain), independently confirming from the reviewer's own side that this Feature's notification half is considered already-covered elsewhere rather than a fresh Communications-side build. Not modeled as a separate out-of-scope Annotation since the coverage is real (sd:satisfiedBy asserted) rather than merely deferred — 'covered elsewhere' and 'out of scope for lack of any owner' are different findings, and comment 34 describes the former." ;
+    sd:definedIn dq:Fdd19Doc .
+
+dq:Req_19_4_2 a sd:UserStory ;
+    sd:requirementId "19.4.2" ;
+    sd:title "Use defined email templates to notify users of assigned Action Items" ;
+    sd:statement "As a MiEdWorkforce system, I will use the defined email templates to notify authorized users of the assigned Action Item." ;
+    sd:acceptanceCriteria "The system automatically uses the specific email templates that were defined by the Data Quality Administrator to handle notifications for assigned Action Items. The authorized user receives an email notification alerting them of the assigned Action Item." ;
+    sd:satisfiedBy comm:EmailTemplateAggregate, comm:Seq_EventTriggeredEmailSend, comm:Rule_EventPayloadStructureAndVariableResolution ;
+    sd:notes "Strong, direct match on the 'use defined email templates to notify' mechanism itself — comm:EmailTemplateAggregate/comm:Seq_EventTriggeredEmailSend is exactly this pattern (event fires -> template resolved -> variables substituted -> sent), and communications-technical-design.ttl's comm:TP_EventConsolidation batches multiple DQ issues into one email per the same BRD-19.4-cited Dependency noted at 19.3.3, matching this story's own implicit 'Data Quality Category Email Templates' concept from the main Business Specifications prose. The one remaining gap, as elsewhere in this file, is upstream: 'defined by the Data Quality Administrator' implies a DQ-specific template-authoring/category surface that doesn't exist (comm:EmailTemplateAggregate's own template authoring is generic across all of Communications' consumers, not a DQ Administrator's own tool)." ;
+    sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# FDD 19, Feature 19.5: MiEdWorkforce ADA Compliance — rejected outright
+#################################################################
+
+dq:Req_19_5 a sd:Requirement ;
+    sd:requirementId "19.5" ;
+    sd:title "MiEdWorkforce ADA Compliance (Feature 19.5)" ;
+    sd:statement "(No narrative or acceptance criteria given — the entire Feature 19.5 section consists of one sentence: 'It has been determined that this feature is no longer necessary.')" ;
+    sd:notes "Modeled as a plain sd:Requirement, not sd:UserStory, since the FDD supplies no narrative/AC content at all to type further — the rejection IS the entire content of this section. The ADA/WCAG 2.0 compliance standard itself remains asserted as a project-wide Assumption in both FDD 19 and FDD 20's own Assumptions sections (not modeled as a separate Requirement here — see sd:nonFunctionalRequirement's own escape-hatch guidance for project-wide NFRs asserted at sd:Solution level, out of scope for a per-domain FDD-review pass to re-litigate)." ;
+    sd:definedIn dq:Fdd19Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "The FDD's own text states plainly: 'It has been determined that this feature is no longer necessary.' Taken at face value as a real, deliberate decision (not a placeholder or drafting error) — no further ADA-specific feature content exists anywhere else in either FDD 19 or FDD 20 to cross-check it against." ;
+    oa:hasTarget dq:Req_19_5 ; sd:status "resolved" ; sd:definedIn dq:Fdd19Doc .
+
+#################################################################
+# Requirements — FDD 20: Comments & Flags (Features 20.1 CEPI / 20.2 MDE)
+#################################################################
+
+dq:Req_20_0_1 a sd:UserStory ;
+    sd:requirementId "20.0.1" ;
+    sd:title "Administrator inputs an External comment visible to the user" ;
+    sd:statement "As a MiEdWorkforce Administrator, I want the workflow to allow me to input specific comments as \"External\" within a functional area, so that Users can view relevant feedback and justifications regarding their records while logged into the system." ;
+    sd:acceptanceCriteria "The Administrator accesses the comment input field (standard free-form text box) within the specific functional area (including, but not limited to, Educator Credentialing, Professional Practice Review (PPR), Professional Learning). The Administrator enters the justification or feedback text. The system saves the comment with details (Created by/Date Created). The system displays the \"External\" comment to the User, as external comments may be viewed with permissions." ;
+    sd:satisfiedBy comm:CommentAggregate, comm:Op_CreateComment, comm:Perm_CommentsCreateExternal ;
+    sd:notes "Direct, strong match: comm:CommentAggregate's own invariants already state 'External comments are eligible for inclusion in outbound emails' and require an explicit visibility distinction created-by/created-at audit fields (comm:CommentEmailHistory), matching this story's AC almost verbatim. See the file-header finding (Question_CommentFrameworkModeledRedundantlyAcrossDomains below) on how this generic framework relates to profpractices' and EPP's own separately-modeled internal/external remarks fields." ;
+    sd:definedIn dq:Fdd20Doc .
+
+dq:Req_20_0_2 a sd:UserStory ;
+    sd:requirementId "20.0.2" ;
+    sd:title "Administrator marks a comment as Internal, restricted from external view" ;
+    sd:statement "As a MiEdWorkforce Administrator, I want the workflow to support marking comments as \"Internal,\" so that sensitive discussions and decision-making details are restricted from Business and Citizen users and are only viewable by authorized state staff." ;
+    sd:acceptanceCriteria "The System Administrator accesses the comment input field during a review process, within the specific functional area (including, but not limited to, Educator Credentialing, Professional Practice Review (PPR), Rap backs, Education Preparation Provider). The Administrator enters text into the comment box. The system saves the comment and enforces role-based restrictions. If a Business or Citizen User views the record, the system hides the \"Internal\" comment from their view. Only select state staff with appropriate privileges and functional area authorization can view the comment." ;
+    sd:satisfiedBy comm:CommentAggregate, comm:Op_CreateComment, comm:Perm_CommentsCreateInternal, comm:Perm_CommentsViewInternal ;
+    sd:notes "Direct, strong match: comm:CommentAggregate's invariant 'Internal comments are never visible to external users' is exactly this story's core requirement, and comm:Perm_CommentsViewInternal's own conditional PermissionRequirement on comm:Op_ListComments already encodes the role-gated visibility this AC describes." ;
+    sd:definedIn dq:Fdd20Doc .
+
+dq:Req_20_0_3 a sd:UserStory ;
+    sd:requirementId "20.0.3" ;
+    sd:title "Require an External comment when applying a status flag (Hold/Cancel/Deny)" ;
+    sd:statement "As a MiEdWorkforce Administrator (e.g., Credentialing or EPP Administrator), I want the system to require an external comment when I apply a status flag like \"Hold,\" \"Cancel,\" or \"Deny\" to an application, so that the applicant (Citizen or Business User) receives a clear explanation for the status change on their record." ;
+    sd:acceptanceCriteria "The system displays status options including \"Hold,\" \"Cancel,\" and \"Deny\" within the application processing screen. Selecting a status flag triggers a mandatory comment input field. The system defaults the comment visibility setting to \"External\" for these specific status flags. The entered justification is visible to the applicant when viewing their application status. The system stores the new status, the external comment, and the audit details (Created by and Date Created)." ;
+    sd:satisfiedBy epp:CredentialApplicationReviewAggregate, epp:ApprovalApplicationReviewAggregate, cred:Op_DenyApplication, cred:AppState_Denied, cred:AppState_Cancelled, comm:CommentAggregate ;
+    sd:notes "PARTIAL, and asymmetric across the two domains this story itself names as examples. EPP already enforces almost exactly this rule TWICE, independently: epp:CredentialApplicationReviewAggregate's own invariant states 'Application Remarks (external, visible to applicant) required when action is Deny or Hold', and epp:ApprovalApplicationReviewAggregate's states 'Denial requires Remarks to be provided' — both a real, mandatory-on-status-change, externally-visible remarks requirement, matching this story closely. Credentialing, however, has the STATUS-FLAG structural half (cred:AppState_Denied, cred:AppState_Cancelled, cred:Op_DenyApplication all real) but NO equivalent 'remarks required on deny/cancel' invariant anywhere in credentialing-domain.ttl — a genuine cross-domain INCONSISTENCY worth flagging on its own terms (see Question_CommentFrameworkModeledRedundantlyAcrossDomains below): the same story names Credentialing and EPP as equally-applicable examples, but only EPP actually enforces it today. 'Hold' as a distinct citizen-facing status flag (vs. Credentialing's internal-only ProfessionalPracticeStatus=Hold, which is not the same concept) is not modeled in Credentialing at all." ;
+    sd:definedIn dq:Fdd20Doc .
+
+dq:Req_20_0_4 a sd:UserStory ;
+    sd:requirementId "20.0.4" ;
+    sd:title "Require an Internal comment when applying a sensitive internal flag (e.g. PPR flag)" ;
+    sd:statement "As a MiEdWorkforce Administrator (e.g. Professional Practices Reviewer), I want the system to require an internal comment when I apply a sensitive flag (such as a Professional Practice Review flag) to a record, so that internal staff can track the reason for the investigation or audit without revealing sensitive details to the public user." ;
+    sd:acceptanceCriteria "The system allows authorized administrators to apply internal-only flags (e.g., Professional Practice Flag) to a record. Applying an internal flag will also allow the option to add an internal remark by navigating to the \"internal remarks\" tab. The Administrator enters sensitive or administrative text into the comment box. The system automatically restricts the visibility of this comment to \"Internal.\" Business and Citizen users are prevented from viewing the flag or the associated comment on their record. Only State Staff with appropriate security privileges can view the internal flag and comment. The system captures and stores the flag application, the internal comment, and user in the audit history." ;
+    sd:satisfiedBy profp:DisclosureInternalRemarks, profp:Seq_ReviewDisclosureAndUpdateStatus, comm:CommentAggregate, comm:Perm_CommentsCreateInternal ;
+    sd:notes "Direct, strong match, and the story's own worked example (a 'Professional Practice Review flag') names the EXACT real mechanism this maps to: profp:Seq_ReviewDisclosureAndUpdateStatus's own sequence diagram literally shows 'Reviewer->>WorklistUI: Add internal remarks (staff notes)' / 'PPRService->>PPRService: Add InternalRemarks' as a real step, and profp:DisclosureInternalRemarks is a real ValueObject on the Disclosure aggregate whose own sd:keyDecisions elsewhere states 'internal remarks are not' visible externally. This is the strongest single satisfiedBy match in this entire file, precisely because the story described the PPR case by name rather than generically." ;
+    sd:definedIn dq:Fdd20Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "This file's single most significant cross-domain finding. FDD 20 describes ONE generic, reusable internal/external comment-and-flag framework meant to be defined once (per its own Description: 'All...areas of state employee interaction that requires decision-making allow for both internal...and external...comments') and reused everywhere. A real, generic implementation of roughly that shape already exists — comm:CommentAggregate, a non-stub Communications aggregate whose own invariants already draw the internal/external distinction and whose own scoping notes says Comment permissions are 'scoped to organizational hierarchy...since comments are tied to specific business process items,' i.e. designed from the start to be consumed by multiple other domains. But TWO other real domains appear to have separately, redundantly hand-rolled the identical pattern as domain-local ValueObjects/invariants instead of consuming it: Professional Practices (profp:DisclosureInternalRemarks/DisclosureExternalRemarks, directly on the Disclosure aggregate) and EPP (epp:CredentialApplicationReviewAggregate's/epp:ApprovalApplicationReviewAggregate's own 'Remarks required on Deny/Hold' invariants). Credentialing, meanwhite, has NEITHER its own local remarks fields NOR a documented integration with comm:CommentAggregate for its Deny/Cancel/Hold flows (see Req_20_0_3's own notes) — the one domain this story names by name as an equally-applicable example is the one domain where NEITHER pattern is actually built. Unresolved architectural question for the project: should ProfPractices/EPP's local remarks fields be refactored onto the shared comm:CommentAggregate (as FDD 20's own framing implies they should have been from the start), or are they intentionally separate because a Disclosure's/Application's remarks are structurally different from a general-purpose Comment (e.g. exactly one remarks field per aggregate vs. an open collection, or mandatory-on-transition vs. always-optional)? Not resolved here — flagging for the project owner." ;
+    oa:hasTarget dq:Req_20_0_1, dq:Req_20_0_3, dq:Req_20_0_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn dq:Fdd20Doc .

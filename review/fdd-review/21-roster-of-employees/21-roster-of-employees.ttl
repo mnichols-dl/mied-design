@@ -1,0 +1,399 @@
+# FDD 21 review — "21 - Data Collection & Compliance - Roster of Employees" (Features
+# 21.1-21.6). Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3
+# Staffing graph (staffing-domain.ttl / staffing-permissions.ttl / staffing-api.ttl /
+# staffing-sequences.ttl / staffing-technical-design.ttl), plus profpractice's own mied-v3
+# conversion for the PPR-eligibility cross-domain check this FDD depends on. Per the
+# CONVENTIONS.md dependency note, FDDs 10 (Staffing Administration), 18 (Roster of
+# Positions), 22 (Employee Assignment Details), and 24 (Request for ID Collection) are
+# concurrent, independently-reviewed sibling FDDs also expected to land in `staffing` —
+# this pass does not see or reconcile against their output, only this FDD's own content.
+#
+# Source: "21 - Collection & Compliance - Employee Roster.docx" (.md sibling read first for
+# the fast pass; docx unzipped for word/comments.xml, commentsExtended.xml/commentsIds.xml,
+# document.xml — comment anchors resolved via commentRangeStart offsets against surrounding
+# text, not just read in isolation — and word/media for wireframes).
+#
+# Structure used for the Requirement unit: the document's own "HIGH LEVEL SCENARIOS" table
+# (20 rows) restates the Business Specifications prose at coarser grain and is SKIPPED per
+# CONVENTIONS.md — every one of its rows maps onto an Addendum story below at finer grain.
+# The Addendum's own Feature/story numbering (21.1.1-21.1.6, 21.2.1-21.2.5, 21.3.1-21.3.4,
+# 21.4.1-21.4.5, 21.5.1-21.5.2, plus an unnumbered Feature 21.6 paragraph) is the primary
+# Requirement unit used below — 23 items total (22 numbered stories + Feature 21.6's own
+# unnumbered scope-pointer paragraph, modeled as Req_21_6).
+#
+# Comments (24 in comments.xml + 8 more reply-chain-only ids in commentsExtended.xml, 32
+# total individual comment nodes): resolved/reply-only "To be confirmed"/"To be defined"
+# placeholder comments (ids 11, 20, 21, 22, 24, 25, 1941181622 — verbiage/detail TBD on
+# fields, warning text, and drawer content that already appear in the visible AC text) are
+# folded into the relevant Requirement's own sd:notes rather than each becoming an
+# Annotation. Comments with a real, still-live finding are modeled as standalone
+# Annotations below: the unresolved "is 21.1.3 even a valid use case" contradiction (id 13,
+# the single most significant finding of this pass — see Question_NewEmployeeWithoutIdContradiction
+# and Req_21_1_3), the still-open "should there be an audit-log user story" thread (ids 6,
+# 27, 330543191 — see Question_AuditLogUserStoryNotYetAdded), and the resolved-in-thread
+# clarifications that materially changed the visible AC text (id 17/1926732478's PPR-status
+# alignment with Epic 9, id 19/1327490318's Date-of-Hire chronological-order addition, id
+# 15's "Add Assignment belongs to Epic 22" scoping, id 26/710379547's split-out of 21.5.2)
+# are folded into their target Requirement's sd:notes as "already reflected in the visible
+# text" rather than re-litigated as open Annotations. Tracked changes were not present in
+# any meaningful volume in this document (a handful of formatting-only w:ins/w:del spans;
+# nothing load-bearing found in a manual scan) and are not otherwise discussed.
+#
+# Wireframes: word/media has 30 images. The first 8 (image1.png-image8.png) are the
+# document's own 5 captioned "Wireframe:"/"Wireframes:" call-outs (confirmed by viewing all
+# 8, not assumed from document order — the "Employee Roster and Advanced Search" caption
+# covers 2 images (list + advanced-search modal) and the "Quality Review"/"Collection
+# Certification" captions together cover 4 (review screen, a confirm-run modal, a
+# no-errors-found success state, and a certify confirmation modal)). The remaining 22
+# (image9.png-image30.png) are uncaptioned, higher-fidelity Addendum screenshots in the
+# same style as FDD 29's own addendum images; 8 were individually viewed (image9, 14, 20,
+# 22, 26, 29, 30, plus image4 among the first 8) to confirm they are real product screens
+# matching specific Addendum stories, not a distinct undocumented feature — including one
+# (image29, extracted as addendum-f) that is directly load-bearing evidence for
+# Req_21_4_1/21_4_2: its "Employees Not Appropriately Assigned"/"Employees with No
+# Assignment"/etc. dashboard literally renders the placeholder text "Power BI Charts?" in
+# the layout, showing the reporting mechanism for this feature was still an open design
+# question at wireframe time, not settled UI. The remaining ~14 addendum images were not
+# individually viewed; per CONVENTIONS.md's depth-calibration guidance, this is judged
+# sufficient sampling across the document's span (employee list, demographic entry,
+# confirmation, employment/assignments, collection landing, quality-review dashboard,
+# employee-details drawer) to confirm the rest are the same application's screens for
+# stories already covered above.
+#
+# Cross-domain corroboration worth calling out: staffing-domain.ttl's own
+# Rule_CollectionRolloverCarriesForward and the CollectionOpenedEvent's
+# carriedForwardCount/excludedCount payload fields are an exact, pre-existing match for
+# this FDD's 21.3.2/21.3.3 rollover-inclusion/exclusion criteria — this FDD confirms rather
+# than surfaces that rule. Likewise profpractice-domain.ttl's Rule_RosterEligibilityAssessment
+# and Rule_ReviewedListedAbsoluteBlock (Reviewed-Listed hard block / Reviewed-Felony
+# conditional-with-acknowledgment / active-review-status alert) are a near-verbatim match
+# for 21.1.4's PPR acceptance criteria, down to the same named statuses — strong, positive
+# cross-domain confirmation, not a gap.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix staff: <urn:solutiondesign:instance:staffing:> .
+@prefix profp: <urn:solutiondesign:instance:profpractices:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+staff:Fdd21Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/21 - Data Collection & Compliance - Roster of Employees/21 - Collection & Compliance - Employee Roster.docx" ;
+    sd:notes "Covers Features 21.1-21.6 (document's own subtitle: 'Data Collection & Compliance- Employee Roster (21.1-21.6)'). Author Caitlin Groom (CEPI); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/04/2025 per the signoff table — but comments.xml contains dated entries through 2026-03-10, well after that nominal signoff date, meaning the document continued to be actively revised/reviewed after its approval date (same pattern already flagged in the FDD 29 review pass for its own signoff table)." .
+
+staff:Wireframe21_1 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-01-individual-employment-details.png" ;
+    sd:notes "Confirmed by viewing: editable 'Employment detail' form (Employment status/start date/end date/separation reason dropdowns+date pickers) plus an 'Employment history' table (Position/Start/End/Role/Status/School district/Modified date/Modified by). Matches 21.1.1/21.1.2's field-for-field description." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_2 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-02-individual-employment-details-readonly.png" ;
+    sd:notes "Confirmed by viewing: same screen as Wireframe21_1 with all four fields rendered as read-only text and an 'Update' button in the header — direct visual match for Req_21_1_5/21_2_5's Active-status read-only + Update-button behavior." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_3 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-03-employee-roster-list.png" ;
+    sd:notes "Confirmed by viewing: 'Employee Roster' list (Unique id/First name/Last name/Employment status/Emp. start date/Emp. end date/Position/Building/Credentialed/Status columns), a free-text Search box, an 'Advanced search' toggle, a 'Collection period end date' filter, and a '+ Add employee' button — matches 21.1.1's landing-page description almost exactly (column set, filter, Add Employee action)." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_4 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-04-advanced-search.png" ;
+    sd:notes "Confirmed by viewing: 'Advanced search' panel (Start date/Start date range from/to, Position, Building, Credentialed, Employment status) — the advanced filter referenced in 21.1.1's 'filtered through all the columns' criterion." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-05-quality-review-certify-collection.png" ;
+    sd:notes "Confirmed by viewing: 'Quality Review - Certify Collection' screen with Submitting entity/Collection period end date selectors, a 'Quality review is complete. Identified 3 outstanding items' banner, paginated Errors and Warnings tables (each row: Error Description/Error Details), an attestation checkbox, and Certify/Cancel/Download Dataset actions. Directly corroborates Req_21_4_1/21_4_2/21_4_3's error-vs-warning distinction and attestation requirement." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_6 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-06-quality-review-confirm-modal.png" ;
+    sd:notes "Confirmed by viewing: 'Select OK to run the Quality Review for this Collection. Depending on the size of the Collection this may take some time.' confirmation modal — corroborates Op_RunQualityReview being a real, potentially long-running, explicitly user-triggered action (Req_21_4_2)." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_7 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-07-quality-review-success.png" ;
+    sd:notes "Confirmed by viewing: same Quality Review screen in a 'Success! Quality review is complete. No errors or warnings found!' state, Certification Status 'Error free with no warnings' — the positive-path counterpart to Wireframe21_5." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:Wireframe21_8 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/wireframe-08-certification-confirm-modal.png" ;
+    sd:notes "Confirmed by viewing: 'Certifying this Collection and submitting Entity will post this information to the Employee master file.' Approve/Cancel modal — corroborates Op_CertifyCollection as a distinct, explicitly-confirmed final step (Req_21_4_1)." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:WireframeAddendumA21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-a-roster-of-employees-list.png" ;
+    sd:notes "Confirmed by viewing: higher-fidelity 'Roster of Employees' page (Current/History tabs, Search, Add Employee dropdown, filter and download icons, Unique ID/Name/Start Date/Position/Building/Credentialed/Employment Status columns, '1-10 of 6115 items' pagination) — direct visual match for 21.1.1." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumB21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-b-demographic-information.png" ;
+    sd:notes "Confirmed by viewing: 'Demographic Information' tab for an existing employee (Joe Jonas) with Personal Information (Unique ID, Legal First/Last Name, DOB, SSN+confirm, Gender, Race/Ethnicity, Tribal Affiliation), Contact Information (address, MiLogin email/phone), and an 'Account Information History' table — matches 21.1.2's field list closely. Fields shown as populated/editable form fields here, consistent with this being the post-match 'existing employee' path rather than 21.1.3's from-scratch entry." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumC21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-c-new-account-created.png" ;
+    sd:notes "Confirmed by viewing: 'New Account Created! Thank you for submitting your information. We have created a new account for you.' confirmation screen with a 'Continue to Details' button — matches 21.1.3's 'processing page' -> 'confirmation page' -> 'user profile page' flow for a from-scratch new-identity submission." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumD21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-d-employment-tab-assignments.png" ;
+    sd:notes "Confirmed by viewing: 'Employment' tab, Current Employment/Employment History sub-tabs, an entity card with 'End Employment'/'Add Assignment' actions and a per-entity assignment table (Assignment/Meets Requirements/SCED Course Title/Start Date/Allocation/Status) — direct match for 21.1.3's 'Under the employment tab..., the business user...can end the employment, or quickly add assignments' and 21.1.2's Current/History employment tabs." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumE21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-e-data-collection-submission.png" ;
+    sd:notes "Confirmed by viewing: 'Data Collection & Submission' page, 'Submit New Collection'/'Past Submissions' tabs, a 'Fall 2025 Data Collection' card with a 'Start Employment Data Submission' button and a 'Due in 17 Days' badge — direct match for 21.3.1's landing description, including the automatically-updated collection-period label." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumF21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-f-quality-review-dashboard-sections.png" ;
+    sd:notes "Confirmed by viewing: 'Fall 2025 Collection' Step 1 of 2, a 'Data Contains Errors' banner, then SEVEN sections matching 21.4.1's acceptance criteria almost verbatim in name and order (Employees Not Appropriately Assigned / Employees with No Assignment / Changes to Employee Roster / Required Positions with No Assignments / Buildings with No Appropriate Positions / Changes to Positions / All Employees) — each rendered as a filterable/downloadable placeholder table. NOTABLE: the large content area above these sections literally renders the text 'Power BI Charts?' as a placeholder — i.e. even the wireframe itself does not commit to how this section is actually rendered (a real Power BI embed vs. these placeholder tables vs. something else), which is evidence the reporting mechanism for this feature was still an open design question at wireframe time, not just an unstated implementation detail. See Req_21_4_1's notes." ;
+    sd:definedIn staff:Fdd21Doc .
+staff:WireframeAddendumG21 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/21-roster-of-employees/wireframes/addendum-g-employee-details-drawer.png" ;
+    sd:notes "Confirmed by viewing: an 'Employee Information' drawer (Name/Certificate #/Certificate Type/National Board Certified/Renewal Status, an Endorsements table, a Certificate History table, an Assignment table, and a Remarks/comments section with Add Comment) opened from the roster list — direct match for 21.3.1's 'click on the Employee's Name hyperlink to open the drawer' description. This drawer surfaces Credentialing-owned data (certificate #, endorsements, certificate history) inline in a Staffing screen — a cross-domain UI composition, not a missing Staffing capability; cred:Op_GetEducatorCredentials (already converted in credentialing-domain.ttl, and already staffing's own documented dependency target for placement validation) is the natural backing call, though staffing-domain.ttl does not itself model a drawer/projection node for this composed view." ;
+    sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirements — Feature 21.1: Add New Employee
+#################################################################
+
+staff:Req_21_1_1 a sd:UserStory ;
+    sd:requirementId "21.1.1" ;
+    sd:title "Add Employment Data details to the Roster of Employees (landing page)" ;
+    sd:statement "As an authorized Business User, I want to add the Employment Data details to the Roster of Employees, so that I can maintain a list of all the current and historical employees." ;
+    sd:acceptanceCriteria "Landing page (Dashboard > Roster of Employees) lists current and historical employees with columns Unique ID/Name/Start Date/Position/Building/Credentialed/Employment Status; list is downloadable as Doc/Excel/PDF and filterable on all columns; an 'Add Employee' single-select dropdown offers 'Add individual Employee' and 'Upload Roster'; Upload Roster shows a CSV-upload modal; Add Individual Employee first searches by name/UID, shows results with advanced filters, and offers 'Create New Employee' if no match is found." ;
+    sd:satisfiedBy staff:Op_ListEmployees, staff:Op_SearchEmployees, staff:EmployeeRosterAggregate ;
+    sd:notes "Direct match on the list/search/add-employee shape (Wireframe21_3, Wireframe21_4, WireframeAddendumA21 all confirm this screen). Two things this story describes with no counterpart anywhere in staffing-api.ttl: (1) Doc/Excel/PDF export of the list — no export/download sd:ApiOperation exists for Employee Roster (staffing-api.ttl has no 'download' or 'export' operation at all); (2) the 'Upload Roster' CSV-upload modal itself — see Req_21_5_1/21_5_2's notes on staff:Perm_EmployeeRosterBulkUpload existing with no backing endpoint, the same underlying gap surfacing here from the landing-page-UI side. Not raised as a separate Annotation per item (both are narrow, and the bulk-upload gap already has its own Annotation below); noted here as partial satisfaction." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_1_2 a sd:UserStory ;
+    sd:requirementId "21.1.2" ;
+    sd:title "Add employment data for an individual who already has a Unique ID" ;
+    sd:statement "As an authorized Business User, I want to add the Employment Data details of individuals who have been assigned a Unique ID, so that I can establish the employment record for individuals whose identity has been validated." ;
+    sd:acceptanceCriteria "From the Name-column hyperlink in search results, show Name/Unique ID/DOB/Gender/School ID plus tabs (Demographic Information, Credentials, Employment, Professional Development, Education); Demographic Information tab shows Personal Information, Contact Information, and an Account Information History table, editable via 'Edit Details'; Credentials tab shows Active and Inactive/Suspended/Expired credentials across Certificates/Permits/Career Authorization/Employment/Special Education Approvals sub-tabs; Employment tab shows Current Employment and Employment History (Assignment/Meets Requirements/SCED Course Title/Start Date/Allocation/Status); user confirms demographic details, then sees a confirmation page after adding to roster." ;
+    sd:satisfiedBy staff:Seq_AddNewEmployee, staff:Op_AddEmployee, staff:Op_GetEmployeeDemographics ;
+    sd:notes "Direct match for the search-then-add path (Wireframe21_1/21_2 for the Employment tab detail, WireframeAddendumB21 for Demographic Information, WireframeAddendumD21 for the Employment tab). The Credentials/Professional Development/Education tabs are cross-domain UI composition over Credentialing- and ProfLearning-owned data (cred:Op_GetEducatorCredentials is staffing's own existing documented dependency for the Credentials-tab-equivalent data; no separate Staffing-side node models the composed multi-tab view itself) — not a Staffing coverage gap, just data the tab pulls from elsewhere. Comment id12 (Sinha, 'SOM Internal- Need to review for new/existing ID workflow') is an internal process-review note, not a content finding, and doesn't change any AC text. Comment id14 (Groom: 'These fields will not be entered by the business user. Citizen account has ability to add this data if/when they create their own account.') anchored to this story's Personal Information field list clarifies that these particular demographic fields are typically citizen-originated (via self-registration), with the district user only viewing/confirming rather than originating them here — consistent with this story covering an individual who ALREADY has a Unique ID (i.e. already resolved through the identity process), unlike 21.1.3's from-scratch entry." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_1_3 a sd:UserStory ;
+    sd:requirementId "21.1.3" ;
+    sd:title "Add employment data for an individual with no Unique ID yet" ;
+    sd:statement "As an authorized Business User, I want to add the Employment Data details of individuals who have not been assigned a Unique ID, so that I can establish the employment record for individuals who are not present in the system." ;
+    sd:acceptanceCriteria "Offered when no search results match; user enters Personal/Contact Information (no Unique ID field, since none exists yet); submission runs the Mi-Key matching algorithm; user sees a processing page, then a confirmation page, then can go to the user profile page; from the rostered employee's Employment tab the user can End Employment (modal: Start Date pre-filled, End Date, Separation Reason, Additional Remarks) or Add Assignment (modal: Type/Category/Position/SCED Course ID/Building/Grade Levels/FTE Allocation/Start Date, an expedited flow limited to selecting existing positions, not creating new ones); the record can be saved in Pending status with required employment fields missing, retaining the in-progress identity resolution; from Credentials the user can apply for Certificate/Permit/Career Authorization/Special Education Approval (link to be attached once available)." ;
+    sd:satisfiedBy staff:Seq_AddNewEmployee, staff:Op_AddEmployee, staff:Op_ResolveNearMatch, staff:Op_RequestNewId ;
+    sd:notes "Mi-Key matching, processing-page-then-confirmation flow, and Pending-status-while-identity-resolves are all a direct match to staff:Seq_AddNewEmployee's 'No match - create new record' branch and staff:Op_ResolveNearMatch/staff:Op_RequestNewId (WireframeAddendumC21, WireframeAddendumD21 confirm the confirmation screen and the End Employment/Add Assignment modals). The Add Assignment modal itself is explicitly out of scope here per comment id15 ('This is defined within Epic 22. Employee Assignment Details.') — consistent with this FDD's own Dependencies section pointing Assignment Details at FDD 22, not re-raised as a separate Annotation. SEE Question_NewEmployeeWithoutIdContradiction below for a genuine, still-open contradiction between this story's own premise and a reviewer comment on the very same paragraph." ;
+    sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Comment id13 (Groom, anchored at the very start of 21.1.3's own paragraph, no reply/resolution found anywhere in comments.xml or commentsExtended.xml): 'This is not a not a valid use case, the user will need to establish the Unique ID for all employees per 15.2 Business User Request for ID Requirements.' This directly contradicts 21.1.3's own stated premise — the story's whole point is adding 'individuals who have not been assigned a Unique ID' by running the Mi-Key matching algorithm from within THIS flow — while the reviewer's comment says a Unique ID must always already exist, established through a separate, earlier FDD 15.2 process, before an employee can be added here at all. This FDD's own Dependencies section is ambiguous on which reading is correct: it says both 'Once an employee has been added to the roster, the user must report the Employee Assignment Details' (implying roster addition happens first) AND cites FDD 24.2/24.3 ('The initial reporting of an individual requires use of the Identity Management Integration with Mi-Key... ID Matching and Assignment (24.2) and ID Resolution (24.3)') as a prerequisite dependency, without saying whether that ID-establishment step happens strictly before or as part of this feature's own 'Add Individual Employee' flow. staff:Seq_AddNewEmployee's own 'No match - create new record' branch (used as this story's satisfiedBy target above) currently models the from-scratch path as happening WITHIN Staffing's Add Employee flow, i.e. the same shape 21.1.3 describes and comment id13 calls invalid — so this isn't just an FDD-text ambiguity, it's a live, unresolved question about whether staffing-domain.ttl's own already-converted sequence models the right shape. Comment id 1690889436 (elsewhere in the same document, on the Add Individual Employee search step) raises the same overlap from a different angle: 'This is also defined in 15.2 Business User Request for ID requirements. Need to ensure the requirements are aligned and effort is not duplicative.' Not resolved here; flagged rather than silently picking a reading." ;
+    oa:hasTarget staff:Req_21_1_3 ; sd:impact "H" ; sd:status "open" ; sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_1_4 a sd:UserStory ;
+    sd:requirementId "21.1.4" ;
+    sd:title "Prevent adding an employee with employment-restricting PPR flags" ;
+    sd:statement "As the system, I must prevent the addition of an employee to the roster if they have PPR flags that restrict employment, issuing an error, so that the organization remains compliant by not hiring restricted individuals." ;
+    sd:acceptanceCriteria "Validate the individual's record for restricting PPR flags on submission. Reviewed-Listed disclosure status: hard-block addition with a specific error message directing the district to IChat for questions. Reviewed-Felony disclosure status: halt addition until the district completes a felony disclosure form, with a specific error message. Under PPR Review / PPR Document Hold / PPR Hold statuses: trigger a general-roster alert plus an application-delay-warning alert (directing questions to MDE-Professional-Practice@Michigan.gov), rather than a hard block. Display an error to the user whenever PPR flags prevent the addition." ;
+    sd:satisfiedBy profp:Rule_RosterEligibilityAssessment, profp:Rule_ReviewedListedAbsoluteBlock, profp:Op_GetRosterEligibilityAssessment, profp:Seq_EvaluateRosterEligibility, staff:Seq_AddNewEmployee ;
+    sd:notes "Excellent, near-verbatim cross-domain match, not a gap: profpractice-domain.ttl's Rule_RosterEligibilityAssessment (Reviewed-Listed -> Ineligible hard block; Reviewed-Felony -> EligibleWithNotification/acknowledgment; active-review statuses -> Ineligible/alert) and Rule_ReviewedListedAbsoluteBlock use the identical named statuses this story lists, and staff:Seq_AddNewEmployee already models the blocking GET /educators/{uniqueId}/roster-eligibility call with a 403 Forbidden branch. Comment id1926732478 (Sinha, reply to id17): 'I have updated the user story to explicitly define the PPR statuses mapped out in Epic 9. The Acceptance Criteria now details the hard stop for the Reviewed; Listed status, the conditional stop requiring a disclosure form for the Reviewed; Felony status, and the specific warning alerts...' confirms the visible AC text above already reflects this alignment work — not a live open item. Comment id2020987456 ('Clarification needed; Comment chain in Epic 9') anchored near the Reviewed-Felony error text remains open but points back into Epic 9's own review thread, not something resolvable from this FDD's side." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_1_5 a sd:UserStory ;
+    sd:requirementId "21.1.5" ;
+    sd:title "Set record to Active and lock as Read Only on successful submission" ;
+    sd:statement "As the system, I must set the record status to 'Active' upon successful submission when all required fields meet criteria, so that the initial employment record is finalized and protected as Read Only." ;
+    sd:acceptanceCriteria "Validate all submitted data elements against defined criteria; set status to Active on success; make employment data elements Read Only once Active; make an Update button available to modify the now-Read-Only data." ;
+    sd:satisfiedBy staff:EmpRosterState_Active, staff:Op_AddEmployee ;
+    sd:notes "Direct match — Wireframe21_1/21_2 are a literal before/after pair (editable form vs. read-only with an Update button in the header) confirming exactly this behavior." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_1_6 a sd:UserStory ;
+    sd:requirementId "21.1.6" ;
+    sd:title "Prevent re-adding a previously terminated record without a new Date of Hire" ;
+    sd:statement "As the system, I must prevent the user from re-adding a previously terminated record (same district, terminated) unless a new Date of Hire is provided (rejecting exact termination matches), so that accurate employment history is maintained and new periods of employment are properly recorded." ;
+    sd:acceptanceCriteria "Re-add a previously-terminated-in-the-same-district individual only if a new Date of Hire is supplied; the new Date of Hire must be chronologically after both the original Date of Hire and the original termination (Employment End) date, flagging an error otherwise; reject any submission that exactly matches a previous termination record (same district, same terminated status, no new Date of Hire); the previous record must be terminated before the individual can be re-added." ;
+    sd:notes "No satisfiedBy: nothing in staffing-domain.ttl models termination-record deduplication, exact-match rejection, or a chronological Date-of-Hire-vs-prior-termination check — staff:EmployeeRecord's own description only covers 'status, start/end dates, separation reason' as plain fields, with no BusinessRule instance addressing re-hire/re-add semantics (contrast with the 12 BusinessRule instances staffing-domain.ttl does have, none of which cover this). Comment id19/id1327490318 ('Business Rule Validation- Date of Hire must be after the original date of hire/comparison with original term date' / 'This has been added') shows this AC text was added to the FDD in response to review, but 'added' here means added to the FDD's own acceptance-criteria text, not built anywhere in the domain model — this is a genuine, still-open coverage gap, not a resolved item. See the coverage-gap Annotation below (grouped with Req_21_2_4, the related End-Date-after-Start-Date chronological check, since both are employment-date-ordering validations entirely absent from staff:EmployeeRosterAggregate's modeled invariants)." ;
+    sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirements — Feature 21.2: Edit/Remove Active Employees
+#################################################################
+
+staff:Req_21_2_1 a sd:UserStory ;
+    sd:requirementId "21.2.1" ;
+    sd:title "Edit employment details of an Active employee" ;
+    sd:statement "As an authorized Business User, I want the system to allow me to edit the employment details of active individuals on the Employee Roster, so that I can maintain current employment information for personnel already added to the system." ;
+    sd:acceptanceCriteria "Require authorized access rights to modify roster data; provide an interface to change employment details of records currently in Active status." ;
+    sd:satisfiedBy staff:Op_UpdateEmploymentStatus ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_2_2 a sd:UserStory ;
+    sd:requirementId "21.2.2" ;
+    sd:title "Add termination information to an employee record" ;
+    sd:statement "As an authorized Business User, I want to be able to add termination information (Employment End Date and Employment Separation Reason) to an employee record, so that the employee's end of employment can be accurately reported." ;
+    sd:acceptanceCriteria "The edit function allows input of Employment End Date and Employment Separation Reason." ;
+    sd:satisfiedBy staff:Op_UpdateEmploymentStatus, staff:EmploymentSeparationReason ;
+    sd:notes "staff:Op_UpdateEmploymentStatus's own projection note ('if terminating, endDate and separationReason must both be present or both absent') already captures exactly this pairing." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_2_3 a sd:UserStory ;
+    sd:requirementId "21.2.3" ;
+    sd:title "Require Employment End Date and Separation Reason together" ;
+    sd:statement "As the system, I must validate that if the Employment End Date is provided, the Employment Separation Reason is also submitted, so that complete separation details are captured when an employee is terminated." ;
+    sd:acceptanceCriteria "If End Date is submitted without Separation Reason (or vice versa), the submission results in an Error status." ;
+    sd:satisfiedBy staff:Rule_EmploymentEndDateSeparationReasonCorequirement ;
+    sd:notes "Exact match — the rule's statement is essentially a direct restatement of this story's acceptance criteria." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_2_4 a sd:UserStory ;
+    sd:requirementId "21.2.4" ;
+    sd:title "Require Employment End Date to be after the original Employment Start Date" ;
+    sd:statement "As the system, I must ensure the Employment End Date is subsequent to the original Employment Start Date, so that data integrity regarding the employment period is maintained." ;
+    sd:acceptanceCriteria "Employment End Date must occur after the original Employment Start Date (Date of Hire); the system prevents submission and flags an Error if End Date is on or before the existing Start Date." ;
+    sd:notes "No satisfiedBy: this is a plain chronological field-validation rule (End Date > Start Date on the SAME record) with no corresponding BusinessRule, invariant, or documented API-level validation anywhere in staffing-domain.ttl/staffing-api.ttl — staff:EmployeeRosterAggregate's invariants list covers required-field co-requirements (Rule_EmploymentEndDateSeparationReasonCorequirement) but not date ordering. Grouped with Req_21_1_6 in the coverage-gap Annotation below." ;
+    sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Two related employment-date chronological-ordering validations this FDD describes in detail (21.1.6: a re-added record's new Date of Hire must postdate both the original Date of Hire and the original termination date, and reject exact-match resubmissions of a prior termination; 21.2.4: Employment End Date must postdate Employment Start Date on the same record) have no counterpart anywhere in staffing-domain.ttl's BusinessRule set, StateDefinitions, or Aggregate invariants. staff:EmployeeRosterAggregate models the co-requirement between End Date and Separation Reason (Rule_EmploymentEndDateSeparationReasonCorequirement) but nothing about date ORDERING or duplicate-termination-record rejection. This looks like plain field-level validation logic that simply wasn't promoted to a BusinessRule node during the v1/v3 staffing conversion, rather than a deliberately unbuilt feature — a real, if narrow, gap." ;
+    oa:hasTarget staff:Req_21_1_6, staff:Req_21_2_4 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_2_5 a sd:UserStory ;
+    sd:requirementId "21.2.5" ;
+    sd:title "Display updated employee details as Read Only after a successful edit" ;
+    sd:statement "As the system, I must display the updated employee details as Read Only upon successful submission, with an 'Update' button available for subsequent changes, so that the finalized data is protected and ready for future modification." ;
+    sd:acceptanceCriteria "Successful validation/submission of changes transitions the data to Read Only display; an Update button is made available and clickable for future modifications." ;
+    sd:satisfiedBy staff:EmpRosterState_Active, staff:Op_UpdateEmploymentStatus ;
+    sd:notes "Same Read-Only-plus-Update-button shape as Req_21_1_5, now for the edit path rather than initial add; Wireframe21_2 corroborates both equally." ;
+    sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirements — Feature 21.3: Create a New Collection
+#################################################################
+
+staff:Req_21_3_1 a sd:UserStory ;
+    sd:requirementId "21.3.1" ;
+    sd:title "Establish a process for creating a school year Employee Roster" ;
+    sd:statement "As an authorized Business User, I want the system to establish a process for creating a school year Employee Roster, so that the details of employed individuals can be reported throughout the year." ;
+    sd:acceptanceCriteria "Dashboard > Employment > Data Collection & Submission page with 'Submit New Collection' (auto-labeled by school year, e.g. 'Fall 2025 Data Collection', with a checklist and a Start/Continue Employment Data Submission button) and 'Past Submissions' tabs (a filterable, Doc/Excel/PDF-downloadable table); validate the user's authorized access to the entity; the created roster is the official mechanism for reporting employment details for the year; clicking an employee's Name hyperlink opens a details drawer (Name, Certificate Number/Type, National Board Certified, Renewal Status, Endorsements, Certificate History, Assignment, Remarks/Comments); the user can submit the roster after making changes." ;
+    sd:satisfiedBy staff:Seq_OpenNewCollection, staff:Op_ListCollections, staff:CollectionAggregate ;
+    sd:notes "Direct match on the collection-creation shape (WireframeAddendumE21 confirms the Data Collection & Submission landing page; WireframeAddendumG21 confirms the Employee Details drawer). As WireframeAddendumG21's own notes discuss, the drawer's Certificate/Endorsement/Certificate-History content is cross-domain UI composition over Credentialing data, not a Staffing-side gap. As with Req_21_1_1, the Doc/Excel/PDF download option on Past Submissions has no backing sd:ApiOperation anywhere — same narrow export-capability gap noted there, not repeated as its own Annotation." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_3_2 a sd:UserStory ;
+    sd:requirementId "21.3.2" ;
+    sd:title "Automatically carry forward active employee records into the new collection" ;
+    sd:statement "As the system, I must automatically include all employee records active at the end of the previous school year collection in the new roster, so that the new school year-based Employee Roster is efficiently populated." ;
+    sd:acceptanceCriteria "The new collection automatically imports all previously-Active employee records; no manual intervention required." ;
+    sd:satisfiedBy staff:Rule_CollectionRolloverCarriesForward, staff:Seq_OpenNewCollection, staff:CollectionOpenedEvent ;
+    sd:notes "Exact, pre-existing match — Rule_CollectionRolloverCarriesForward's statement and CollectionOpenedEvent's own carriedForwardCount payload field describe precisely this behavior; this FDD confirms an already-modeled rule rather than surfacing a new one." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_3_3 a sd:UserStory ;
+    sd:requirementId "21.3.3" ;
+    sd:title "Automatically exclude fully-terminated records from the new collection" ;
+    sd:statement "As the system, I must automatically exclude employee records that have both an Employment End Date and Employment Separation Reason reported in the previous submission, so that only continuing employees are included in the new collection." ;
+    sd:acceptanceCriteria "Records with BOTH End Date and Separation Reason in the prior collection are filtered out of the new roster; only terminated records meeting this dual criterion are excluded." ;
+    sd:satisfiedBy staff:Rule_CollectionRolloverCarriesForward, staff:Seq_OpenNewCollection, staff:CollectionOpenedEvent ;
+    sd:notes "Same exact-match relationship as Req_21_3_2 — CollectionOpenedEvent's excludedCount payload field is this criterion's own counter." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_3_4 a sd:UserStory ;
+    sd:requirementId "21.3.4" ;
+    sd:title "Save an employee record in Pending status while identity resolution completes" ;
+    sd:statement "As the MiEdWorkforce system, I want to save an employee record in Pending status with incomplete employment details, so that I can establish a Unique ID while the authorized user enters official start dates or contractual statuses." ;
+    sd:acceptanceCriteria "Set status to Pending when Start Date or Employment Status hasn't been submitted; allow completing Mi-Key identity matching and assigning a Unique ID while still Pending; prevent finalizing (certifying) the Roster while any records remain Pending; move Pending to Active only once all required initial-hire fields are submitted and pass validation." ;
+    sd:satisfiedBy staff:EmpRosterState_Pending, staff:EmpRosterState_Active, staff:Seq_AddNewEmployee ;
+    sd:notes "Pending/Active states and the identity-resolution-while-Pending sequencing are a direct match. One nuance worth flagging (not a full gap): this story's 'prevents a user from finalizing the Employee Roster if any records remain in Pending status' criterion is not explicitly named among staff:CollectionAggregate's own invariants, which state only that 'Collection cannot be certified with any Error-status records' (Rule_CollectionCannotCertifyWithErrors) — Pending is a distinct, non-terminal EmpRosterState from Error, so it's not certain the modeled certify-block actually also covers Pending records the way this story requires. Not raised as a separate Annotation given how narrow it is, but worth a reviewer's eye if staff:Rule_CollectionCannotCertifyWithErrors is ever revised." ;
+    sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirements — Feature 21.4: Employee Roster Certification
+#################################################################
+
+staff:Req_21_4_1 a sd:UserStory ;
+    sd:requirementId "21.4.1" ;
+    sd:title "Identify and correct Error-status records before certification" ;
+    sd:statement "As an Authorized User, I want to identify and correct records marked with an 'Error' status, so that I can resolve data inconsistencies and logic failures before the collection certification deadline." ;
+    sd:acceptanceCriteria "Set Error status when field validation criteria aren't met (e.g. End Date before Date of Hire); let the user acknowledge errors via a 'Data Contains Errors' alert before submitting; show sections for Employees Not Appropriately Placed, Employees with No Assignment, Changes to Employee Roster, Required Positions with No Assignments, Buildings with No Appropriate Positions, Changes to Positions, and All Employees, each filterable and downloadable (Word/Excel/PDF); mark a record Error if the user cancels an update on a record missing mandatory data; restrict certifying the collection while any record is in Error status." ;
+    sd:satisfiedBy staff:Op_RunQualityReview, staff:QualityReviewResult, staff:Rule_CollectionCannotCertifyWithErrors, staff:Rule_ActiveEmploymentRequiresAssignment, staff:Rule_CredentialMatchingForAdminInstructional, staff:Rule_EndorsementAlignmentForTeaching ;
+    sd:notes "Strong match: Rule_CollectionCannotCertifyWithErrors is an exact match for the certify-blocked-by-Error criterion; Rule_ActiveEmploymentRequiresAssignment is an exact match for the 'Employees with No Assignment' dashboard section; Rule_CredentialMatchingForAdminInstructional/Rule_EndorsementAlignmentForTeaching are the underlying 'appropriate placement' checks behind 'Employees Not Appropriately Placed.' Genuinely partial, though: the SEVEN individual dashboard sections this story names are not each modeled as distinct queryable operations — staff:QualityReviewResult is one generic DomainEntity covering the whole quality-review output, not seven separately-addressable report shapes, and 'Required Positions with No Assignments'/'Buildings with No Appropriate Positions'/'Changes to Positions' lean on PositionRosterAggregate/organizations-domain concepts (EEM 'Open' building status) not individually cross-checked in this pass. As WireframeAddendumF21's own notes describe, the wireframe itself literally places a 'Power BI Charts?' placeholder over this content — corroborating from the source's OWN design artifact that this section's actual reporting mechanism was still unsettled, not just under-modeled on the Staffing side. Doc/Excel/PDF export again has no backing operation (same recurring gap as Req_21_1_1/21_3_1)." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_4_2 a sd:UserStory ;
+    sd:requirementId "21.4.2" ;
+    sd:title "Trigger a Quality Review before final certification" ;
+    sd:statement "As an Authorized User, I want to trigger a Quality Review of the Employee Roster, so that I can identify collection-level errors and warnings before final certification." ;
+    sd:acceptanceCriteria "Enable Quality Review only once pre-certification tasks are complete: all employment/assignment details updated; no records in error/pending status; legally-required building-level roles present per EEM (certification blocked if an open building has no reported staff); Data Quality Dashboard anomalies reviewed; mandatory text justification for specific warnings/errors; high-stakes summary reports reviewed. Display Quality Review results on screen, identifying specific flagged records." ;
+    sd:satisfiedBy staff:Op_RunQualityReview, staff:Op_GetCertificationStatus, staff:Op_SubmitJustifications ;
+    sd:notes "Core review-then-justify-then-certify flow is a direct match (Wireframe21_5/21_6/21_7 confirm the screen and its confirm/success states). Two named pre-certification inputs are cross-domain/stub territory, not Staffing gaps per se: the EEM 'open building must have reported staff' check depends on orgs:BuildingsLookupOperation (already staffing's own documented Dependency, itself flagged with a mechanism discrepancy in staffing-domain.ttl's own header); the 'Data Quality Dashboard' review step points at dq:DataQualityContext, a stub-only bounded context per mied-v3/CONVENTIONS.md's registry with no real conversion anywhere — consistent with GAPS.md's expectation that Data Collection & Compliance FDDs often reference not-yet-modeled stub contexts." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_4_3 a sd:UserStory ;
+    sd:requirementId "21.4.3" ;
+    sd:title "Show non-blocking warning messages during review and certification" ;
+    sd:statement "As an authorized Business User, I want to see clear warning messages during Employee Roster review and certification, so that I am aware of potential data quality issues and can make informed decisions before submitting the roster." ;
+    sd:acceptanceCriteria "Show warnings, visually distinct from errors and non-blocking, for: employees reported across multiple districts; no new employees added since the last 30-day certification; no terminations reported since the last 30-day certification; apparent overreporting of a single Employment Status; all terminated employees sharing the same End Date; the same Separation Reason reported for all separating employees. User may proceed after acknowledging; acknowledgment is logged and stored in the roster's audit history." ;
+    sd:satisfiedBy staff:Op_RunQualityReview, staff:QualityReviewResult, staff:CertificationAttestation ;
+    sd:notes "The six named warning scenarios are a near-verbatim match to the Business Specifications section's own 'Employee Collection Cert Level' warning table (same six conditions, same wording), so this story is internally confirmatory of the FDD's own earlier prose rather than introducing new scope. Comment id24 ('Verbiage for each warning is to be confirmed') remains open on the exact user-facing wording, but the underlying error-vs-warning distinction and non-blocking behavior are already modeled via Op_RunQualityReview/QualityReviewResult — not treated as a coverage gap, just unfinished copy." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_4_4 a sd:UserStory ;
+    sd:requirementId "21.4.4" ;
+    sd:title "View Roster of Employees submission status" ;
+    sd:statement "As an authorized Business User, I want to view the status of the Roster of Employees submission, so that I can monitor the current progress of the collection and know the state of the submitted data." ;
+    sd:acceptanceCriteria "Set/display status (Pending/Error/Active) based on submission state and validation results, per the same Pending/Error/Active semantics as Feature 21.1; Save-or-Cancel option; Active records become Read Only with an Update action available; user can save Pending, correct-and-resubmit Error, and view status transitions over time." ;
+    sd:satisfiedBy staff:EmpRosterState_Pending, staff:EmpRosterState_Error, staff:EmpRosterState_Active, staff:Op_AddEmployee, staff:Op_UpdateEmploymentStatus ;
+    sd:notes "This story restates Req_21_1_5/21_1_6's status-lifecycle acceptance criteria essentially verbatim, now framed as roster-wide monitoring rather than a single record's submission — same satisfiedBy targets apply; not treated as introducing distinct new scope." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_4_5 a sd:UserStory ;
+    sd:requirementId "21.4.5" ;
+    sd:title "Push employee records to entities within an organizational hierarchy" ;
+    sd:statement "As a Business User (such as an ISD or PSA Management Company user), I want to push employee records to other entities within my established organizational hierarchy, so that shared staff (e.g., speech therapists or daily substitutes) can be added to multiple district rosters without requiring duplicate data entry." ;
+    sd:acceptanceCriteria "Allow a user to 'send'/'push' submitted employee data to entities within their established hierarchy (PSA Education Management Companies, PSA Charter Authorizers, ISD/RESA hierarchies); generate an Action Item in the receiving entity's worklist; the receiving entity reviews core person data and confirms the individual is their employee; on confirmation, the employee is added to the receiving entity's Employee Roster; display a visual indicator that the record was received from another entity." ;
+    sd:notes "No satisfiedBy: nothing in staffing-domain.ttl, staffing-api.ttl, staffing-sequences.ttl, or staffing-permissions.ttl models sending/pushing an employee record to another entity, a receiving-entity worklist Action Item, a cross-entity confirmation step, or a 'received from another entity' indicator — no Aggregate, Permission, ApiOperation, Sequence, or DomainEvent addresses this at all (the closest concept, orgs:BuildingsLookupOperation's 'EEM hierarchy,' is about validating buildings within ONE entity's own organizational chart, not sharing an employee ACROSS entities). This is described in real detail (5 concrete acceptance criteria) for a specific, named multi-entity staffing scenario (shared speech therapists/substitutes across PSA/ISD hierarchies) — a substantive, high-impact gap, not a one-line aside. Comment id824067289 ('Need to add details') on this exact story suggests even the FDD's own reviewers considered it underspecified relative to how central it is. See the coverage-gap Annotation below." ;
+    sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Cross-entity employee record 'push'/'send' with a receiving-entity worklist Action Item and confirmation step (21.4.5) has no counterpart anywhere in the staffing bounded context as converted — no Aggregate, Permission, Sequence, ApiOperation, or DomainEvent models sending an employee record to, or confirming receipt from, another entity in an organizational hierarchy. This is functionally a shared-staff/multi-district-employment scenario (an ISD-employed speech therapist working across several constituent districts, e.g.) that the rest of staff:EmployeeRosterAggregate's single-entity-scoped model does not appear designed for at all — worth flagging to whoever owns FDD 22 (Employee Assignment Details) or FDD 18 (Roster of Positions), since a shared/multi-entity assignment concept may belong there instead, not necessarily as new Staffing-employee-roster scope." ;
+    oa:hasTarget staff:Req_21_4_5 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirements — Feature 21.5: Data Input via API and File Upload
+#################################################################
+
+staff:Req_21_5_1 a sd:UserStory ;
+    sd:requirementId "21.5.1" ;
+    sd:title "Support online entry, file upload, and API-based data submission" ;
+    sd:statement "As the MiEdWorkforce system, I must be designed to support flexible and scalable data submission methods—including online entry, file uploads, and future API connections—so that educating organizations and integrated HR systems can seamlessly submit Employee Roster data through the Data Hub without requiring manual intervention." ;
+    sd:acceptanceCriteria "Provide a file-upload option and file-type selection; support bulk submission via file upload; require authorization to submit for the entity; support direct online entry; accept structured, consumable file formats (not flat text); support automated submission through API service connections to HR systems; maintain open API endpoints for current/future HR-system integration via the Data Hub; design processing queues to handle both API streams and uploaded files consistently; align file-format decisions with future API integration." ;
+    sd:satisfiedBy staff:Op_AddEmployee, staff:Perm_EmployeeRosterBulkUpload ;
+    sd:notes "Online entry is well covered (Op_AddEmployee). File upload and the HR-system/'Data Hub' API-integration path are only PARTIALLY covered: staff:Perm_EmployeeRosterBulkUpload exists (staffing.employee-roster.bulk-upload) but — per that permission's own pre-existing note in staffing-permissions.ttl — has no matching sd:ApiOperation anywhere in staffing-api.yml/staffing-api.ttl at all; a 'processing queue' concept for either file uploads or API streams is likewise entirely absent from staffing-technical-design.ttl. This is a pre-existing, already-documented gap in the staffing conversion (not new to this pass), independently confirmed here by an FDD that describes the missing capability in detail. The 'Data Hub' as a named integration surface doesn't correspond to any bounded context or ExternalSystem in mied-v3's registry either." ;
+    sd:definedIn staff:Fdd21Doc .
+
+staff:Req_21_5_2 a sd:UserStory ;
+    sd:requirementId "21.5.2" ;
+    sd:title "Review bulk-upload processing results in a staging area before committing" ;
+    sd:statement "As a Business User submitting roster data via bulk upload, I want to review the processing results and validation errors in a staging area before committing, so that I can ensure only accurate data updates the individual employee records." ;
+    sd:notes "No satisfiedBy: a staging/review-before-commit step for bulk-uploaded data has no counterpart anywhere in staffing-domain.ttl/staffing-api.ttl/staffing-sequences.ttl — consistent with there being no bulk-upload sd:ApiOperation at all (see Req_21_5_1). Comment id26 (Groom, on the parent 21.5.1 paragraph: 'Does this need to include file processing post upload? (i.e. error results, and updating of individual records?)') with reply id710379547 (Sinha: 'This user story does not particularly address file processing post upload. It is added as a new user story 21.5.2.') documents exactly how this story came to exist — a reviewer noticed the gap directly, and it was split out as its own story rather than folded into 21.5.1, which is why it's modeled as a distinct Requirement here too. Coverage gap, not out-of-scope: this reads as intended future scope for the same not-yet-built bulk-upload pipeline, not a deliberately rejected idea." ;
+    sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Bulk file upload for the Employee Roster has a Permission (staff:Perm_EmployeeRosterBulkUpload) and an admin-monitoring Permission (staff:Perm_AdminViewFileQueues/staff:Perm_AdminResetFileProcessing) but NO backing sd:ApiOperation, sd:Sequence, or processing-queue concept anywhere in the staffing conversion (a pre-existing gap, documented in staffing-permissions.ttl's own header, now independently confirmed from the FDD side). This FDD adds a second layer on top: a staging-area review-before-commit step (21.5.2) for exactly this not-yet-built pipeline, plus 'API service connections directly to HR systems' via an unspecified 'Data Hub' (21.5.1) that doesn't correspond to any bounded context or ExternalSystem in mied-v3's registry. All three pieces (bulk-upload endpoint itself, staging/review step, HR-system API integration) are open." ;
+    oa:hasTarget staff:Req_21_5_1, staff:Req_21_5_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd21Doc .
+
+#################################################################
+# Requirement — Feature 21.6: Email/Comm (unnumbered scope-pointer paragraph)
+#################################################################
+
+staff:Req_21_6 a sd:Requirement ;
+    sd:requirementId "21.6" ;
+    sd:title "Email/Comm configuration scope pointer" ;
+    sd:statement "All underlying logic for sending, tracking, and displaying emails, alerts and notifications are derived from Business Specification #6 (Alerts, Emails & Communications). This feature is strictly limited to the configuration of these tools (defining what is sent) specifically for the Data Collection & Compliance module. Additionally, Business Specification #4 (Business Rules Management) will specify when and to whom it is sent." ;
+    sd:notes "Not narrative ('As a...') form — modeled as plain sd:Requirement rather than sd:UserStory per CONVENTIONS.md. This is a pure scope-pointer, not a testable requirement of its own, so it's recorded as one Requirement and immediately dispositioned rather than left to accumulate its own acceptance criteria." ;
+    sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "out-of-scope" ;
+    rdfs:comment "Email/alert delivery logic is explicitly deferred to Business Specification #6, which already exists as comm:CommunicationsContext — and is already the target of every staff:*Event's own sd:subscribesTo assertion in staffing-domain.ttl (EmployeeAddedToRosterEvent, EmploymentStatusChangedEvent, CollectionCertifiedEvent, etc. all already list comm:CommunicationsContext as a subscriber), so this dependency direction is already fully modeled, not a gap. The second half of this feature — Business Specification #4, Business Rule Management, determining WHEN and TO WHOM alerts are sent — has no corresponding bounded context anywhere in mied-v3 at all; this is the same Business Rule Management gap FDD 29's review pass already logged in GAPS.md ('Referenced throughout FDD 29... but no bounded context or admin-facing configuration surface for it exists anywhere'), independently re-confirmed here by a second, unrelated FDD." ;
+    oa:hasTarget staff:Req_21_6 ; sd:status "resolved" ; sd:definedIn staff:Fdd21Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:commenting ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "Still-open reviewer thread, not resolved anywhere in the document's own comment history: comment id6 (Groom, anchored at the Business Specifications section's 'The system will store all audit data for all changes applied to the Employee Roster' sentence) says 'Need to address in user story/design' — i.e. the audit-storage CLAIM exists in prose but was never itself promoted into a numbered Addendum story. Comment id27 (Groom, at the very end of the document, referencing a Professional Learning FDD's own audit-log story as a model: '28.5.7 As a Professional Learning Administrator, I want to review the Audit Log...Do we need to add a similar user story (like this one from 28) to address the audit requirements?') with reply id330543191 (Sinha: 'Yes this can be added. Can we get details on specifically what actions should trigger this? Eg: Roster status change.') confirms both reviewers agree an explicit audit-log user story SHOULD be added to this FDD, but as of this document's latest revision it had not been — meaning this FDD, as written, never actually specifies WHAT audit data is captured, on WHAT actions, or how it's surfaced to a user (contrast with FDD 28's own 28.5.7, which does specify an Audit Log review UI). Not modeled as its own numbered Requirement (there is no 21.x number for it to attach to), but flagged here since staffing-domain.ttl also has no distinct audit-trail Aggregate/Entity for Employee Roster changes specifically (audit modeling that DOES exist in staffing, staff:AuditWorkItemAggregate, is the ISD-auditor district-submission-review workflow — a different concept from a per-change audit log of roster edits)." ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn staff:Fdd21Doc .

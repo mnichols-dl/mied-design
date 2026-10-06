@@ -1,0 +1,2333 @@
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce Professional Learning API
+  version: 1.0.0
+  description: |
+    Manages the SCECH (State Continuing Education Clock Hours) system including
+    professional learning program lifecycle, sponsor management, attendance tracking,
+    credit awarding, and public catalog search. Primary consumers are coordinators,
+    educators, and Professional Learning Admins within the MiEdWorkforce platform.
+
+servers:
+  - url: http://proflearning-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/proflearning/api/v1
+    description: External via APIM
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ----------------------------------------------------------------------------
+  # PROGRAM APPLICATIONS
+  # ----------------------------------------------------------------------------
+
+  /program-applications:
+    get:
+      summary: List program applications
+      operationId: listProgramApplications
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.view
+      x-scope-sensitive: true
+      description: |
+        Returns program applications scoped to the caller's organizational context.
+        Coordinators see only applications for their sponsor. Admins with system-wide
+        authorization see all applications. X-Organization-Context is used by IAM to
+        determine which sponsor-scoped authorization applies.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ApplicationReviewStatus'
+        - name: sponsorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: applicationType
+          in: query
+          schema:
+            type: string
+            enum: [New, Modify, Renewal]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of program applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProgramApplicationSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Submit new or modified program application
+      operationId: submitProgramApplication
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.create
+      x-scope-sensitive: true
+      description: |
+        Coordinator submits a program application (New, Modify, or Renewal).
+        Triggers ProgramApplicationSubmitted event; the application appears in the admin's
+        pending-review list via GET /program-applications?status=PendingApproval.
+        X-Organization-Context must match the sponsor's organization.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgramApplicationCreate'
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ApplicationReviewStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /program-applications/{applicationId}:
+    get:
+      summary: Get program application
+      operationId: getProgramApplication
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.view
+      x-scope-sensitive: false
+      description: |
+        Returns full application details. Scope is resolved server-side from the
+        application's owning sponsor — X-Organization-Context is not required.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Application details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramApplicationDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /program-applications/{applicationId}/approve:
+    post:
+      summary: Approve program application
+      operationId: approveProgramApplication
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.approve
+      x-scope-sensitive: false
+      description: |
+        Transitions application from PendingApproval to Approved. Creates the
+        approved Program record. Scope resolved server-side from the application.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reviewerNotes:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Application approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    format: uuid
+                  programId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ApplicationReviewStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /program-applications/{applicationId}/reject:
+    post:
+      summary: Reject program application
+      operationId: rejectProgramApplication
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.approve
+      x-scope-sensitive: false
+      description: |
+        Transitions application from PendingApproval to Rejected.
+        Scope resolved server-side from the application.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejectionReason]
+              properties:
+                rejectionReason:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Application rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ApplicationReviewStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /program-applications/{applicationId}/request-info:
+    post:
+      summary: Request additional information from sponsor
+      operationId: requestProgramApplicationInfo
+      tags: [ProgramApplications]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.approve
+      x-scope-sensitive: false
+      description: |
+        Transitions application from PendingApproval to RequiresInfo.
+        Notifies coordinator via Notification platform capability.
+        Scope resolved server-side from the application.
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [infoRequest]
+              properties:
+                infoRequest:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Information request sent to sponsor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ApplicationReviewStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # PROGRAMS
+  # ----------------------------------------------------------------------------
+
+  /programs:
+    get:
+      summary: List programs
+      operationId: listPrograms
+      tags: [Programs]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.view
+      x-scope-sensitive: true
+      description: |
+        Returns approved programs scoped to the caller's organizational context.
+        Coordinators see programs under their sponsor. Admins with system-wide
+        authorization see all programs across sponsors.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: sponsorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProgramStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of programs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProgramSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+  /programs/{programId}:
+    get:
+      summary: Get program
+      operationId: getProgram
+      tags: [Programs]
+      # NOTE: Non-standard — this endpoint supports two access patterns (mirrors the
+      # dual-access convention used by credentialing-api.yml's
+      # GET /educators/{educatorId}/credentials).
+      # internal-user: MiLogin token; authenticated staff/sponsor view, any status.
+      # external-public: unauthenticated via APIM; Active programs only, referenced
+      #   from /catalog/search results.
+      x-access: internal-user, external-public
+      x-permissions-required:
+        - proflearning.program.view
+      x-scope-sensitive: false
+      description: |
+        Returns full program details. Scope resolved server-side from the program's
+        owning sponsor — X-Organization-Context is not required.
+
+        Supports two access patterns (non-standard — see x-access note above):
+        - **internal-user**: authenticated staff/sponsor view; any program status.
+        - **external-public**: unauthenticated via APIM for Active programs only
+          (see /catalog/search) — permission check is bypassed for this access
+          pattern, and non-Active programs return 404 rather than program detail.
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      responses:
+        '200':
+          description: Program details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /programs/{programId}/withdraw:
+    post:
+      summary: Withdraw program
+      operationId: withdrawProgram
+      tags: [Programs]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.program.withdraw
+      x-scope-sensitive: false
+      description: |
+        Transitions program from Active or Approved to Withdrawn.
+        Scope resolved server-side from the program's owning sponsor.
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Program withdrawn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  programId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/ProgramStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # SESSIONS & ATTENDANCE
+  # ----------------------------------------------------------------------------
+
+  /sessions/{sessionId}/attendees:
+    get:
+      summary: View session roster
+      operationId: getSessionRoster
+      tags: [Attendance]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.attendance.view
+      x-scope-sensitive: false
+      description: |
+        Returns the current enrollment roster for the session.
+        Scope resolved server-side from the session's owning program.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session roster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceRoster'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Add attendee to session roster
+      operationId: addAttendee
+      tags: [Attendance]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.attendance.add
+      x-scope-sensitive: false
+      description: |
+        Adds an educator to the session roster. Validates the educatorUniqueId
+        against the Mi-Key registry. Scope resolved server-side from the session.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [educatorUniqueId]
+              properties:
+                educatorUniqueId:
+                  type: string
+                  description: Validated Mi-Key Unique ID
+      responses:
+        '201':
+          description: Attendee added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attendeeId:
+                    type: string
+                    format: uuid
+                  defaultScechAward:
+                    $ref: '#/components/schemas/ScechAllocation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Educator already enrolled in this session
+
+  /sessions/{sessionId}/attendees/bulk-upload:
+    post:
+      summary: Bulk add attendees from CSV
+      operationId: bulkUploadAttendees
+      tags: [Attendance]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.attendance.add
+      x-scope-sensitive: false
+      description: |
+        Asynchronously adds multiple attendees from a CSV file containing Unique IDs.
+        Scope resolved server-side from the session.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [attendeesFile]
+              properties:
+                attendeesFile:
+                  type: string
+                  format: binary
+                  description: CSV with Unique IDs
+      responses:
+        '202':
+          description: Bulk upload accepted for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                  statusUrl:
+                    type: string
+                    format: uri
+                  processed:
+                    type: integer
+                  added:
+                    type: integer
+                  failed:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        uniqueId:
+                          type: string
+                        reason:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sessions/{sessionId}/certify:
+    post:
+      summary: Certify attendance and award SCECHs
+      operationId: certifyAttendance
+      tags: [Attendance]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.attendance.certify
+      x-scope-sensitive: false
+      description: |
+        Coordinator certifies attendance. SCECH awards become immutable after certification.
+        Blocked if required evaluations are not submitted.
+        Publishes AttendanceCertified event consumed by Credentialing domain.
+        Scope resolved server-side from the session's owning program.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attestation]
+              properties:
+                attestation:
+                  type: boolean
+                  description: Coordinator attests to accuracy of attendance records
+                  enum: [true]
+      responses:
+        '200':
+          description: Attendance certified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  certifiedAt:
+                    type: string
+                    format: date-time
+                  attendeeCount:
+                    type: integer
+                  totalScechsAwarded:
+                    type: integer
+        '400':
+          description: Cannot certify — pending evaluations or other blocking conditions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Session already certified
+
+  /session-attendees/{attendeeId}/scech-award:
+    patch:
+      summary: Adjust SCECH award for attendee
+      operationId: adjustScechAward
+      tags: [Attendance]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.attendance.adjust
+      x-scope-sensitive: false
+      description: |
+        Adjusts the SCECH award for an individual attendee before certification.
+        Post-certification changes require a correction request.
+        Scope resolved server-side from the attendee's session.
+      parameters:
+        - name: attendeeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [awardedScechs]
+              properties:
+                awardedScechs:
+                  $ref: '#/components/schemas/ScechAllocation'
+                adjustmentReason:
+                  type: string
+                  maxLength: 1000
+                  description: Optional justification for partial attendance adjustment
+      responses:
+        '200':
+          description: SCECH award updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attendeeId:
+                    type: string
+                    format: uuid
+                  awardedScechs:
+                    $ref: '#/components/schemas/ScechAllocation'
+        '400':
+          description: Award exceeds program maximum or session already certified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # SCECH CORRECTION REQUESTS
+  # ----------------------------------------------------------------------------
+
+  /correction-requests:
+    get:
+      summary: List correction requests
+      operationId: listCorrectionRequests
+      tags: [CorrectionRequests]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.correction.view
+      x-scope-sensitive: true
+      description: |
+        Returns correction requests scoped to the caller's organizational context.
+        Coordinators see only requests for sessions under their sponsor.
+        Admins with system-wide authorization see all correction requests.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/CorrectionRequestStatus'
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sponsorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of correction requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CorrectionRequestSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Submit SCECH correction request
+      operationId: submitCorrectionRequest
+      tags: [CorrectionRequests]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.correction.submit
+      x-scope-sensitive: false
+      description: |
+        Required for any changes to SCECH awards after attendance has been certified.
+        Appears in the admin's correction-request review list via
+        GET /correction-requests?status=Submitted.
+        Scope resolved server-side from the session's owning program.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, attendeeId, requestedScechs, justification]
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                attendeeId:
+                  type: string
+                  format: uuid
+                requestedScechs:
+                  $ref: '#/components/schemas/ScechAllocation'
+                  description: New requested SCECH allocation (must not exceed program max)
+                justification:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Correction request submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  correctionRequestId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/CorrectionRequestStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Duplicate pending correction request for this attendee
+
+  /correction-requests/{correctionRequestId}/approve:
+    post:
+      summary: Approve correction request
+      operationId: approveCorrectionRequest
+      tags: [CorrectionRequests]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.correction.approve
+      x-scope-sensitive: false
+      description: |
+        Transitions correction request from UnderReview to Approved.
+        Updates attendance roster and publishes SCECHCorrectionApproved event
+        consumed by Credentialing domain.
+        Scope resolved server-side from the correction request.
+      parameters:
+        - $ref: '#/components/parameters/CorrectionRequestId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminNotes:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Correction approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  correctionRequestId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/CorrectionRequestStatus'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Request already resolved
+
+  /correction-requests/{correctionRequestId}/deny:
+    post:
+      summary: Deny correction request
+      operationId: denyCorrectionRequest
+      tags: [CorrectionRequests]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.correction.approve
+      x-scope-sensitive: false
+      description: |
+        Transitions correction request from UnderReview to Denied.
+        Admin notes are required to explain the denial reason.
+        Scope resolved server-side from the correction request.
+      parameters:
+        - $ref: '#/components/parameters/CorrectionRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [adminNotes]
+              properties:
+                adminNotes:
+                  type: string
+                  maxLength: 2000
+                  description: Required — must explain denial reason
+      responses:
+        '200':
+          description: Correction denied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  correctionRequestId:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/CorrectionRequestStatus'
+        '400':
+          description: Admin notes required for denial
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # COLLEGE COURSE CREDIT (Educator self-service)
+  # ----------------------------------------------------------------------------
+
+  /my/college-courses/eligible:
+    get:
+      summary: Get eligible college courses for current educator
+      operationId: getEligibleCollegeCourses
+      tags: [CollegeCourses]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.collegecourse.apply
+      x-scope-sensitive: false
+      description: |
+        Returns STARR courses completed after the educator's last credential issuance
+        date, excluding courses already applied for SCECH credit. Scope is always
+        self-only — the result set is constrained to the authenticated user.
+      responses:
+        '200':
+          description: Eligible college courses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EligibleCourse'
+                  lastCredentialIssuanceDate:
+                    type: string
+                    format: date
+                    description: Date used to determine course eligibility
+
+  /my/college-courses:
+    post:
+      summary: Apply college course for SCECH credit
+      operationId: applyCollegeCourse
+      tags: [CollegeCourses]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.collegecourse.apply
+      x-scope-sensitive: false
+      description: |
+        Educator selects an eligible STARR course to apply toward SCECH requirements.
+        Conversion rate: 1 semester credit = 15 SCECH hours.
+        Publishes CollegeCourseApplied event consumed by Credentialing domain.
+        Always operates on the authenticated user's own records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [starrCourseRecordId]
+              properties:
+                starrCourseRecordId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: College course applied for SCECH credit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applicationId:
+                    type: string
+                    format: uuid
+                  courseName:
+                    type: string
+                  semesterCredits:
+                    type: number
+                    format: decimal
+                  scechsAwarded:
+                    type: integer
+                    description: semesterCredits * 15 (configurable conversion rate)
+        '400':
+          description: Course not eligible or already applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Course record not found
+
+  # ----------------------------------------------------------------------------
+  # EVALUATION TEMPLATES
+  # ----------------------------------------------------------------------------
+
+  /evaluation-templates:
+    get:
+      summary: List evaluation templates
+      operationId: listEvaluationTemplates
+      tags: [EvaluationTemplates]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.evaluationtemplates
+      x-scope-sensitive: false
+      description: |
+        Returns all evaluation templates. System-wide admin operation;
+        scope is not constrained by organization.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Active, Inactive]
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of evaluation templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluationTemplateSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create evaluation template
+      operationId: createEvaluationTemplate
+      tags: [EvaluationTemplates]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.evaluationtemplates
+      x-scope-sensitive: false
+      description: |
+        Creates a new evaluation template. System-wide admin operation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationTemplateCreate'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templateId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /evaluation-templates/{templateId}:
+    put:
+      summary: Update evaluation template
+      operationId: updateEvaluationTemplate
+      tags: [EvaluationTemplates]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.evaluationtemplates
+      x-scope-sensitive: false
+      description: |
+        Full replacement update of an evaluation template. System-wide admin operation.
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationTemplateCreate'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templateId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # PROGRAM CATEGORIES
+  # ----------------------------------------------------------------------------
+
+  /program-categories:
+    get:
+      summary: List program categories
+      operationId: listProgramCategories
+      tags: [ProgramCategories]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.categories
+      x-scope-sensitive: false
+      description: |
+        Returns all program categories and optionally their subcategories.
+        System-wide admin operation.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Active, Inactive]
+        - name: includeSubcategories
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of program categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProgramCategorySummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create program category
+      operationId: createProgramCategory
+      tags: [ProgramCategories]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.categories
+      x-scope-sensitive: false
+      description: |
+        Creates a new top-level program category. System-wide admin operation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categoryId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /program-categories/{categoryId}:
+    patch:
+      summary: Update program category
+      operationId: updateProgramCategory
+      tags: [ProgramCategories]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.categories
+      x-scope-sensitive: false
+      description: |
+        Partial update of a program category's name or description.
+        System-wide admin operation.
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categoryId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /program-categories/{categoryId}/subcategories:
+    post:
+      summary: Create subcategory
+      operationId: createSubcategory
+      tags: [ProgramCategories]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.categories
+      x-scope-sensitive: false
+      description: |
+        Creates a subcategory under the specified parent category.
+        System-wide admin operation.
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Subcategory created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subcategoryId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Parent category not found
+
+  /program-categories/{categoryId}/deactivate:
+    post:
+      summary: Deactivate program category
+      operationId: deactivateProgramCategory
+      tags: [ProgramCategories]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.admin.categories
+      x-scope-sensitive: false
+      description: |
+        Transitions category from Active to Inactive.
+        Blocked if active programs are currently assigned to this category —
+        programs must be reassigned before deactivation.
+        System-wide admin operation.
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '200':
+          description: Category deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categoryId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Cannot deactivate — active programs assigned to this category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # SPONSORS
+  # ----------------------------------------------------------------------------
+
+  /sponsors/{sponsorId}:
+    get:
+      summary: Get sponsor
+      operationId: getSponsor
+      tags: [Sponsors]
+      # NOTE: Non-standard — this endpoint supports two access patterns (mirrors the
+      # dual-access convention used by credentialing-api.yml's
+      # GET /educators/{educatorId}/credentials).
+      # internal-user: MiLogin token; authenticated staff/sponsor view.
+      # external-public: unauthenticated via APIM; public-facing sponsor lookup.
+      x-access: internal-user, external-public
+      x-permissions-required:
+        - proflearning.sponsor.view
+      x-scope-sensitive: false
+      description: |
+        Returns full sponsor details including active programs.
+        Scope resolved server-side from the sponsor record.
+
+        Supports two access patterns (non-standard — see x-access note above):
+        - **internal-user**: authenticated staff/sponsor view.
+        - **external-public**: unauthenticated via APIM for public-facing sponsor
+          lookup — permission check is bypassed for this access pattern.
+      parameters:
+        - $ref: '#/components/parameters/SponsorId'
+      responses:
+        '200':
+          description: Sponsor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SponsorDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # BOOKMARKS (Educator self-service)
+  # ----------------------------------------------------------------------------
+
+  /my/bookmarks:
+    get:
+      summary: List bookmarks
+      operationId: listBookmarks
+      tags: [Bookmarks]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.catalog.bookmark
+      x-scope-sensitive: false
+      description: |
+        Returns the authenticated educator's saved bookmarks.
+        Always operates on the authenticated user's own records.
+      parameters:
+        - name: itemType
+          in: query
+          schema:
+            type: string
+            enum: [Program, Sponsor]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of bookmarks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookmarkSummary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create bookmark
+      operationId: createBookmark
+      tags: [Bookmarks]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.catalog.bookmark
+      x-scope-sensitive: false
+      description: |
+        Saves a program or sponsor bookmark for the authenticated educator.
+        Always operates on the authenticated user's own records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemType, itemId]
+              properties:
+                itemType:
+                  type: string
+                  enum: [Program, Sponsor]
+                itemId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Bookmark saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookmarkId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Already bookmarked
+
+    delete:
+      summary: Remove bookmark
+      operationId: deleteBookmark
+      tags: [Bookmarks]
+      x-access: internal-user
+      x-permissions-required:
+        - proflearning.catalog.bookmark
+      x-scope-sensitive: false
+      description: |
+        Removes a bookmark for the authenticated educator.
+        Always operates on the authenticated user's own records.
+      parameters:
+        - name: itemType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Program, Sponsor]
+        - name: itemId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Bookmark removed
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------------------
+  # PUBLIC CATALOG (Unauthenticated via APIM)
+  # ----------------------------------------------------------------------------
+
+  /catalog/search:
+    get:
+      summary: Search public program catalog
+      operationId: searchCatalog
+      tags: [Catalog]
+      x-access: external-public
+      x-permissions-required: []
+      x-scope-sensitive: false
+      description: |
+        Unauthenticated public endpoint routed via APIM (FDD 31.5 "Public Search -
+        Professional Learning"). Returns Active programs and sponsors only
+        (Programs within their current approval period). No X-Organization-Context
+        applies. Matches full and partial results; strips leading/trailing
+        whitespace, retains embedded spaces, ignores special characters.
+        City, zip code, county, and a human-readable Sponsor ID (e.g. "A123456",
+        distinct from the internal sponsorId UUID) are FDD 31.5 Advanced Search
+        fields not yet filterable here — see proflearning-domain.md's Sponsor
+        address/identifier coverage gap.
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Free-text search across program name, description, and sponsor
+        - name: sponsorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter to a single known sponsor (internal UUID, not the FDD's human-readable Sponsor ID — see coverage gap note above)
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProgramFormat'
+        - name: county
+          in: query
+          schema:
+            type: string
+        - name: sessionDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sessionDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dppd
+          in: query
+          schema:
+            type: boolean
+          description: Filter to DPPD-eligible programs only
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Catalog search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogSearchResult'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ProgramId:
+      name: programId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    CorrectionRequestId:
+      name: correctionRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    SponsorId:
+      name: sponsorId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: sponsor-org-42
+
+  schemas:
+
+    # ------ Enums ------
+
+    ApplicationReviewStatus:
+      type: string
+      enum:
+        - Draft
+        - Submitted
+        - PendingApproval
+        - Approved
+        - Rejected
+        - RequiresInfo
+        - Withdrawn
+
+    ProgramStatus:
+      type: string
+      enum:
+        - Draft
+        - PendingApproval
+        - Approved
+        - Active
+        - Inactive
+        - Withdrawn
+
+    CertificationStatus:
+      type: string
+      enum:
+        - Draft
+        - AwaitingEvaluations
+        - ReadyForCertification
+        - Certified
+
+    CorrectionRequestStatus:
+      type: string
+      enum:
+        - Submitted
+        - UnderReview
+        - Approved
+        - Denied
+
+    ProgramFormat:
+      type: string
+      enum:
+        - FaceToFace
+        - VirtualOnline
+        - Hybrid
+
+    # ------ Value Objects ------
+
+    ScechAllocation:
+      type: object
+      description: SCECH hours broken down by type. Not all types available for all educators.
+      properties:
+        general:
+          type: integer
+          minimum: 0
+          description: General SCECH hours
+        college:
+          type: integer
+          minimum: 0
+          description: College SCECH hours (School Counselors only)
+        career:
+          type: integer
+          minimum: 0
+          description: Career SCECH hours (School Counselors only)
+        military:
+          type: integer
+          minimum: 0
+          description: Military SCECH hours (School Counselors only)
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ------ Program Application Schemas ------
+
+    ProgramApplicationSummary:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        programTitle:
+          type: string
+        sponsorId:
+          type: string
+          format: uuid
+        sponsorName:
+          type: string
+        applicationType:
+          type: string
+          enum: [New, Modify, Renewal]
+        status:
+          $ref: '#/components/schemas/ApplicationReviewStatus'
+        submittedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProgramApplicationDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProgramApplicationSummary'
+        - type: object
+          properties:
+            programDetails:
+              $ref: '#/components/schemas/ProgramDetails'
+            reviewerNotes:
+              type: string
+              nullable: true
+
+    ProgramApplicationCreate:
+      type: object
+      required: [sponsorId, applicationType, programDetails]
+      properties:
+        sponsorId:
+          type: string
+          format: uuid
+        applicationType:
+          type: string
+          enum: [New, Modify, Renewal]
+        existingProgramId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for Modify and Renewal types
+        programDetails:
+          $ref: '#/components/schemas/ProgramDetails'
+
+    ProgramDetails:
+      type: object
+      required: [title, format, categoryId, maxScechHours, approvalPeriod]
+      properties:
+        title:
+          type: string
+          maxLength: 300
+        description:
+          type: string
+          maxLength: 5000
+        format:
+          $ref: '#/components/schemas/ProgramFormat'
+        categoryId:
+          type: string
+          format: uuid
+        subcategoryId:
+          type: string
+          format: uuid
+          nullable: true
+        maxScechHours:
+          $ref: '#/components/schemas/ScechAllocation'
+        approvalPeriod:
+          type: object
+          required: [beginDate, endDate]
+          properties:
+            beginDate:
+              type: string
+              format: date
+            endDate:
+              type: string
+              format: date
+        isDppd:
+          type: boolean
+          default: false
+          description: District Provided Professional Development indicator
+        programFee:
+          type: number
+          format: decimal
+          nullable: true
+          description: Display-only; payment collected externally by sponsor
+        externalRegistrationUrl:
+          type: string
+          format: uri
+          nullable: true
+        evaluationRequired:
+          type: boolean
+          default: false
+        evaluationTemplateId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required if evaluationRequired=true
+        endorsementAlignments:
+          type: array
+          items:
+            type: string
+          description: Endorsement codes this program is aligned to (informational only)
+        agendaDocumentId:
+          type: string
+          format: uuid
+          description: Reference to document uploaded via Documents API
+        contact:
+          $ref: '#/components/schemas/ProgramContact'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionCreate'
+
+    SessionCreate:
+      type: object
+      required: [startDate, endDate]
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        location:
+          $ref: '#/components/schemas/SessionLocation'
+
+    SessionLocation:
+      type: object
+      properties:
+        isVirtual:
+          type: boolean
+          default: false
+        county:
+          type: string
+        locationName:
+          type: string
+        address:
+          type: string
+          description: Required if isVirtual=false
+
+    ProgramContact:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+
+    # ------ Program Schemas ------
+
+    ProgramSummary:
+      type: object
+      properties:
+        programId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sponsorName:
+          type: string
+        format:
+          $ref: '#/components/schemas/ProgramFormat'
+        maxScechHours:
+          $ref: '#/components/schemas/ScechAllocation'
+        status:
+          $ref: '#/components/schemas/ProgramStatus'
+        approvalPeriodEnd:
+          type: string
+          format: date
+        isDppd:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProgramDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProgramSummary'
+        - type: object
+          properties:
+            description:
+              type: string
+            category:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                subcategoryName:
+                  type: string
+                  nullable: true
+            programFee:
+              type: number
+              format: decimal
+              nullable: true
+            externalRegistrationUrl:
+              type: string
+              format: uri
+              nullable: true
+            evaluationRequired:
+              type: boolean
+            endorsementAlignments:
+              type: array
+              items:
+                type: string
+            contact:
+              $ref: '#/components/schemas/ProgramContact'
+            approvalPeriod:
+              type: object
+              properties:
+                beginDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+            sessions:
+              type: array
+              items:
+                $ref: '#/components/schemas/SessionSummary'
+
+    SessionSummary:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        location:
+          $ref: '#/components/schemas/SessionLocation'
+        certificationStatus:
+          $ref: '#/components/schemas/CertificationStatus'
+
+    # ------ Attendance Schemas ------
+
+    AttendanceRoster:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        programTitle:
+          type: string
+        programMaxScechs:
+          $ref: '#/components/schemas/ScechAllocation'
+        certificationStatus:
+          $ref: '#/components/schemas/CertificationStatus'
+        certifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendeeRecord'
+
+    AttendeeRecord:
+      type: object
+      properties:
+        attendeeId:
+          type: string
+          format: uuid
+        educatorUniqueId:
+          type: string
+        educatorName:
+          type: string
+        awardedScechs:
+          $ref: '#/components/schemas/ScechAllocation'
+        evaluationSubmitted:
+          type: boolean
+        adjustmentReason:
+          type: string
+          nullable: true
+
+    # ------ Correction Request Schemas ------
+
+    CorrectionRequestSummary:
+      type: object
+      properties:
+        correctionRequestId:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        programTitle:
+          type: string
+        sponsorName:
+          type: string
+        educatorUniqueId:
+          type: string
+        educatorName:
+          type: string
+        currentScechs:
+          $ref: '#/components/schemas/ScechAllocation'
+        requestedScechs:
+          $ref: '#/components/schemas/ScechAllocation'
+        justification:
+          type: string
+        status:
+          $ref: '#/components/schemas/CorrectionRequestStatus'
+        submittedAt:
+          type: string
+          format: date-time
+
+    # ------ College Course Schemas ------
+
+    EligibleCourse:
+      type: object
+      properties:
+        starrCourseRecordId:
+          type: string
+          format: uuid
+        courseName:
+          type: string
+        institution:
+          type: string
+        completionDate:
+          type: string
+          format: date
+        semesterCredits:
+          type: number
+          format: decimal
+        estimatedScechs:
+          type: integer
+          description: semesterCredits * conversionRate (currently 15)
+
+    # ------ Evaluation Template Schemas ------
+
+    EvaluationTemplateSummary:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [Active, Inactive]
+        applicableCategories:
+          type: array
+          items:
+            type: string
+        questionSetCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EvaluationTemplateCreate:
+      type: object
+      required: [name, questionSetRefs]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        applicableCategoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Categories this template applies to (empty = all programs)
+        questionSetRefs:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: References to Question Set capability IDs
+
+    # ------ Category Schemas ------
+
+    ProgramCategorySummary:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Active, Inactive]
+        subcategories:
+          type: array
+          items:
+            type: object
+            properties:
+              subcategoryId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              status:
+                type: string
+                enum: [Active, Inactive]
+
+    # ------ Sponsor Schemas ------
+
+    SponsorDetail:
+      type: object
+      properties:
+        sponsorId:
+          type: string
+          format: uuid
+        organizationCode:
+          type: string
+          description: EEM organization code
+        name:
+          type: string
+        status:
+          type: string
+          enum: [Active, Inactive]
+        contact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              format: email
+        activePrograms:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgramSummary'
+
+    # ------ Bookmark Schemas ------
+
+    BookmarkSummary:
+      type: object
+      properties:
+        bookmarkId:
+          type: string
+          format: uuid
+        itemType:
+          type: string
+          enum: [Program, Sponsor]
+        itemId:
+          type: string
+          format: uuid
+        itemName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ------ Catalog Schemas ------
+
+    CatalogSearchResult:
+      type: object
+      properties:
+        resultType:
+          type: string
+          enum: [Program, Sponsor]
+        programId:
+          type: string
+          format: uuid
+          nullable: true
+        sponsorId:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        sponsorName:
+          type: string
+        format:
+          $ref: '#/components/schemas/ProgramFormat'
+        category:
+          type: string
+          nullable: true
+          description: Category name (e.g. Curriculum Development, School Administration, DPPD) — null for Sponsor results
+        maxScechHours:
+          type: integer
+          description: Total across all SCECH types
+        nextSessionDate:
+          type: string
+          format: date
+          nullable: true
+        beginDate:
+          type: string
+          format: date
+          nullable: true
+          description: Approval period begin date (FDD 31.5 "Begin Date" results column) — null for Sponsor results
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Approval period end date (FDD 31.5 "End Date" results column) — null for Sponsor results
+        county:
+          type: string
+          nullable: true
+        isDppd:
+          type: boolean
+        programFee:
+          type: number
+          format: decimal
+          nullable: true
+
+    # ------ Error Schemas ------
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        validationErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Validation error or business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Optimistic concurrency conflict or duplicate creation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            proflearning:read: Read professional learning data
+            proflearning:write: Submit applications and manage attendance
+            proflearning:admin: Administrative operations
+            proflearning:coordinator: Coordinator operations for sponsor programs
+
+security:
+  - MiLogin: [proflearning:read]

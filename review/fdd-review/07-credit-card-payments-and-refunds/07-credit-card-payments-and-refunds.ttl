@@ -1,0 +1,347 @@
+# FDD 07 review — "07 - Credit Card Payments and Refunds" (Features 7.1, 7.2, 7.3).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Payments graph
+# (payments-capability.ttl / payments-permissions.ttl / payments-api.ttl /
+# payments-sequences.ttl / payments-technical-design.ttl, all loaded together), which is a
+# very close match: this FDD is essentially the source functional spec that
+# payments-capability.md/payments-sequences.md were themselves derived from, so most
+# numbered stories here map onto an already-modeled Sequence/Rule/Operation with high
+# confidence rather than a speculative one.
+#
+# Source: "7 - Credit card payments and Refunds-.docx" (Epic 187622). Read the .md sibling
+# first, then unzipped the .docx for comments.xml/commentsExtended.xml (30 comments, 6 in
+# threads via w15:paraIdParent, the rest standalone) and word/media (16 images, image1-6
+# are .png "Screenshots" from the main Business Specifications section, image7-16 are .jpg
+# higher-fidelity Addendum screenshots for Features 7.1/7.3) — all 16 were individually
+# viewed (small enough set that full depth was practical; see CONVENTIONS.md's "not every
+# image needs viewing" guidance, not invoked here since there was no need to sample).
+#
+# Companion documents also present in this FDD folder and read for corroborating detail
+# (NOT separately promoted into their own Requirement set — they describe the CEPAS
+# interface contract itself, which payments-capability.ttl/payments-technical-design.ttl
+# already model in full; used here only to confirm or add nuance to the numbered stories
+# below): "7.0 CEPAS/Interface Design document - CEPAS (Payments).md" (AES-GCM encryption
+# spec, SHA-1 hash calculation, confirmation query-string field layout — matches
+# pay:TP_CepasRedirectInitiation/TP_CepasConfirmationProcessing exactly), "...CEPAS
+# (Reimbursements).md" (POST /api/v1/payment/cancel field layout — matches
+# pay:TP_CepasRefundApiCall), "...CEPAS (Posting File).md" (fixed-width AH/AD/AF record
+# layout — matches pay:BatchJob_PostingFileReconciliation's own notes). "Payments/Payment_
+# flow.vsdx" and "Payments/CEPAS Integration/CEPAS flow.vsdx"/".pdf" skipped per
+# CONVENTIONS.md's vsdx-skip rule (payments-sequences.ttl's mermaid content is a fuller,
+# already-converted equivalent). "Payments/Payments_Scenarios.xlsx" was read (not
+# vsdx/pptx, and short) — six informal scenario rows, five of which just restate content
+# already in the main document; the sixth ("Paying for a Permit after school year ends")
+# is genuinely new and is captured as pay:Question_PostSchoolYearPaymentValidation below.
+# "MOECS Current Process Documentation" (.doc/.pdf/.msg) skipped — legacy reference
+# material for the predecessor system, not load-bearing for MiEdWorkforce's own design
+# (image1.png, one of the 16 embedded images, turns out to BE a MOECS legacy screenshot
+# reused inline — see cred:... no, pay:WireframeLegacyMoecs below — corroborating that
+# these documents are backward-reference material, not new requirements).
+#
+# Structure of the document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section covers both payments AND refunds in detail
+#   (inbound/outbound data elements for both, CEPAS-down handling, posting-file
+#   reconciliation, bulk/batch processing) plus a 16-row "HIGH LEVEL SCENARIOS" paraphrase
+#   table restating the same ground — the HLS table is skipped per CONVENTIONS.md.
+# - An "Addendum" with real Feature/story numbering (7.1.1-7.1.5, 7.2.1-7.2.3, 7.3.1-7.3.2 —
+#   10 stories total) is the primary Requirement unit used below.
+# - Exactly like FDD 29's own pilot finding, the Addendum's numbering OMITS an entire
+#   real, wireframed capability the Business Specifications prose describes in detail:
+#   refund processing by the Credential Administrator (its own inbound/outbound data-
+#   element tables, and HLS Use Cases 9-11) never got a 7.1.x/7.2.x/7.3.x number anywhere
+#   in the Addendum, even though Feature 7.1's own title is "CEPAS Interface (Payments AND
+#   REFUNDS)". Modeled below with a synthetic pay:Req_07_BizSpec_Refund ID and flagged as a
+#   discrepancy (pay:Question_AddendumOmitsRefundFeature), rather than silently folded into
+#   7.1's numbering or silently dropped.
+# - Feature 7.2/7.3's own numbering has no internal inconsistency (unlike FDD 29's 29.4)
+#   and needed no synthetic IDs or renumbering.
+#
+# Comments: 30 total (28 from the original 2025 review cycle, dated 2025-06-26 through
+# 2026-01-16; 2 much later standalone ones dated 2026-03-06 — see below). Most are
+# minor wording-confirmation exchanges ("Updated", "Added") already resolved in-thread and
+# folded into the relevant story's own sd:notes rather than transcribed. Two threads
+# surfaced a substantive, still-live finding and are modeled as standalone Annotations:
+# - Comments 7/8/9 (Caswell asking whether Success/Error messaging appears in
+#   MiEdWorkforce itself; Punniyamoorthy replying "MiEd will not display any message
+#   related to payment, but will change the status"; Caswell noting the visible document
+#   text contradicts that explanation and that wording was edited to match — with no
+#   further reply confirming the edit was accepted) — this is a genuine, still-open
+#   contradiction between what the FDD's own prose/wireframes show (an explicit Payment
+#   Successful/Payment Error page — see wireframes 04/10/11/15/16 below, all showing
+#   dedicated MiEdWorkforce-rendered success/error content) and what its own author says
+#   the system actually does. See pay:Question_PaymentResultMessagingContradiction below,
+#   modeled on FDD 29's Question_CoverLetterStoryContradiction precedent.
+# - Comments 132877093/1640280882 (Caswell, dated 2026-03-06 — six weeks after every other
+#   comment in the document and seven months after the 08/01/2025 approval signoff),
+#   flagging a dead hyperlink ("brings you to a 'Page not found' message") and an access
+#   request ("Can access be granted for these?") on the Additional Resources links
+#   (Payment_flow.vsdx / CEPAS_BestPractices.doc / Consumer Payments Integration Guide),
+#   both with no reply. Document-hygiene only, not a functional finding — noted here (same
+#   as FDD 29's own post-signoff-revision finding) so the approval table isn't read as
+#   "nothing changed after this," but not modeled as its own Annotation.
+# - Comment 10 ("Define users.") on 7.1.1's "As a User (Citizen, Business, State Admin)"
+#   phrasing is the same kind of role-definition thread FDD 11/16 and 29 both already
+#   surfaced; here it's a single unreplied comment rather than a multi-comment thread, and
+#   payments-permissions.md/payments-sequences.md already resolve "Business User" concretely
+#   (district staff managing temporary credentials/substitutes) — folded into 7.1.1's notes
+#   rather than re-raised as a new Annotation.
+# - Comment 30/31 (Punniyamoorthy/Caswell): "Payment Type" (Credit Card or Bank Remittance)
+#   added as a data element mid-review. Folded into 7.1.4's notes as a minor terminology
+#   nuance against pay:PaymentConfirmation's existing "card type" field, not a new gap.
+#
+# Tracked changes: not separately reconstructed (no comment thread here depends on a
+# stale-vs-corrected text distinction the way FDD 29's Confirm-Enrollment thread did).
+#
+# Wireframes: all 16 embedded images viewed and extracted to wireframes/. image1.png-
+# image6.png (the six "Screenshot N" images the Business Specifications section refers to
+# by number, skipping "Screenshot 4" in the source's own numbering — an unexplained gap,
+# not investigated further given how minor it is) are data-flow/sequence diagrams and
+# lower-fidelity mockups; image7.jpg-image16.jpg are higher-fidelity Addendum screenshots
+# of an actual Career Authorization Application's Payment tab and a "District staff"-facing
+# Unpaid Application Fees screen. Confirmed by viewing, not assumed from document order —
+# in particular image1.png (Screenshot 4's neighbor) turned out to be a legacy MOECS system
+# screenshot reused as reference material, not a proposed MiEdWorkforce screen; caught only
+# by actually looking at it (its own on-screen text says "log on to MOECS System").
+#
+# Cross-domain note: this FDD's own Dependencies section names five OTHER FDDs by number
+# (1.0 auth/roles = iam, 2.0 Reports = reporting, 3.0 Dashboards = dashboards, 4.0 Business
+# Rule Management = pay-fee-link availability rules, 5.1-5.3 System Administration =
+# credentialing fee/global-parameter config, 6.0 Alerts/Emails/Communications = comm).
+# None of these dependencies are modeled as Requirements of THIS FDD (they're the other
+# FDDs' own subject matter) — noted only where a numbered story here directly references
+# one (7.1.1's email template -> comm:EmailTemplateAggregate).
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix pay:   <urn:solutiondesign:instance:payments:> .
+@prefix cred:  <urn:solutiondesign:instance:credentialing:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+@prefix ext:   <urn:solutiondesign:instance:external:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+pay:Fdd07Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/07 - Credit Card Payments and Refunds/7 - Credit card payments and Refunds-.docx" ;
+    sd:notes "Covers Features 7.1-7.3 (the document's own subtitle: '7.0 Credit Card Payments/Refunds (7.1, 7.2 and 7.3)'). Author Vidhya Punniyamoorthy (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/01/2025 per the signoff table — but two comments (132877093/1640280882) are dated 2026-03-06, over seven months after signoff, flagging a dead Additional-Resources hyperlink and an access request. Not resolved here (document hygiene, not a functional finding); noted so the signoff table isn't read as 'nothing changed after this' — same caution FDD 29's own header carries for the same reason." .
+
+pay:Fdd07CepasPaymentsInterfaceDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/07 - Credit Card Payments and Refunds/7.0 CEPAS/Interface Design document - CEPAS (Payments).docx" ;
+    sd:notes "CEPAS's own interface contract: AES-256-GCM redirect payload encryption (amount/id/ref/returnurl plaintext, 12-byte nonce, 16-byte tag), and the SHA-1(ConfirmationNumber+Amount+SecurityKey) hash-validation formula for the return redirect. Confirms pay:TP_CepasRedirectInitiation and pay:TP_CepasConfirmationProcessing in payments-capability.ttl match the actual interface spec field-for-field; not separately modeled as its own Requirement set." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Fdd07CepasReimbursementsInterfaceDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/07 - Credit Card Payments and Refunds/7.0 CEPAS/Interface Design document - CEPAS (Reimbursements).docx" ;
+    sd:notes "CEPAS's CancelPayment API contract (Header: ApplicationID/PaymentChannel/SecurityKey; body: ConfirmationNumber/RefundAmount). Confirms pay:TP_CepasRefundApiCall in payments-capability.ttl matches the actual interface spec; not separately modeled." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Fdd07CepasPostingFileInterfaceDoc a sd:SourceDocument ;
+    sd:docType "review" ;
+    sd:section "functional-design-docs/07 - Credit Card Payments and Refunds/7.0 CEPAS/Interface Design document - CEPAS (Posting File).docx" ;
+    sd:notes "Fixed-width AH (header)/AD (transaction detail)/AF (footer) posting-file layout, retrieved via SFTP. Confirms pay:BatchJob_PostingFileReconciliation's own notes on the file format; also the ultimate source of the Payment Command Code vocabulary already captured verbatim as pay:UT_PaymentCommandCode in payments-capability.ttl. Not separately modeled." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:WireframeDataFlowElements a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-01-payment-data-flow-elements.png" ;
+    sd:notes "Confirmed by viewing: 'Screenshot 1' per the document's own caption. A data-flow box diagram (not a UI mockup): Inbound Payment Request (MiEdWorkforce Payment Review screen -> API -> CEPAS, carrying Type of License/Application Reference Number/Payment Amount) and Outbound Payment Response (CEPAS -> API -> MiEdWorkforce Payment Review screen, carrying the full outbound element list). Directly corroborates the Business Specifications section's own inbound/outbound data-element tables and 7.1.3/7.1.4." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframePaymentFlowSequence a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-02-payment-flow-sequence-cepas.png" ;
+    sd:notes "Confirmed by viewing: 'Screenshot 2'. An UML-style sequence diagram (Users -> MiEdWorkforce UI -> CEPAS) showing: click Pay -> UI requests encrypted URL from an 'Encryption endpoint' -> UI sends user to CEPAS URL -> user pays at CEPAS -> CEPAS returns success message with HASH -> UI requests a HASH check from a 'Hash-check endpoint' -> UI displays Success/Error message. This is a close match to pay:Seq_IndividualPaymentHappyPath's own mermaid content, down to the encrypt/hash-check endpoint split, and is itself evidence AGAINST comment 8's 'no message displayed' claim — see pay:Question_PaymentResultMessagingContradiction." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframePaymentReviewSummary a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-03-payment-review-summary.png" ;
+    sd:notes "Confirmed by viewing: 'Screenshot 3'. A 'Payment review' screen (Daily Substitute Permit fee, $45.00, payer name) with the CEPAS static-text notice ('Michigan Department of Education uses the CEPAS Credit Card Processing Payment Module...') and Previous/Next navigation — directly corroborates 7.1.2's required pre-redirect static text (comment 18-21 thread)." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframePaymentSuccessfulScreenshot5 a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-04-payment-successful-screenshot5.png" ;
+    sd:notes "Confirmed by viewing: 'Screenshot 5' (the document's own numbering skips 'Screenshot 4' entirely — not investigated further, too minor). A MiEdWorkforce-branded 'Payment successful' confirmation screen (checkmark, Amount paid $45.00, Payment details, confirmation-email notice, Back to home/Start a new credential application buttons) — direct, explicit evidence that MiEdWorkforce DOES render its own success page, corroborating 7.1.2/7.1.4 and contradicting comment 8's 'no message displayed' claim (see pay:Question_PaymentResultMessagingContradiction)." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeBulkPaymentAndRefund a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-05-bulk-payment-and-refund-screen.png" ;
+    sd:notes "Confirmed by viewing: 'Screenshot 6'. A 'Bulk payment and refund' screen scoped to one district ('Holt public school district'), with Temporary credential/Select type/Status filter dropdowns, a checkbox table (Unique Id/Name/Type/Fee/Status), Total amount/Total selected, and a Pay fee button — directly corroborates 7.3.1/7.3.2's filter dropdowns (also described in the Business Specifications' own 'dropdown boxes... Temporary Credential, Select Type, Status' bullet, which is actually about the AUDIT tables, not this payment screen — see pay:Question_AuditFilterDropdownsVsBulkPaymentScreen) and the per-application fee/status/select-multiple shape. Notably titled 'Bulk payment AND REFUND' even though no numbered Addendum story covers bulk refund selection by an end user (only pay:Op_RequestBulkRefund's own Credential-Admin-initiated API flow) — consistent with pay:Question_AddendumOmitsRefundFeature below." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeLegacyMoecs a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-06-legacy-moecs-payment-confirmation.png" ;
+    sd:notes "Confirmed by viewing: NOT a MiEdWorkforce mockup — a screenshot of the legacy MOECS system's own 'Payment Confirmation' page ('To download the certificate, you need to log on to MOECS System and click on the Print Certificate link'), embedded inline near the Business Specifications' CEPAS-success bullet list as reference material for the OLD system's equivalent screen, not a proposed new design. Caught only by viewing it (its filename/document-order position gave no hint of this)." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeApplicationSubmittedPayLater a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-07-application-submitted-continue-to-payment.jpg" ;
+    sd:notes "Confirmed by viewing: 'Application Submitted!' confirmation with 'Continue to Payment' (primary) and 'Pay Later' (secondary/text link) actions — directly corroborates 7.1.1's 'Pay Fee link displayed immediately on the application confirmation page' AND its 'if the fee is not paid immediately, the application status is Pending Payment but remains submitted' criterion in one screen." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeApplicationPaymentTab a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-08-application-payment-tab-cepas-notice.jpg" ;
+    sd:notes "Confirmed by viewing: a 'Career Authorization Application: 292871' detail page (Details/Payment/Documents tabs, Payment tab active, status badge 'Awaiting Payment'), showing the exact CEPAS static-text notice quoted in comment 21 ('Michigan Department of Education uses the CEPAS Credit Card Processing Payment Module to provide a secure payment method. This will open a new window. Payments status is provided after the payment is processed.') and a 'Pay Application Fee' button — directly corroborates 7.1.1's 'Pay Fee link on the pending certification/application status page' and 7.1.2's static pre-redirect text." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeCepasModalPlaceholder a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-09-placeholder-cepas-payment-modal.jpg" ;
+    sd:notes "Confirmed by viewing: the same Payment tab with an empty 'Placeholder for CEPAS Payment' modal overlaid — an explicit wireframe placeholder standing in for CEPAS's own off-platform payment UI (comment 23/36: 'Placeholder to indicate the step in this process where CEPAS will handle the payment process, outside of MiEdWorkforce'). Worth flagging that this renders as an IN-PAGE MODAL rather than a full off-site redirect/new-window — a minor visual discrepancy against 7.1.2's 'navigates the system user AWAY from MiEdWorkforce' and 8's own text ('This will open a new window'), likely just wireframe shorthand for the same redirect rather than a real modal design intent, not raised as a separate Annotation given how clearly it reads as a placeholder." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframePaymentSuccessfulDetail a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-10-payment-successful-detail.png" ;
+    sd:notes "Confirmed by viewing: the same application detail page, Payment tab, now showing 'Pending Review' status and a 'Payment successful' panel with Amount paid $45.00, Item/For, Payment Date/Time, and Payment Confirmation # — directly corroborates 7.1.4's stored/displayed confirmation data and the status advancing past 'Awaiting Payment' once paid." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframePaymentErrorDetail a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-11-payment-error-detail.jpg" ;
+    sd:notes "Confirmed by viewing: the same Payment tab showing a 'Payment Error' banner, status still 'Awaiting Payment', Pay Application Fee button still present (retry available) — directly corroborates 7.1.2's 'status remains in Awaiting Payment' on CEPAS error and pay:Seq_IndividualPaymentFailed's retry affordance. Note this specific wireframe is generic (redacted body text) and doesn't visually distinguish a CEPAS-DOWN error (7.1.5) from a card-declined error (7.1.2/pay:PayState_Failed) — both would plausibly render this same panel; not investigated further as the acceptance-criteria text for each is otherwise clear and non-conflicting." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeUnpaidFeesNav a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-12-unpaid-application-fees-nav.jpg" ;
+    sd:notes "Confirmed by viewing: the main left-nav menu ('Welcome back, Connie') with 'Unpaid Application Fees' as a Credential Management sub-item alongside Permits/Renew Daily Substitutes/Career Authorizations/Special Education Approvals — establishes where 7.3.2's bulk-payment entry point lives in the actual information architecture (a menu item, not the district-scoped 'Bulk payment and refund' screen in wireframe-05, which is unlabeled navigation-wise — see pay:Question_AuditFilterDropdownsVsBulkPaymentScreen for the broader inconsistency between the two bulk-payment mockups)." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeUnpaidFeesEmpty a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-13-unpaid-application-fees-empty-state.jpg" ;
+    sd:notes "Confirmed by viewing: 'Unpaid Application Fees' screen, empty results ('No Unpaid Applications... Try expanding your search criteria'), Selected 0 / Payment Amount $0.00 footer — directly corroborates 7.3.2's 'No Unpaid Applications' message criterion, though the wireframe's own copy differs slightly from the FDD text's exact wording ('No Unpaid Applications' heading vs. the FDD's quoted 'No Unpaid Applications.' message) — near enough not to flag as a discrepancy." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeUnpaidFeesSelectedTotal a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-14-unpaid-application-fees-selected-total.jpg" ;
+    sd:notes "Confirmed by viewing: the same screen with a redacted Application #/Type/Amount/Status/Submitted table, 4 (then, per the footer, effectively 10 across pagination) rows checked, footer 'Selected: 10, Payment Amount: $450.00', 'Pay Application Fees' button — directly corroborates 7.3.2's select-multiple, single-total-fee-calculation, and single Pay Fee action criteria." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeUnpaidFeesBulkSuccess a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-15-unpaid-application-fees-bulk-success.jpg" ;
+    sd:notes "Confirmed by viewing: the Unpaid Application Fees list with a 'Payment Successful' banner overlaid, selection reset to 0 — directly corroborates 7.3.2's 'upon confirmation of payment success, user navigated back to MiEdWorkforce webpage' criterion." ;
+    sd:definedIn pay:Fdd07Doc .
+pay:WireframeUnpaidFeesBulkError a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/07-credit-card-payments-and-refunds/wireframes/wireframe-16-unpaid-application-fees-bulk-error.jpg" ;
+    sd:notes "Confirmed by viewing: the same list with a 'Payment Error' banner, selection/total PRESERVED (10 selected, $450.00) rather than reset — directly corroborates 7.3.2's error-path criterion, and usefully shows the error path preserves the user's selection (retry-friendly) where the success path clears it — a UX detail not stated in the FDD text itself, not modeled as a gap since it's additive detail, not a contradiction." ;
+    sd:definedIn pay:Fdd07Doc .
+
+#################################################################
+# Requirements — Feature 7.1: CEPAS Interface (Payments and Refunds)
+#################################################################
+
+pay:Req_07_1_1 a sd:UserStory ;
+    sd:requirementId "7.1.1" ;
+    sd:title "Display Pay Fee link across the application lifecycle" ;
+    sd:statement "As a User (Citizen, Business, State Admin), I want to see a Pay Fee link after submitting my credential application so that I can immediately complete the required payment." ;
+    sd:acceptanceCriteria "The 'Pay Fee' link is displayed to Citizen, Business, and State Admin/staff users; shown immediately on the application confirmation page after submission; also shown on the pending certification/application status page for later payment; no longer available once status updates to Paid; the confirmation email template includes a coded insert for the pay fee link; if not paid immediately, application status is Pending Payment while the application remains Submitted." ;
+    sd:satisfiedBy pay:Seq_IndividualPaymentHappyPath, pay:Seq_PaymentRetryAfterFailure, pay:Op_InitiatePayment, cred:AppState_PendingPayment, comm:EmailTemplateAggregate ;
+    sd:notes "Direct match: pay:Seq_IndividualPaymentHappyPath and pay:Seq_PaymentRetryAfterFailure both begin exactly at 'User clicks Pay Fee link', and pay:Seq_PaymentRetryAfterFailure's own UI note ('Link always available for Pending Payment') matches this story's persistence criterion. cred:AppState_PendingPayment (credentialing-domain.ttl) is a real, already-modeled state matching this story's status name exactly. comm:EmailTemplateAggregate (communications-api.ttl) is Communications' own real templating concept — matches 'coded insert for the pay fee link' well, though the specific coded-insert/merge-field mechanism isn't independently confirmed against communications' own docs in this pass (out of scope; Communications' own FDD ingestion should verify). Comment 10 ('Define users.') on the 'Citizen, Business, State Admin' phrase is the same role-definition ambiguity FDD 11/16 and 29 both raised; already resolved concretely elsewhere (payments-permissions.md/payments-sequences.md define Business User as district staff managing temporary credentials/substitutes) — not re-raised. Wireframes 07/08 (viewed) directly show both halves of this story (confirmation-page link with Pay Later deferral; pending-status-page Payment tab)." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_1_2 a sd:UserStory ;
+    sd:requirementId "7.1.2" ;
+    sd:title "Redirect to CEPAS for secure payment entry" ;
+    sd:statement "As a User (Citizen, Business, State Admin), I want to be redirected to the CEPAS site when I click 'Pay Fee' so that I can securely enter my payment details." ;
+    sd:acceptanceCriteria "Clicking 'Pay Fee' navigates the user away from MiEdWorkforce to CEPAS; the payment information payload sent to CEPAS is encrypted (e.g. AES over TLS); MiEdWorkforce does not process payments or store credit card numbers; upon confirmation on the CEPAS site the user is automatically navigated back; the returned webpage displays a Success or Error message; CEPAS Success updates application status to Paid; CEPAS Error leaves status at Awaiting Payment." ;
+    sd:satisfiedBy pay:Seq_IndividualPaymentHappyPath, pay:Seq_IndividualPaymentFailed, pay:Op_InitiatePayment, pay:Op_ConfirmPayment, pay:PayState_Paid, pay:PayState_Failed ;
+    sd:notes "Strong direct match across every criterion: AES encryption (pay:TP_CepasRedirectInitiation's own AES-256-GCM steps), never storing card data (pay:PaymentsContext's own PCI-boundary notes), auto-return-with-status-message (both sequences' own UI-facing steps), and the Paid/Failed status split (pay:PayState_Paid / pay:PayState_Failed). See pay:Question_PaymentResultMessagingContradiction: comment 8 (the FDD's own author) states MiEdWorkforce displays NO message related to payment, only a status change — directly contradicted by this story's own acceptance criteria text and by wireframes 04/10/11/15/16 (all viewed), which show explicit MiEdWorkforce-rendered Payment Successful/Payment Error panels with confirmation numbers, amounts, and dates. Not resolved here." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_1_3 a sd:UserStory ;
+    sd:requirementId "7.1.3" ;
+    sd:title "Construct and send the CEPAS payment request payload" ;
+    sd:statement "As MiEdWorkforce, I want to send CEPAS the information necessary to make a payment." ;
+    sd:acceptanceCriteria "Calculate the required Payment Amount from the associated License/Credential type; construct a payment request payload with Payment Amount, Type of License, and Application Reference Number; encrypt the payload (AES/TLS) and redirect the user to CEPAS; verify the integrity of the completed transaction by matching a hash provided by CEPAS against the expected amount." ;
+    sd:satisfiedBy pay:Op_InitiatePayment, pay:TP_CepasRedirectInitiation, pay:Rule_HashValidationRequired, pay:Rule_PaymentAmountImmutability ;
+    sd:notes "Direct match. The hash-integrity criterion technically describes the CONFIRM side of the flow (matching CEPAS's returned hash), not the initiate side this story is otherwise about — the FDD bundles both directions under one 'send CEPAS what's needed' story; pay:Rule_HashValidationRequired is linked for that half rather than treating it as out of scope." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_1_4 a sd:UserStory ;
+    sd:requirementId "7.1.4" ;
+    sd:title "Receive and apply CEPAS outbound confirmation data" ;
+    sd:statement "As MiEdWorkforce, I want to receive all necessary outbound confirmation data from CEPAS immediately after a successful payment, so that I can update the application status and ensure comprehensive payment traceability." ;
+    sd:acceptanceCriteria "Receive Payment Amount, Payment Type, Paid Date, CEPAS Authorization Code, CEPAS Confirmation Number, Type of License, Application Reference Number, Payment Reference Number, CEPAS Return message, and CEPAS Return Code; mark the application Paid and advance the workflow (e.g. auto-approved or credential review); double-confirm the amount via a secret-key hash match against CEPAS's own hash; store the confirmation data for traceability; the system relies entirely on this real-time CEPAS response since it never processes payments or handles card numbers itself." ;
+    sd:satisfiedBy pay:Op_ConfirmPayment, pay:TP_CepasConfirmationProcessing, pay:Rule_HashValidationRequired, pay:PaymentCompletedEvent, cred:AppState_PendingPayment ;
+    sd:notes "Direct match, including the double-hash-confirmation detail (pay:TP_CepasConfirmationProcessing's own steps) and the 'workflow advancement' criterion (pay:PaymentCompletedEvent -> credentialing's own status transition per payments-capability.ttl's subscribesTo edge). 'Payment Type' (Credit Card or Bank Remittance, added mid-review per comment 30/31) is a distinct concept from pay:PaymentConfirmation's existing 'card type' field (VISA/MC/AMEX/etc, per the CEPAS Payments interface doc's own 'ct' parameter, explicitly NOT sent for eCheck) — Payment Type would need to be a separate payment-METHOD-category field alongside card type, not a synonym for it; not currently modeled as its own PaymentConfirmation field. Minor terminology gap, not raised as a full Annotation given how small it is." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_1_5 a sd:UserStory ;
+    sd:requirementId "7.1.5" ;
+    sd:title "Display CEPAS-unavailable error before redirect" ;
+    sd:statement "As MiEdWorkforce, I want to direct a user to an error pop-up on the CEPAS website when the CEPAS server is down and the user tries to pay so that they know why they cannot proceed." ;
+    sd:acceptanceCriteria "If CEPAS is down/unavailable when the user clicks Pay Fee, display an error message pop-up; the error message displays within MiEdWorkforce (before attempted redirection); the message informs the user the system is offline and to try again later." ;
+    sd:satisfiedBy pay:Seq_CepasServiceUnavailable, pay:Rule_CepasUnavailabilityHandling ;
+    sd:notes "Direct match, including the 'before redirection, inside MiEdWorkforce' detail (pay:Seq_CepasServiceUnavailable's own circuit-breaker health check precedes any redirect) — note the story's own title says 'error pop-up on the CEPAS website' but its acceptance criteria correctly say the error displays WITHIN MiEdWorkforce; the title itself looks like a copy-paste leftover from 7.1.2's CEPAS-side error case, not a real discrepancy in behavior (the AC text, wireframes, and pay:Seq_CepasServiceUnavailable's own diagram all agree the message is MiEdWorkforce-side). No wireframe distinctly depicts this specific 'system offline' message (wireframe-11's generic Payment Error panel is the closest visual match, per that wireframe's own note) — not raised as a gap given the AC text is otherwise unambiguous." ;
+    sd:definedIn pay:Fdd07Doc .
+
+#################################################################
+# Requirements — Business Specifications content never promoted into the Addendum's own
+# numbering (see this file's header note on the FDD 29 precedent for this pattern).
+#################################################################
+
+pay:Req_07_BizSpec_Refund a sd:Requirement ;
+    sd:requirementId "BizSpec-Refunds" ;
+    sd:title "Refund processing via CEPAS (never given its own 7.x number)" ;
+    sd:statement "(No user-story stem — this is Business Specifications prose, not Addendum narrative form.) The system integrates MiEdWorkforce with the CEPAS interface for processing refunds with real-time capability, using API as needed, with traceability. Refunds are processed by the MiEdWorkforce Credential Administrator." ;
+    sd:acceptanceCriteria "Inbound to CEPAS: Original Payment Amount, CEPAS Confirmation Number, Refund Amount. Outbound from CEPAS: Refund Amount, CEPAS Refund Confirmation Number, Date Refund Processed. (HLS Use Cases 9-11 restate the same content at coarser grain and are skipped as duplicative, per CONVENTIONS.md, same as the rest of the HLS table.)" ;
+    sd:satisfiedBy pay:Op_RequestRefund, pay:Op_ApproveRefund, pay:Seq_RefundRequestSingleApproval, pay:Seq_RefundRequestDualApproval, pay:Rule_RefundAmountValidation, pay:TP_CepasRefundApiCall ;
+    sd:notes "Very strong match — payments-capability.ttl/payments-api.ttl/payments-sequences.ttl model refund processing (including the >$500 dual-approval workflow this FDD's own prose doesn't even mention) in more detail than this FDD provides. The interesting finding isn't a gap on the Payments side; it's that the Addendum's own Feature/story numbering (7.1.1-7.1.5, 7.2.1-7.2.3, 7.3.1-7.3.2) never gives refund processing its own number at all, despite Feature 7.1's title explicitly being 'CEPAS Interface (Payments AND REFUNDS)' — see pay:Question_AddendumOmitsRefundFeature." ;
+    sd:definedIn pay:Fdd07Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "Feature 7.1's own title is 'CEPAS Interface (Payments and Refunds)', and the Business Specifications section describes refund processing (by the Credential Administrator) in the same depth and structure as payment processing (its own inbound/outbound data-element tables), with HLS Use Cases 9-11 devoted to it. But the Addendum — the document's own more-detailed, formally-numbered story breakdown that 7.1.1-7.1.5/7.2.1-7.2.3/7.3.1-7.3.2 all come from — never assigns refund processing a number anywhere. This is the same pattern FDD 29's own pilot review found for that FDD's Add-College-Credits/Add-DPPD/SCECH-Evaluation features (real, wireframed capabilities described in prose but never promoted into the Addendum's numbering). Modeled here as pay:Req_07_BizSpec_Refund with a synthetic ID so it isn't silently dropped or folded into 7.1's own numbering." ;
+    oa:hasTarget pay:Req_07_BizSpec_Refund ; sd:impact "L" ; sd:status "open" ; sd:definedIn pay:Fdd07Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "discrepancy" ;
+    rdfs:comment "pay:Req_07_1_2's acceptance criteria state the CEPAS-returned webpage displays a Success or Error message and that comment 8 (Punniyamoorthy, the FDD's own author, 2025-11-24) states the opposite: 'MiEd will not display any message related to payment, but will change the status of application based on the CEPAS response.' Comment 9 (Caswell, 2026-01-06) explicitly flags this tension ('The wording here seems to imply that messaging related to payment... is displayed in MEWF. We've modified the wording to fit your explanation. Please review and modify or confirm the change.') with no reply confirming resolution anywhere in the thread. Independently, wireframes 04/10/11/15/16 (all viewed directly, not assumed) show explicit MiEdWorkforce-rendered 'Payment successful'/'Payment Error' panels with confirmation numbers, amounts, dates, and item descriptions — real, specific UI content, not a bare status-only page. The weight of evidence (four separate wireframes plus the story's own AC text) favors 'yes, MiEdWorkforce displays a real success/error page' over comment 8's claim, but the FDD's own author is on record saying otherwise and the thread never closes the loop. Not resolved here." ;
+    oa:hasTarget pay:Req_07_1_2 ; sd:impact "M" ; sd:status "open" ; sd:definedIn pay:Fdd07Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ; sd:findingType "unconfirmed-assumption" ;
+    rdfs:comment "Two different bulk-payment wireframes in this same FDD look like they belong to two different designs: wireframe-05 ('Bulk payment and refund', Screenshot 6) is scoped to one named district ('Holt public school district') with Temporary credential/Select type/Status filter dropdowns matching the Business Specifications' AUDIT-table filter description almost verbatim, while wireframe-12 through -16 (the Addendum's own 'Unpaid Application Fees' screens) show a differently-shaped table (Application #/Type/Amount/Status/Submitted, no district-scoping chrome visible, reached via a left-nav Credential Management menu item) for what 7.3.2's own acceptance criteria describe. Both plausibly satisfy 7.3.1/7.3.2's text, but whether they represent the same screen at two design iterations, or two genuinely different screens (e.g. a district-admin bulk view vs. an individual Business User's own unpaid-fees view) is not stated anywhere in the source document. Not resolved here." ;
+    oa:hasTarget pay:Req_07_3_2 ; sd:impact "L" ; sd:status "open" ; sd:definedIn pay:Fdd07Doc .
+
+pay:Question_PostSchoolYearPaymentValidation a sd:Annotation ;
+    a oa:Annotation ;
+    oa:motivatedBy oa:reviewing ;
+    oa:hasTarget pay:PaymentTransactionAggregate ;
+    sd:findingType "coverage-gap" ;
+    sd:description "Payments/Payments_Scenarios.xlsx (a short informal scenarios workbook in this FDD folder, not named in the FDD's own Additional Resources list but read per CONVENTIONS.md's load-bearing-xlsx allowance) has one row not restated anywhere in the main FDD text: 'Paying for a Permit after school year ends -> Prevent people from paying fees for inactive applications... should be on MORE validation (Error message should show up).' No invariant on pay:PaymentTransactionAggregate or business rule anywhere in payments-capability.ttl validates an application's/credential's active-vs-inactive status (school-year-bounded or otherwise) before allowing payment initiation — pay:Op_InitiatePayment's own request body is just an applicationId reference, with no such pre-check documented. This is a different concept from the already-flagged 'one fee per year' dedup gap (credentialing-technical-design.md Open Technical Question #7 / this project's own cross-domain confirmation note on pay:PaymentTransactionAggregate) — that one is about preventing a SECOND payment for the same year; this one is about preventing ANY payment once the underlying application/permit has gone stale/inactive. Genuine, newly-surfaced coverage gap; whichever domain owns 'application is still payable' eligibility (most likely credentialing, which owns application/permit lifecycle state) would need to enforce this before ever calling Payments, exactly as the cross-domain 'one fee per year' rule already works." ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn pay:Fdd07Doc .
+
+#################################################################
+# Requirements — Feature 7.2: CEPAS Reconciliation
+#################################################################
+
+pay:Req_07_2_1 a sd:UserStory ;
+    sd:requirementId "7.2.1" ;
+    sd:title "Receive daily CEPAS posting file for reconciliation" ;
+    sd:statement "As MiEdWorkforce, I want to receive a CEPAS post file containing information about single payments, bulk payments, single refunds, and bulk refunds so that I can perform payment reconciliation." ;
+    sd:acceptanceCriteria "Ingest the CEPAS post file daily; the file is an audit summary of the previous day's transactions; contains single/bulk payments and single/bulk refunds plus missing-payment information; used for reconciling/auditing; transferred via the State's File Transfer Service (FTS), inbound to MiEdWorkforce; contains a Payment Command Code (Payment=1, Refund=5, Partial Refund=14, etc.)." ;
+    sd:satisfiedBy pay:Seq_DailyPostingFileReconciliation, pay:BatchJob_PostingFileReconciliation, pay:UT_PaymentCommandCode ;
+    sd:notes "Direct, strong match — pay:UT_PaymentCommandCode's full code list (1/5/6/9/10/14/15/16) is a superset of what this story names, sourced from the same posting-file interface spec (confirmed against Fdd07CepasPostingFileInterfaceDoc). FTS as the transfer mechanism matches ext:FTSSystem's own Dependency in payments-capability.ttl." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_2_2 a sd:UserStory ;
+    sd:requirementId "7.2.2" ;
+    sd:title "Daily batch job processes the posting file" ;
+    sd:statement "As MiEdWorkforce, I want to process a daily batch job using the CEPAS post file so that I can automatically update records where payment confirmation was initially missed." ;
+    sd:acceptanceCriteria "A dedicated daily batch job processes the incoming posting file; checks specifically for missing-payment-information records; the posting file is the designated source of truth for payment status during reconciliation." ;
+    sd:satisfiedBy pay:BatchJob_PostingFileReconciliation, pay:Rule_PostingFileSourceOfTruth ;
+    sd:notes "Direct match; 'source of truth' language is a near-verbatim match to pay:Rule_PostingFileSourceOfTruth's own statement." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_2_3 a sd:UserStory ;
+    sd:requirementId "7.2.3" ;
+    sd:title "Auto-update missing payment information found by the batch job" ;
+    sd:statement "As MiEdWorkforce, I want the system to update the respective MiEdWorkforce tables if missing payment information is found in the batch job so that the payment status is accurately reflected." ;
+    sd:acceptanceCriteria "If missing payment information is identified, automatically update the respective tables; the update is automatic, requiring no manual approval; this corrects payments initially missed during real-time confirmation to 'paid' status; if no missing payment information is found, no action is required." ;
+    sd:satisfiedBy pay:BatchJob_PostingFileReconciliation, pay:Rule_MissingPaymentAutoUpdateRestrictions, pay:MissingPaymentDetectedEvent, pay:Seq_MissingPaymentRecovery ;
+    sd:notes "Direct match, including the 'no manual approval needed' detail (pay:Rule_MissingPaymentAutoUpdateRestrictions's own auto-update behavior for Pending transactions) and the no-action-needed branch (pay:Seq_DailyPostingFileReconciliation's own 'Match confirmed, no action needed' branch)." ;
+    sd:definedIn pay:Fdd07Doc .
+
+#################################################################
+# Requirements — Feature 7.3: Batch processing for payments and refunds
+#################################################################
+
+pay:Req_07_3_1 a sd:UserStory ;
+    sd:requirementId "7.3.1" ;
+    sd:title "Support bulk/batch processing of payments and refunds" ;
+    sd:statement "As MiEdWorkforce, I want to support bulk/batch processing of payments and refunds to CEPAS so that district staff and administrators can efficiently manage high volumes of transactions." ;
+    sd:acceptanceCriteria "Support processing multiple transactions simultaneously via bulk/batch for both payments and refunds; generate and submit a single payment request to CEPAS encapsulating fees for multiple credential applications; trigger multiple distinct refund requests via the CEPAS API based on a bulk administrator selection; receive and process the daily CEPAS post file for both bulk payments and bulk refunds." ;
+    sd:satisfiedBy pay:Op_InitiateBulkPayment, pay:Op_RequestBulkRefund, pay:Seq_BulkPaymentProcessing, pay:Seq_BulkRefundProcessing, pay:Rule_BulkPaymentFeeIntegrity ;
+    sd:notes "Direct, comprehensive match across all four sub-criteria: single-request-for-multiple-applications (pay:Op_InitiateBulkPayment/pay:Rule_BulkPaymentFeeIntegrity), multiple-distinct-refund-requests (pay:Op_RequestBulkRefund's own per-item RefundRequest creation), and posting-file handling for both (pay:Seq_DailyPostingFileReconciliation's Command Code 1/5 branches, already linked from 7.2.x)." ;
+    sd:definedIn pay:Fdd07Doc .
+
+pay:Req_07_3_2 a sd:UserStory ;
+    sd:requirementId "7.3.2" ;
+    sd:title "Business User selects multiple applications for a single bulk payment" ;
+    sd:statement "As a Business User, I want to select multiple applications with outstanding fees so that I can complete a single bulk payment." ;
+    sd:acceptanceCriteria "Show the Business User (e.g. district staff managing temporary credentials/substitutes) a view of multiple applications with outstanding fees; allow selecting multiple pending applications; display 'No Unpaid Applications' if none exist; accurately calculate and display the single total fee owed for all selected applications; provide a Pay Fee link/button that initiates the single bulk transaction for the calculated total; redirect to CEPAS passing required metadata for all applications in the batch; navigate back to MiEdWorkforce on both success and error." ;
+    sd:satisfiedBy pay:Op_InitiateBulkPayment, pay:Seq_BulkPaymentProcessing, pay:Perm_TransactionInitiateBulk ;
+    sd:notes "Direct match on every criterion, corroborated in detail by wireframes 05/12-16 (all viewed): the empty state (wireframe-13, near-exact 'No Unpaid Applications' text match), the selected-total footer (wireframe-14, $450.00 across 10 selected items — matches pay:Rule_BulkPaymentFeeIntegrity's own worked example structure even though the dollar figures differ), and both the success (wireframe-15) and error (wireframe-16) return states. pay:Perm_TransactionInitiateBulk's own scope model (District/ISD/System-wide) matches 'Business User... district staff' precisely. See the discrepancy Annotation above (targeting this Requirement) on the two visually different bulk-payment mockups in this same FDD." ;
+    sd:definedIn pay:Fdd07Doc .

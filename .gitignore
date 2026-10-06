@@ -1,0 +1,6 @@
+# Rendered output from the markdown-to-PDF/DOCX pipeline. These are derived and
+# can be recreated. Not to be confused with generated-from-graph/, which is tracked.
+**/generated/
+
+# Office temp files
+~$*

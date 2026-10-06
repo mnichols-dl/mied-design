@@ -1,0 +1,494 @@
+# FDD 28 review — "28 - Professional Learning - Processing" (Features 28.1-28.5).
+# Ingested per abox/mied-v3/fdd-review/CONVENTIONS.md against the mied-v3 Professional
+# Learning graph (proflearning-domain.ttl / proflearning-permissions.ttl /
+# proflearning-api.ttl / proflearning-sequences.ttl, all loaded together), plus
+# documents-api.ttl and communications-api.ttl/-capability.ttl for cross-domain
+# satisfaction checks (document viewing, email/comment infrastructure).
+#
+# Source: "28 - Professional Learning - Processing.docx" (subtitle "28.1-28.5"). Read the
+# .md sibling first, then unzipped the .docx for comments.xml/commentsExtended.xml and
+# word/media (28 images, image1.png-image28.jpg). A second file in the same folder,
+# "TBDeleted_ 28 - Professional Learning - Admin Processing.docx", is an earlier, less
+# detailed draft of the same subject matter (its own filename says it's slated for
+# deletion) — its .md was read and confirmed to be wholly superseded by the main
+# document (same Business Specifications restated at lower fidelity, no numbered
+# Addendum stories of its own, no wireframes); not separately ingested, consistent with
+# CONVENTIONS.md's treatment of duplicate/superseded source material. One thing from it
+# worth preserving: its own Dependencies section explicitly ties FDD 28 to "Public
+# Search - Professional Learning Resources (31.5)" for catalog maintenance, corroborated
+# below by a comments.xml thread (comment 17).
+#
+# Structure of the document and what's used as the Requirement unit:
+# - A "Business Specifications" prose section + a "HIGH LEVEL SCENARIOS" paraphrase
+#   table (43 rows) both restate the same admin-worklist/search/review actions at
+#   coarser grain — the HLS table is skipped per CONVENTIONS.md (duplicative).
+# - An "Addendum" with real Feature/story numbering (28.1.1-28.1.5, 28.3.1,
+#   28.4.1-28.4.6, 28.5.3-28.5.8) is the primary Requirement unit used below. Feature
+#   28.2 ("Publishing the Professional Learning Catalog") has no numbered stories at
+#   all — the Addendum states outright that the feature "is no longer considered
+#   necessary" because its own dependency (FDD 26's Feature 26.4, Professional Learning
+#   Catalog) was itself dropped. Modeled as a single rejected Requirement (Req_28_2)
+#   rather than forced into a numbered-story shape it doesn't have.
+# - The Addendum's own numbering has two of the same quirks the FDD 29 pass already
+#   found and named: (a) Feature 28.4 has a genuine duplicate-number collision — a
+#   heading "28.4.3 As a... I need the system to store audit details when I edit..." is
+#   immediately followed by a SECOND, unrelated story also numbered "28.4.3" ("I need to
+#   review the Audit Log of a Program..."). Modeled as Req_28_4_3 and Req_28_4_3b, the
+#   FDD's own literal numbers preserved, collision and all — same treatment FDD 29 used
+#   for its own 29.4.3/29.4.4 collision. (b) Feature 28.5's numbering starts at 28.5.3,
+#   not 28.5.1 — 28.5.1/28.5.2 are never defined anywhere in the document. The Business
+#   Specifications prose's own Sponsor-worklist search/filter/results description (which
+#   would be the natural 28.5.1/28.5.2 content, by analogy with 28.5.3/28.5.4's Program-
+#   worklist search/filter) was apparently never promoted into the Addendum's own
+#   numbering at all — the same "described and wireframed in Business Specs, never
+#   promoted to a real Addendum number" pattern the FDD 29 pass found for three of its
+#   own Business-Specification-only features. Modeled below with a synthetic
+#   plrn:Req_28_BizSpec_SponsorWorklistSearch ID rather than silently absorbed into
+#   28.5's numbering or silently dropped.
+# - Several other real, wireframed Business-Specification-only capabilities are likewise
+#   never given an Addendum number at all: Sponsor List view/edit/delete (Wireframes
+#   7-8), the approved-Programs list and program withdraw (Wireframe 9), evaluation-
+#   question-template maintenance, and Program Category/Program Description admin
+#   maintenance. All modeled with synthetic plrn:Req_28_BizSpec_* IDs below, per the same
+#   FDD-29-pattern reasoning as above — see the "Business-Specification-only
+#   capabilities" section.
+#
+# Comments (11 total, via comments.xml): the most load-bearing thread is a genuine
+# admin-editability CONTRADICTION resolved mid-review: comment 3 (Ross, 2025-12-05)
+# states edit access to a Sponsor application is deliberately restricted to an Action +
+# comments, NOT the application fields themselves; comment 4 (Ross, same day, later)
+# notes this was "later discussed as potentially allowing a Sponsor Application to be
+# editable... Need confirmation"; comment 5 (Dontje, 2026-01-28, ~2 months later)
+# resolves it: "Yes, the Sponsor Application should be editable by the admin." The
+# visible Addendum text (28.1.3, "The system provides an option to Edit the selected
+# Sponsor application, allowing the administrator to modify any submitted field") already
+# reflects the FINAL, resolved position — not the earlier-restricted one comment 3
+# describes — so no correction to the modeled text was needed, but the contradiction
+# itself (and how close the document came to shipping the earlier, narrower reading) is
+# worth recording; see Question_SponsorApplicationEditabilityWasContested below. Comment
+# 8/6/7 make the parallel point for Program applications (admin can edit ALL sections,
+# no restriction ever proposed there) — consistent with 28.4.1's visible text, no
+# correction needed. Comment 9 (Ross) is a naming-standardization note ("Audit Log" is
+# the term of record, not "Activity Log" — the Business Specifications prose's own
+# Wireframe 6 caption still says "Activity log", a stale term the Addendum's 28.4.3b/
+# 28.5.7 correctly updated to "Audit Log"; not itself worth a separate Annotation).
+# Comment 18 (Groom, 2026-02-02) on the evaluations-review passage says "Admin ability to
+# manage/maintain the evaluations should be included in 14, this may belong with that
+# admin functionality. Need to discuss" — an explicit, UNRESOLVED cross-FDD scope
+# question about whether 28.4.6 belongs here or in FDD 14 (Professional Learning Admin);
+# modeled as Question_EvaluationReviewFddOwnershipUnresolved. Comment 17 (Groom,
+# 2026-01-30) ties catalog/search maintenance to FDD 31.5 and flags that admin-side
+# search-function maintenance has no described mechanism yet — folded into the
+# BizSpec catalog-maintenance coverage-gap notes below. Comments 10, 12, 16 are minor
+# single-word/single-line notes ("Approved Sponsors", "no longer relevant" re: an
+# internal review artifact, "Can this assumption be confirmed?") with no independently
+# resolvable finding and are not modeled as separate Annotations.
+#
+# Tracked changes: not inspected in detail for this pass (a lower-volume document than
+# FDD 11/16 or 29; no comment thread pointed at a stale-vs-corrected-text situation that
+# would require it).
+#
+# Wireframes: 14 are captioned "Wireframe N" in the Business Specifications prose
+# (1-14); the .docx's word/media folder holds 28 image files total, not 14 — document
+# order (confirmed via document.xml's r:embed sequence, which runs image1 through
+# image28 essentially in file-number order) shows roughly twice as many embeds as
+# captions, because several images are decorative/repeated chrome (a State-of-Michigan
+# seal, repeated header icons) rather than distinct wireframes, and a cluster of later
+# images (~ image20-28) are higher-fidelity Sponsor/Coordinator-facing screens (program
+# creation, attendance submission with an attestation checkbox, an Attendance/
+# Evaluations tab view) that read as reference material carried over from the
+# Sponsor-side FDD (26/27) rather than this FDD's own Professional-Learning-Admin-facing
+# deliverable — this FDD's own actors are exclusively "Professional Learning
+# Administrator" throughout the Business Specifications and Addendum text. Four images
+# were viewed and extracted: image1.png (Wireframe 1: Sponsor worklist search/results —
+# confirmed; ALSO reveals a persistent admin tab bar "Sponsor Worklist | Program
+# Worklist | Sponsor List | Program List | Category/Program description | Coupons and
+# Payments | Email Sponsors" not fully described anywhere in the prose text — see
+# Question_CouponsAndPaymentsTabUndocumented below), image2.png (Wireframe 2: Review
+# Sponsor Application — confirms the Action/Comment/Comment-History layout matching
+# 28.1.3/28.1.5), image9.png (Wireframe 7: Sponsor List search/results — confirms
+# Sponsor-name/Sponsor-ID/Include-Inactive filters and the Active-column checkbox
+# layout), and image28.jpg (an uncaptioned, higher-fidelity Attendance/Evaluations tab
+# view for a Coordinator-facing "{Program_Name}" screen, extracted as
+# addendum-a-attendance-evaluation-tabs.jpg — background context for 28.4.5/28.4.6, not
+# confidently mapped to any one of the 14 captioned wireframes or to this FDD's own
+# PL-Admin actor scope). The remaining ~24 images were sampled by position (early/mid/
+# late in the document) rather than individually described — per CONVENTIONS.md's depth-
+# calibration guidance — and confirmed to be consistent with the two clusters described
+# above (PL-Admin worklist/list screens matching the numbered stories; Sponsor/
+# Coordinator-side reference screens outside this FDD's own actor scope), not a distinct
+# undocumented feature area.
+
+@prefix sd:    <urn:solutiondesign:ontology:> .
+@prefix oa:    <http://www.w3.org/ns/oa#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix plrn:  <urn:solutiondesign:instance:proflearning:> .
+@prefix docs:  <urn:solutiondesign:instance:documents:> .
+@prefix comm:  <urn:solutiondesign:instance:communications:> .
+
+#################################################################
+# Source documents
+#################################################################
+
+plrn:Fdd28Doc a sd:SourceDocument ;
+    sd:docType "fdd" ;
+    sd:section "functional-design-docs/28 - Professional Learning - Processing/28 - Professional Learning - Processing.docx" ;
+    sd:notes "Covers Features 28.1-28.5 (document's own subtitle: '28 - Professional Learning - Processing (28.1 - 28.5)'). Authors Vidhya Punniyamoorthy / Beth Dontje (DTMB); approved by Beth Dontje (MDE) and Caitlin Groom (CEPI), both 08/05/2025 per the signoff table — but comments.xml contains dated entries through 2026-02-02, well after that signoff date (same post-signoff-revision pattern the FDD 29 review already found in its own sibling document), meaning the document continued to be actively revised/reviewed after its nominal approval date. A companion document in the same folder, 'TBDeleted_ 28 - Professional Learning - Admin Processing.docx', is an earlier, superseded draft of the same subject matter — read and confirmed wholly superseded (see this file's header note), not separately modeled." .
+
+plrn:Wireframe1Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/28-professional-learning-processing/wireframes/wireframe-01-sponsor-worklist-search-results.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Learning - Sponsor list' [sic, actually the Sponsor Worklist screen] with Type/District-or-Sponsor/District-Sponsor-name/Application-number/Status filters, Search/Clear buttons, and a persistent admin tab bar: Sponsor Worklist | Program Worklist | Sponsor List | Program List | Category/Program description | Coupons and Payments | Email Sponsors. The 'Category/Program description' and 'Email Sponsors' tabs match Business-Specification-only capabilities modeled below (plrn:Req_28_BizSpec_ProgramCategoryMaintenance / ProgramDescriptionsAdmin / MassEmailSponsors); 'Coupons and Payments' matches nothing anywhere in this FDD's own text — see Question_CouponsAndPaymentsTabUndocumented." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Wireframe2Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/28-professional-learning-processing/wireframes/wireframe-02-review-sponsor-application.png" ;
+    sd:notes "Confirmed by viewing: 'Review Sponsor Application' — full submitted-application detail (School/Organization name, Address, Authorized Representative certification, submitter Name/Title/Email/Submitted Date), an Action dropdown (Comment/Submit/Cancel controls visible) and a Comment History panel showing two prior dated entries. Directly corroborates 28.1.1 (view in view mode), 28.1.3 (Action options), and 28.1.5 (comments + comment history)." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Wireframe7Doc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/28-professional-learning-processing/wireframes/wireframe-07-sponsor-list-search-results.png" ;
+    sd:notes "Confirmed by viewing: 'Professional Learning - Sponsor list' — Sponsor name/Sponsor ID search fields, an 'Include inactive' checkbox, Search/Clear buttons, and a results table (Sponsor Name hyperlink, Sponsor ID, Contact, Sponsor Email, Active checkbox column) — matches the Business Specifications prose exactly. Same persistent tab bar as Wireframe 1." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:WireframeAddendumADoc a sd:SourceDocument ; sd:docType "wireframe" ;
+    sd:section "abox/mied-v3/fdd-review/28-professional-learning-processing/wireframes/addendum-a-attendance-evaluation-tabs.jpg" ;
+    sd:notes "Confirmed by viewing: an uncaptioned, higher-fidelity '{Program_Name}' screen with Detail/Attendance/Evaluations tabs, a Coordinator-facing 'Add Attendee' / CSV-upload prompt, a per-attendee Attendance/Credits table, and a redacted attestation checkbox before 'Submit Attendance'. Header chrome ('School Name' persona selector) and actor implied (a Coordinator submitting attendance, not a Professional Learning Administrator reviewing it) place this outside this FDD's own stated PL-Admin actor scope — likely reused reference material from the Sponsor-side FDD (26/27), not this FDD's own deliverable. Kept as background context for 28.4.5/28.4.6 rather than mapped to a specific numbered story." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Requirements — Feature 28.1: Process vendors (Sponsor applications)
+#
+# GENUINE STRUCTURAL GAP shared by every story in this Feature: proflearning-domain.ttl
+# models NO SponsorApplication aggregate at all — the ProfessionalLearningSponsorAggregate's
+# own Design Note states sponsor creation is EEM-only with no PendingApproval state
+# inside MiEdWorkforce, which plrn:Question_SponsorApprovalWorkflowContradiction (Open
+# Question #9, already raised during proflearning-domain.ttl's own conversion) already
+# flagged as contradicting proflearning-permissions.ttl's own proflearning.sponsor.approve
+# permission and FDD 26's described new-Sponsor application workflow. FDD 28 is the
+# review-and-decision side of EXACTLY that same missing workflow — it independently
+# confirms, with a full worklist, wireframes, and 5 numbered stories, that a
+# SponsorApplication-shaped entity (with Type: Sponsor/Coordinator/Assistant-Coordinator,
+# a review-status lifecycle New/Pending/Approved/Comment/Documentation, and admin
+# approve/reject/edit/delete/email/comment actions) is real, described, expected
+# functionality — not modeled anywhere in proflearning-api.ttl (which has zero
+# sponsor-application endpoints; only plrn:Op_GetSponsor, for an ALREADY-approved
+# sponsor, exists) or proflearning-sequences.ttl. Each story below is therefore a
+# coverage-gap; satisfiedBy is left unasserted throughout this Feature rather than
+# pointing at plrn:Perm_SponsorApprove/plrn:Perm_SponsorDelete, both of which are
+# themselves documented as ungated (no PermissionRequirement, no backing operation) —
+# linking them would overstate coverage that doesn't actually exist yet.
+#################################################################
+
+plrn:Req_28_1_1 a sd:UserStory ;
+    sd:requirementId "28.1.1" ;
+    sd:title "View submitted Sponsor application in view mode" ;
+    sd:statement "As a Professional Learning Administrator, I need to view the submitted Sponsor application in view mode so that I can review all details before taking an approval action." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator can select a Sponsor application from the worklist. The system must display the submitted application in view mode upon selection." ;
+    sd:notes "Confirmed by Wireframe 2 (plrn:Wireframe2Doc). No SponsorApplication aggregate/entity or backing ApiOperation exists anywhere in proflearning-domain.ttl/proflearning-api.ttl — see this section's header note and plrn:Question_SponsorApprovalWorkflowContradiction (already raised in proflearning-domain.ttl, Open Question #9). This FDD is independent, later evidence that the missing workflow is real and specific, not speculative." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_1_2 a sd:UserStory ;
+    sd:requirementId "28.1.2" ;
+    sd:title "View, parse, and extract documents uploaded within the Sponsor application" ;
+    sd:statement "As a Professional Learning Administrator, I need the ability to view, parse, and extract documents uploaded within the Sponsor application so that I can verify supporting documentation." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator is able to view documents uploaded within the Sponsor application. The Professional Learning Administrator is able to parse documents uploaded within the Sponsor application. The Professional Learning Administrator is able to extract documents uploaded within the Sponsor application." ;
+    sd:notes "Compound gap: even setting aside the missing SponsorApplication container itself (this section's header note), 'parse' specifically has no counterpart anywhere in documents-api.ttl either — docs:Op_DownloadDocument/docs:Op_GetDocumentMetadata/docs:Op_SearchDocuments cover view/retrieve, but no operation extracts or parses document content (OCR, form-field extraction, etc.) in any domain converted so far. 'View'/'extract' alone would be a plausible partial match to the generic Documents capability if a SponsorApplication existed to hold the document references; 'parse' would still be an open gap even then." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_1_3 a sd:UserStory ;
+    sd:requirementId "28.1.3" ;
+    sd:title "Approve, Reject, Edit, or Delete the Sponsor application" ;
+    sd:statement "As a Professional Learning Administrator, I need to have the option to Approve, Reject, Edit, or Delete the Sponsor application so that I can efficiently process the worklist and correct minor errors without returning the application." ;
+    sd:acceptanceCriteria "The system provides an option to Approve the selected Sponsor application. The system provides an option to Reject the selected Sponsor application. The system provides an option to Edit the selected Sponsor application, allowing the administrator to modify any submitted field (e.g., to correct typos). The system provides an option to Delete the selected Sponsor application. The ability to delete applies to both a pending Sponsor application and an already approved Sponsor record." ;
+    sd:notes "The visible 'Edit... modify any submitted field' text is the FINAL, resolved position of a contested comment thread: comment 3 (Ross, 2025-12-05) originally said edit access is restricted to an Action + comments only, NOT the application fields; comment 4 (Ross, same day) notes this was 'later discussed as potentially allowing... editable... Need confirmation'; comment 5 (Dontje, 2026-01-28) resolves it — 'Yes, the Sponsor Application should be editable by the admin.' See Question_SponsorApplicationEditabilityWasContested. Structural gap unchanged regardless of which reading won: no SponsorApplication aggregate/entity/API exists at all (this section's header note) — approve/reject/edit/delete are all equally unmodeled. plrn:Perm_SponsorApprove and plrn:Perm_SponsorDelete both already exist in proflearning-permissions.ttl and already document this exact gap in their own notes (no PermissionRequirement, no backing operation) — deliberately not linked via satisfiedBy here since neither actually gates anything yet." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_1_4 a sd:UserStory ;
+    sd:requirementId "28.1.4" ;
+    sd:title "Email the sponsor from the review page" ;
+    sd:statement "As a Professional Learning Administrator, I need to email the sponsor directly from the review page so that I can communicate decisions or request missing details." ;
+    sd:acceptanceCriteria "The system provides an option to Email the respective sponsor from the application review page using editable templates. The email functionality supports communicating a decision regarding the application. The email functionality supports requesting additional information. When requesting information, the system allows the admin to set the application status to \"Needs Information\" (or similar \"Correction\" status)." ;
+    sd:satisfiedBy comm:Op_SendManualEmail, comm:Perm_EmailCustomize ;
+    sd:notes "GOOD MATCH, cross-domain: communications-api.ttl's comm:Op_SendManualEmail ('Send one-time manual email using template', single recipientEmail + optional customSubject/customBody, gated by comm:Perm_EmailSendManual + comm:Perm_EmailCustomize when customizing) is a genuinely fitting, already-modeled mechanism for 'email the respective sponsor... using editable templates' — and Communications' permission catalog explicitly includes Proflearning as one of its four gated functional areas (comm:Perm_ProflearningTemplatesView/Create/Edit/Activate, comm:Perm_ProflearningEmailsViewHistory/Resend all exist), unlike comm:CommentAggregate below, whose own invariant explicitly does NOT list proflearning as a covered process-item type. Partial gap: setting the application to a 'Needs Information'/'Correction' status still requires the SponsorApplication container this Feature doesn't have (this section's header note) — the email mechanism itself is real, but nothing exists yet to hold the resulting status change." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_1_5 a sd:UserStory ;
+    sd:requirementId "28.1.5" ;
+    sd:title "Add comments and view comment history on a Sponsor application" ;
+    sd:statement "As a Professional Learning Administrator, I need to be able to add comments and view comment history on an application so that I have a record of communication and review notes." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator is able to add comments to the application. The Professional Learning Administrator is able to view the comment history for the application." ;
+    sd:notes "Confirmed by Wireframe 2 (plrn:Wireframe2Doc), which shows a live Comment field + dated Comment History panel. communications-capability.ttl already models a generic comm:CommentAggregate ('text annotation on a process item... with visibility control') with a real API (comm:Op_CreateComment/Op_ListComments/Op_UpdateComment/Op_DeleteComment) — but its own invariant explicitly scopes it to 'CredentialApplication, StaffingRecord, EPPEnrollment' only, NOT any proflearning process item. satisfiedBy deliberately left unasserted: the mechanism exists and is the natural extension point, but as documented it does not yet cover this FDD's SponsorApplication (which itself doesn't exist — this section's header note) or ProgramApplication (see plrn:Req_28_4_2, same gap on the Program side)." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Every one of Feature 28.1's five stories (28.1.1-28.1.5) depends on a SponsorApplication-shaped entity with a review-status lifecycle (New/Pending/Approved/Comment/Documentation) and admin approve/reject/edit/delete actions — none of which exists anywhere in proflearning-domain.ttl or proflearning-api.ttl. This independently confirms plrn:Question_SponsorApprovalWorkflowContradiction (raised during proflearning-domain.ttl's own v3 conversion, Open Question #9, from FDD 26's side) from the opposite direction: FDD 26 describes the SPONSOR-SIDE submission/e-signature workflow that creates such an application, and FDD 28 describes the ADMIN-SIDE worklist/review/decision workflow that consumes it — both sides of the same missing entity, now confirmed by two independent FDDs rather than one. High-impact, cross-cutting: a real SponsorApplication aggregate (parallel in shape to the already-modeled plrn:ProgramApplication) is needed before either FDD's described behavior can be built." ;
+    oa:hasTarget plrn:Req_28_1_1, plrn:Req_28_1_2, plrn:Req_28_1_3, plrn:Req_28_1_5 ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment thread on Sponsor-application editability (comments.xml IDs 3, 4, 5) shows the FDD came close to shipping a materially different, more restrictive answer than what the visible 28.1.3 text now says: comment 3 (Ross, 2025-12-05) states edit access should be restricted to an Action + comments, with the application's own fields never editable; comment 4 (Ross, same day, later) says this was 'later discussed as potentially allowing... editable, with the interest of correcting minor typos... Need confirmation'; comment 5 (Dontje, 2026-01-28, ~2 months later) resolves it in favor of full field-level editability. The visible text reflects the final, resolved answer, so no correction was needed here — but the reversal is worth recording since it's the kind of decision a stale export/summary made before 2026-01-28 would get wrong." ;
+    oa:hasTarget plrn:Req_28_1_3 ;
+    sd:impact "L" ; sd:status "resolved" ; sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Wireframe 1 (plrn:Wireframe1Doc, confirmed by viewing) shows a persistent Professional-Learning-Admin tab bar including a 'Coupons and Payments' tab, alongside tabs that DO match modeled/described capabilities (Sponsor Worklist, Program Worklist, Sponsor List, Program List, Category/Program description, Email Sponsors). Nothing anywhere in this FDD's Business Specifications, Addendum, or comments.xml describes what 'Coupons and Payments' does, and no coupon/discount concept exists anywhere in proflearning-domain.ttl or payments-domain.ttl (Professional Learning's own program-fee field, plrn:UT_ProgramFee, is explicitly display-only — 'actual payment collection happens on the sponsor's external registration website, not within MiEdWorkforce', which makes an in-app Coupons/Payments admin screen doubly unexplained). Wireframe-only feature with zero narrative backing — flagged rather than silently ignored or force-fit to an existing story." ;
+    oa:hasTarget plrn:ProfessionalLearningContext ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Requirement — Feature 28.2: Publishing the Professional Learning Catalog (REJECTED,
+# no numbered stories — the Addendum states the feature outright, in prose, as dropped)
+#################################################################
+
+plrn:Req_28_2 a sd:Requirement ;
+    sd:requirementId "28.2" ;
+    sd:title "Publishing the Professional Learning Catalog" ;
+    sd:statement "It has been determined that this feature is no longer considered necessary. Business Specification #26 Professional Learning - Sponsor, contains feature 26.4: Professional Learning Catalog which is considered no longer necessary. Based on this, the ability to publish that particular feature is not feasible." ;
+    sd:notes "Not a user story — the Addendum states this feature's own removal in prose, with no numbered sub-stories or acceptance criteria to model individually. Consistent with plrn:Op_SearchCatalog's real, modeled 'catalog' actually being the PUBLIC catalog search surface (31.5 Public Search), a distinct capability from whatever admin-side 'publishing' workflow this dropped feature would have added on top of it." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "rejected" ;
+    rdfs:comment "Feature 28.2 (Publishing the Professional Learning Catalog) was explicitly dropped by the document's own authors, contingent on FDD 26's Feature 26.4 (Professional Learning Catalog) also having been dropped. No action needed; nothing to build, nothing missing." ;
+    oa:hasTarget plrn:Req_28_2 ; sd:status "resolved" ; sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Requirements — Feature 28.3: Document upload
+#################################################################
+
+plrn:Req_28_3_1 a sd:UserStory ;
+    sd:requirementId "28.3.1" ;
+    sd:title "View, parse, and extract documents uploaded within the Program application" ;
+    sd:statement "As a Professional Learning Administrator, I need the ability to view, parse and extract documents uploaded as part of the Program application so that I can review the Program Agenda Details." ;
+    sd:acceptanceCriteria "The Administrator is able to view, parse and extract documents uploaded within the Program application. The summary view of the Program application includes the Program Agenda Details as an attached document." ;
+    sd:satisfiedBy docs:Op_DownloadDocument, plrn:Op_GetProgramApplication, plrn:ProgramAgenda, plrn:Seq_AdminApprovesProgramApplication ;
+    sd:notes "Real match, unlike Feature 28.1's Sponsor-side stories: plrn:ProgramApplication is a real, modeled entity and plrn:ProgramAgenda ('Document reference from the documents domain') is a real ValueObject on plrn:ProfessionalLearningProgramAggregate — and plrn:Seq_AdminApprovesProgramApplication's own mermaid content already shows the admin's UI calling DocumentsAPI to 'Fetch program agenda' (resolved, if ambiguously, to docs:Op_RequestDocumentUpload in proflearning-sequences.ttl; docs:Op_DownloadDocument is the more precise real-download counterpart added here). Partial gap: 'parse' still has no counterpart anywhere in documents-api.ttl — same specific gap already noted on plrn:Req_28_1_2 — no domain converted so far models document content extraction/OCR." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Requirements — Feature 28.4: Program Maintenance
+#################################################################
+
+plrn:Req_28_4_1 a sd:UserStory ;
+    sd:requirementId "28.4.1" ;
+    sd:title "View and edit each section of an approved Program's summary" ;
+    sd:statement "As a Professional Learning Administrator, I need to be able to view and edit each section of an approved Program's summary so that I can ensure the catalog information is accurate." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator can click on the Program name hyperlink from the approved Programs Search Results table. The system displays the summary of the associated Program. The Administrator is able to view and edit each section of the Program summary." ;
+    sd:satisfiedBy plrn:Op_GetProgram, plrn:Rule_ModifiedProgramsRequireReapproval ;
+    sd:notes "View half is a clean match (plrn:Op_GetProgram). Edit half is a PARTIAL, already-documented gap: plrn:Rule_ModifiedProgramsRequireReapproval's own text explicitly distinguishes sponsor-initiated edits (which route through re-approval, via plrn:Op_SubmitProgramApplication) from 'Professional Learning Admin edits apply directly without re-triggering approval' — exactly what this story describes — but proflearning-permissions.ttl's plrn:Perm_ProgramEdit notes already flag that no API operation is gated by proflearning.program.edit at all; a direct-edit-by-admin endpoint is described in two places (this business rule and this story) but implemented in neither. Comment 8/6/7 (Ross/Chaturvedi, on the parallel Sponsor-application-editability thread) confirm Program applications were NEVER proposed to have a restricted-edit reading the way Sponsor applications briefly were — 'Program Applications should allow for Admin to edit all sections... Needs to edit all fields' — consistent with the visible text, no correction needed." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_2 a sd:UserStory ;
+    sd:requirementId "28.4.2" ;
+    sd:title "Add internal comments to Program applications and view remarks history" ;
+    sd:statement "As a Professional Learning Administrator, I want to add internal comments to Program applications and view the historical log of these remarks so that I can document decision-making logic and maintain a clear audit trail of the review process." ;
+    sd:acceptanceCriteria "The application review interface provides a specific input mechanism for the administrator to enter text-based comments regarding the application under review. The system saves entered comments to the specific Program application record. A dedicated \"Remarks History\" tab is visible and accessible within the application review screen. The \"Remarks History\" tab displays a cumulative list of all comments previously added to the application. The history log presents comments in chronological order to reflect the timeline of the review process. Each entry in the \"Remarks History\" tab includes the content of the comment, the name of the user who created the note, and the timestamp (date and time) of the entry. The system allows the administrator to view the comment history without requiring them to add a new comment." ;
+    sd:notes "Same gap as plrn:Req_28_1_5, on the Program side: communications-capability.ttl's comm:CommentAggregate is a real, generically-shaped Comment mechanism (author/timestamp/chronological history already exactly match this story's AC) but its own invariant explicitly scopes it to CredentialApplication/StaffingRecord/EPPEnrollment only — ProgramApplication is not a covered process-item type. satisfiedBy deliberately left unasserted for the same reason as Req_28_1_5: the extension point exists, the coverage doesn't yet." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Both plrn:Req_28_1_5 (Sponsor application comments) and plrn:Req_28_4_2 (Program application 'internal comments'/Remarks History) need the SAME already-modeled generic comm:CommentAggregate mechanism, which explicitly does not cover either process-item type today (its invariant lists only CredentialApplication, StaffingRecord, EPPEnrollment). One coverage-gap Annotation covering both rather than two near-duplicate ones — the fix, if made, would extend comm:CommentAggregate's covered-process-item list to include proflearning's ProgramApplication (and, per Req_28_1_5's own note, a future SponsorApplication once that entity exists) rather than building a second, parallel comment mechanism inside proflearning itself." ;
+    oa:hasTarget plrn:Req_28_1_5, plrn:Req_28_4_2 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_3 a sd:UserStory ;
+    sd:requirementId "28.4.3" ;
+    sd:title "Store audit details when editing a Program application" ;
+    sd:statement "As a Professional Learning Administrator, I need the system to store audit details when I edit a Program application so that changes are tracked chronologically." ;
+    sd:acceptanceCriteria "Audit details will be stored upon successful editing of the Program summary." ;
+    sd:notes "NUMBERING COLLISION: the Addendum uses '28.4.3' twice — this story, and a second, unrelated one immediately following it (modeled as plrn:Req_28_4_3b) — same pattern the FDD 29 pass already documented for its own 29.4.3/29.4.4 collision. Preserved literally, not renumbered. No audit/change-tracking concept exists on plrn:ProfessionalLearningProgramAggregate or plrn:ProgramApplication anywhere in proflearning-domain.ttl — the only AuditTrail ValueObject modeled in this domain belongs to plrn:SCECHCorrectionRequestAggregate, a different aggregate entirely. Comment 9 (Ross) — 'Noting that in the interest of Standardization, Audit Log is used' — confirms 'Audit Log' (not the Business Specifications prose's stale 'Activity log', see Wireframe 6's own caption) is the term of record, consistent with 28.4.3b/28.5.7's wording." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_3b a sd:UserStory ;
+    sd:requirementId "28.4.3" ;
+    sd:title "Review the Audit Log of a Program" ;
+    sd:statement "As a Professional Learning Administrator, I need to review the Audit Log of a Program to see a record of all user actions (Date/time, User, Action, Description) so that I can audit the history of modifications and track specific changes made by users during the application review process." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator can review the Audit log of the Program. The Audit Log includes the following information: Date/time, User, Action, Description." ;
+    sd:notes "Same coverage-gap as plrn:Req_28_4_3 (no Program/ProgramApplication-level audit-trail concept modeled) and the same content as plrn:Req_28_5_7 below (Feature 28.5's Worklist section independently re-describes the identical Audit Log capability) — see the shared coverage-gap Annotation covering all three." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "A Program/ProgramApplication-level Audit Log (Date/time, User, Action, Description) is described three separate times in this FDD alone (28.4.3 'store audit details on edit', 28.4.3b 'review the Audit Log', and 28.5.7, word-for-word the same Audit Log capability again under the Worklist feature) plus once more in the Business Specifications prose (Wireframe 6, using the stale term 'Activity log' — see comment 9). No audit/change-history concept exists on plrn:ProfessionalLearningProgramAggregate or plrn:ProgramApplication anywhere in proflearning-domain.ttl; the only AuditTrail ValueObject modeled in this domain belongs to the unrelated plrn:SCECHCorrectionRequestAggregate. High confidence this is a real, load-bearing gap (independently repeated four times within one FDD) rather than a one-off phrasing quirk." ;
+    oa:hasTarget plrn:Req_28_4_3, plrn:Req_28_4_3b, plrn:Req_28_5_7 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_4 a sd:UserStory ;
+    sd:requirementId "28.4.4" ;
+    sd:title "Add/edit program event dates and locations" ;
+    sd:statement "As a Professional Learning Administrator, I need the ability to add/edit program event dates and locations and specify required information like County and Start/End times so that I can accurately define event offerings and ensure the system can generate the necessary attendance lists for each specific session." ;
+    sd:acceptanceCriteria "The Professional Learning Administrator is able to add or edit program event dates and locations within the Program Begin and End Date. The system requires the following information for event dates and locations: Start date, End date, Start time, End time, County, Location name, Address - City, State and Zip. Note: Address details (City, State and Zip) are not collected for Virtual/Online events." ;
+    sd:satisfiedBy plrn:ProgramSession, plrn:SessionLocation ;
+    sd:notes "Field shape matches cleanly: plrn:SessionLocation's own fields ('County, LocationName, Address or Virtual indicator') already capture exactly this AC's field list, including the Virtual/Online address exception. GAP: no distinct session-creation/session-edit API operation exists — proflearning-permissions.ttl's plrn:Perm_SessionCreate and plrn:Perm_SessionEdit both already document this (sessions are created only inline as part of plrn:Op_SubmitProgramApplication's ProgramDetails.sessions[], with no standalone endpoint for an admin to add/edit a session directly against an already-approved Program, which is what this story actually describes). satisfiedBy names the domain-model shape that's correctly modeled; the missing operation is the gap." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_5 a sd:UserStory ;
+    sd:requirementId "28.4.5" ;
+    sd:title "Approve, edit, or reject credits awarded to attendees" ;
+    sd:statement "As a Professional Learning Administrator, I need to approve, edit, or reject the credits awarded to specific attendees so that I can ensure the correct number and type of professional learning hours (SCECHs) are recorded for their certification." ;
+    sd:acceptanceCriteria "The interface allows the administrator to select attendees from the attendance list to modify their credit status. The system provides options to approve, edit, or reject credits for the selected attendees. Credit entry fields are categorized into General, College, Career, and Military types. The system restricts the assignment of College, Career, and Military credits to the School Counselor role. The system automatically validates manually awarded credits against the Program's maximum allowable credits for each category. The system prohibits awarding credits that exceed the program's defined maximums. The system records attendance in both full and partial increments based on the event date. An audit log captures details whenever credits are added or updated for an attendee." ;
+    sd:satisfiedBy plrn:Op_AdjustScechAward, plrn:Seq_AdjustScechAwardsAndCertify, plrn:Rule_CounselorScechTypesRestricted, plrn:AttendanceRecord ;
+    sd:notes "Strong match on the substance: School-Counselor-only College/Career/Military restriction (plrn:Rule_CounselorScechTypesRestricted), max-credit validation (plrn:SCECHAllocation), and Full/Partial attendance increments (plrn:AttendanceRecord) are all real, already-modeled concepts, and plrn:Op_AdjustScechAward + plrn:Seq_AdjustScechAwardsAndCertify carry out the adjustment end-to-end. Two minor gaps: (1) terminology — the modeled operation is 'adjust', a single action; this story's 'approve, edit, or reject' as three DISTINCT actions doesn't map one-to-one (an adjustment that reduces credits to zero is the closest analogue to 'reject', but there's no separate reject action or status); (2) the per-adjustment audit-log requirement ('An audit log captures details whenever credits are added or updated') has no modeled counterpart — same class of gap as plrn:Req_28_4_3's Program-level Audit Log, but not folded into that same Annotation since this is attendee/attendance-scoped rather than Program-scoped." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_4_6 a sd:UserStory ;
+    sd:requirementId "28.4.6" ;
+    sd:title "Review evaluations submitted by attendees" ;
+    sd:statement "As a Professional Learning Administrator, I need to review the evaluations submitted by attendees so that I can assess the quality of the program and ensure feedback is linked to the correct participant." ;
+    sd:acceptanceCriteria "The interface allows the administrator to select specific attendees from the Attendance List. The system displays the responses submitted by the selected attendee." ;
+    sd:notes "SIGNIFICANT, already-known gap, now independently confirmed by a second FDD: proflearning-permissions.ttl's plrn:Perm_EvaluationView already documents 'proflearning-api.yml has no endpoint for listing/viewing submitted EvaluationSubmission records at all', and plrn:Perm_EvaluationSubmit documents the matching submission-side gap. This story is the review-side confirmation of the exact same missing capability. UNRESOLVED CROSS-FDD SCOPE QUESTION, not just a technical gap: comment 18 (Groom, 2026-02-02) on this exact passage says 'Admin ability to manage/maintain the evaluations should be included in 14, this may belong with that admin functionality. Need to discuss' — i.e. even the FDD's own reviewers were unsure whether evaluation review belongs in FDD 28 (Processing) or FDD 14 (Professional Learning Admin) at all, and left it an open discussion rather than resolving it. See Question_EvaluationReviewFddOwnershipUnresolved." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:questioning ;
+    rdfs:comment "Comment 18 (Groom, 2026-02-02, on the evaluation-review passage that became 28.4.6): 'Admin ability to manage/maintain the evaluations should be included in 14, this may belong with that admin functionality. Need to discuss.' This is an explicit, still-open scope question from the FDD's own reviewers about whether evaluation review/management belongs in FDD 28 (Processing, this document) or FDD 14 (Professional Learning Admin) — never resolved anywhere in this document's comment thread. Recorded as its own Annotation because it's a genuine open cross-FDD ownership question, not a coverage gap this review can resolve on its own (FDD 14 was not reviewed as part of this pass)." ;
+    oa:hasTarget plrn:Req_28_4_6 ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Independent of the open FDD-14-vs-28 ownership question above, reviewing submitted evaluation responses has no backing capability anywhere regardless of which FDD ends up owning it: plrn:Perm_EvaluationView's own notes already state 'proflearning-api.yml has no endpoint for listing/viewing submitted EvaluationSubmission records at all', and the matching submission-side plrn:Perm_EvaluationSubmit is separately flagged as a 'SIGNIFICANT GAP... a real, load-bearing gap, not a minor one.' This FDD's 28.4.6 is the review-side, third independent confirmation of the same missing end-to-end capability." ;
+    oa:hasTarget plrn:Req_28_4_6 ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Requirements — Feature 28.5: Worklist
+#
+# Numbering starts at 28.5.3 — 28.5.1/28.5.2 are never defined anywhere in the document.
+# By analogy with 28.5.3/28.5.4 (Program-worklist view + filter), the missing 28.5.1/
+# 28.5.2 would naturally be the Sponsor-worklist equivalents — see
+# plrn:Req_28_BizSpec_SponsorWorklistSearch below, modeled from the Business
+# Specifications prose instead since the Addendum itself never gives it a number.
+#################################################################
+
+plrn:Req_28_5_3 a sd:UserStory ;
+    sd:requirementId "28.5.3" ;
+    sd:title "View pending Program applications in a worklist" ;
+    sd:statement "As a Professional Learning Administrator, I need to view the pending Program applications in a worklist so that I can manage the queue for program review." ;
+    sd:acceptanceCriteria "The system provides a worklist for the Professional Learning Administrator to review pending Program applications." ;
+    sd:satisfiedBy plrn:Op_ListProgramApplications, plrn:Seq_AdminApprovesProgramApplication ;
+    sd:notes "Clean match — plrn:Op_ListProgramApplications's own notes already describe serving as 'the admin's pending-review list via ?status=PendingApproval', exactly this story, and plrn:Seq_AdminApprovesProgramApplication's sequence content opens with exactly that call." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_5_4 a sd:UserStory ;
+    sd:requirementId "28.5.4" ;
+    sd:title "Filter the Program applications worklist" ;
+    sd:statement "As a Professional Learning Administrator, I need to filter the Program applications worklist by Program name, Program number, and Program Application number so that I can efficiently locate specific applications or groups of applications for processing." ;
+    sd:acceptanceCriteria "The Program applications worklist provides a basic search field. The Program Application Worklist Search Results table displays the following columns: Program name (as a hyperlink to open the program), Program #, Application #, Start Date, Submit Date, Status." ;
+    sd:satisfiedBy plrn:Op_ListProgramApplications ;
+    sd:notes "The list operation itself exists and is the right target, but proflearning-api.ttl doesn't document sd:parameters for plrn:Op_ListProgramApplications the way documents-api.ttl does for its own search endpoints — the specific named filters (Program name/number, Application number) aren't confirmed as real query parameters on this operation, only that the operation and its result columns exist. Minor documentation gap, not a structural one." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_5_5 a sd:UserStory ;
+    sd:requirementId "28.5.5" ;
+    sd:title "Reset option on search pages" ;
+    sd:statement "As a Professional Learning Administrator, I need a Reset option on the search pages so that I can easily reset search criteria." ;
+    sd:acceptanceCriteria "The Program applications worklist page provides a \"Clear\" option to restore search defaults. The \"Clear\" option removes all entered search criteria on the Program applications worklist page." ;
+    sd:satisfiedBy plrn:Op_ListProgramApplications ;
+    sd:notes "Pure client-side UI behavior (restoring a form to its default, unfiltered state) rather than a distinct server-side concern — satisfied by the same list operation returning its default, unfiltered result set; this level of design doesn't model client-side form state as its own node, consistent with how other domains' equivalent 'Clear'/'Reset' stories have been treated." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_5_6 a sd:UserStory ;
+    sd:requirementId "28.5.6" ;
+    sd:title "\"No results found\" message on empty search" ;
+    sd:statement "As a Professional Learning Administrator, I need the system to display a \"No results found\" message when my search yields no results so that I am clearly informed that no records matched my criteria and know to adjust my filter inputs." ;
+    sd:acceptanceCriteria "The system displays a 'No results found' message when search criteria for Sponsor applications yield no matching records. The system displays a 'No results found' message when search criteria for Program applications yield no matching records. The 'No results found' message disappears when the user enters search criteria that successfully displays results." ;
+    sd:satisfiedBy plrn:Op_ListProgramApplications ;
+    sd:notes "Same client-side-rendering treatment as plrn:Req_28_5_5 — an empty-result-set UI affordance on top of the same list operation, not a distinct backend capability. Note this AC explicitly covers BOTH Program and Sponsor application searches, but only the Program-application list operation is real (plrn:Op_ListProgramApplications) — the Sponsor-application half has no backing operation at all, per Feature 28.1's header note; satisfiedBy still asserted here since the story is fundamentally a UI-rendering concern, with the missing Sponsor-application search itself already captured as its own gap (plrn:Req_28_BizSpec_SponsorWorklistSearch)." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_5_7 a sd:UserStory ;
+    sd:requirementId "28.5.7" ;
+    sd:title "Review the Audit Log within a Program application" ;
+    sd:statement "As a Professional Learning Administrator, I want to review the Audit Log within a specific Professional Learning Program application so that I can audit the history of actions taken, including edits and status changes, by specific users." ;
+    sd:acceptanceCriteria "The Audit Log displays a chronological list of actions taken on the application. Each entry includes the Date and Time the action occurred. Each entry identifies the specific User who performed the action. The log details the specific Action taken (such as an edit or status change). A Description field is provided for each entry to explain the nature of the activity. The system automatically stores audit details in this log whenever a section of the program application is successfully edited." ;
+    sd:notes "Word-for-word restatement of plrn:Req_28_4_3/28.4.3b's Audit Log capability — see that shared coverage-gap Annotation (oa:hasTarget already includes this Requirement)." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_5_8 a sd:UserStory ;
+    sd:requirementId "28.5.8" ;
+    sd:title "View attendance records for a program event" ;
+    sd:statement "As a Professional Learning Administrator, I want to view the attendance records for a specific program event so that I can verify learner participation and manage attendee details." ;
+    sd:acceptanceCriteria "The table includes columns for the attendee's First Name, Last Name, and Unique ID. A \"Confirmed\" column is visible in the table to indicate attendance status. The interface handles scenarios where no results are found by displaying an appropriate message that clears once valid criteria are entered." ;
+    sd:satisfiedBy plrn:Op_GetSessionRoster ;
+    sd:notes "Clean match — plrn:Op_GetSessionRoster's own AttendeeRecord projection already carries educatorUniqueId/Name and evaluationSubmitted/attendance-status fields matching this AC's column list. The Business Specifications prose's fuller version of this same capability (Wireframe 10-12) additionally describes search filters (Last name/First name/Email/Unique ID) not mentioned in this Addendum story's own AC and not documented as sd:parameters on plrn:Op_GetSessionRoster — same minor documentation-gap pattern as plrn:Req_28_5_4, not modeled as a separate Requirement given how minor it is relative to the rest of this story." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+#################################################################
+# Business-Specification-only capabilities — described (and in most cases wireframed)
+# in the Business Specifications prose but never given a number anywhere in the
+# Addendum. Same treatment the FDD 29 pass used for its own three BizSpec-only
+# features (synthetic plrn:Req_28_BizSpec_* IDs, cross-referenced rather than folded
+# silently into the Addendum's own numbering).
+#################################################################
+
+plrn:Req_28_BizSpec_SponsorWorklistSearch a sd:UserStory ;
+    sd:requirementId "28-BizSpec-SponsorWorklistSearch" ;
+    sd:title "View, search, and filter the Sponsor/Vendor Applications worklist" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I can view the pending Professional Learning Sponsor/Vendor Applications in a table format with filter options, so that I can locate and process specific applications." ;
+    sd:acceptanceCriteria "Filter by Type (Sponsor, coordinator, assistant coordination), District or sponsor, District/Sponsor name, Application number, Status (New, pending, approved, comment, documentation). A Clear option restores search defaults. Search Results table columns: Type, Date of application, Application number, District or sponsor, District/Sponsor name, Name (Last, First), Last update date, Status. 'No results found' message shown/hidden per search outcome." ;
+    sd:notes "Confirmed by Wireframe 1 (plrn:Wireframe1Doc). Never promoted to an Addendum number — by analogy with 28.5.3/28.5.4 (the Program-worklist equivalents), this would naturally be 28.5.1/28.5.2, but the Addendum's Worklist feature starts numbering at 28.5.3 and never defines a Sponsor-worklist story at all, the same 'described and wireframed in Business Specs, never promoted to the Addendum's own numbering' pattern the FDD 29 pass found for three of its own features. Same structural gap as the rest of Feature 28.1 (this file's header note on that section): no SponsorApplication entity exists to search over, so satisfiedBy is left unasserted despite the search/filter/results UI itself being fully wireframed." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Sponsor/Vendor Applications worklist search (Wireframe 1) has real filter fields, real result columns, and a real wireframe, but — like the rest of Feature 28.1 — has no SponsorApplication entity anywhere in proflearning-domain.ttl to search over. Same root cause and same Annotation family as this file's Feature-28.1 coverage-gap Annotation; called out separately here because it was never given an Addendum number at all (unlike 28.1.1-28.1.5) and could otherwise be missed by a query that only looks at numbered Addendum stories." ;
+    oa:hasTarget plrn:Req_28_BizSpec_SponsorWorklistSearch ;
+    sd:impact "H" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_SponsorListViewEditDelete a sd:UserStory ;
+    sd:requirementId "28-BizSpec-SponsorListViewEditDelete" ;
+    sd:title "View, search, edit, and delete Sponsors from the Sponsor List" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I can view the list of all Sponsors, search by name/ID/active status, and edit or delete a Sponsor's information, so that I can maintain accurate sponsor records." ;
+    sd:acceptanceCriteria "Search by Sponsor name, Sponsor ID, Include Inactive toggle; Clear option; results table (Sponsor name hyperlink, Sponsor ID, Contact name, Sponsor email, Active); clicking the Sponsor name opens a view/edit screen for Sponsor name/ID/Address/City/State/Zip/Contact/Phone/Email/URL/Active-inactive switch; delete option for both a pending Sponsor application and an approved Sponsor." ;
+    sd:satisfiedBy plrn:Op_GetSponsor ;
+    sd:notes "Confirmed by Wireframe 7 (plrn:Wireframe7Doc). PARTIAL: view is a real, clean match (plrn:Op_GetSponsor). Edit and delete are both already-documented gaps on the Permission side — plrn:Perm_SponsorEdit's own notes say 'No distinct update-sponsor API operation exists... an honest gap', and plrn:Perm_SponsorDelete's own notes say the same for deletion, further noting the aggregate's own Design Note that sponsor lifecycle belongs to EEM, not MiEdWorkforce. This FDD independently confirms both stated capabilities (edit AND delete an approved Sponsor, not just a pending application) are real, expected, and wireframed — strengthening, not just repeating, those two existing Permission-level gap notes." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_ApprovedProgramsListAndWithdraw a sd:UserStory ;
+    sd:requirementId "28-BizSpec-ApprovedProgramsListAndWithdraw" ;
+    sd:title "View, search, edit, and withdraw approved Programs" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I can view the list of all approved Programs, search/filter them, edit each section, and delete or withdraw a Program, so that I can maintain the program catalog." ;
+    sd:acceptanceCriteria "Search by Program name, Program approval #, Offering end date range, Sponsor name; Clear option; results table (Program name hyperlink, Sponsor ID, Program approval #, Application #, Start Date, Submit date, Status); clicking the Program name opens view/edit of each section, with audit details stored on edit; a delete-or-withdraw action on the Program." ;
+    sd:satisfiedBy plrn:Op_ListPrograms, plrn:Op_GetProgram, plrn:Op_WithdrawProgram ;
+    sd:notes "Good match overall — the approved-Programs list/search/withdraw trio is fully modeled (plrn:Op_ListPrograms, plrn:Op_GetProgram, plrn:Op_WithdrawProgram/plrn:Perm_ProgramWithdraw). Same edit-endpoint and audit-on-edit gaps already noted on plrn:Req_28_4_1 and the Req_28_4_3/28.4.3b/28.5.7 Audit Log Annotation apply here too — not re-raised as separate Annotations since they're the identical, already-flagged gaps applied to the same underlying Program entity via a different worklist screen." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_EvaluationTemplateMaintenance a sd:UserStory ;
+    sd:requirementId "28-BizSpec-EvaluationTemplateMaintenance" ;
+    sd:title "Maintain evaluation questions for Programs" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I will maintain the evaluation questions for Programs, so that program feedback can be systematically collected." ;
+    sd:acceptanceCriteria "Admin can create/edit evaluation templates referencing question sets, assignable to program categories or individual programs (per the Business Specifications prose and Wireframe 10's Attendance-list-Evaluation screen)." ;
+    sd:satisfiedBy plrn:Seq_AdminConfiguresEvaluationQuestions, plrn:Op_ListEvaluationTemplates, plrn:Op_CreateEvaluationTemplate ;
+    sd:notes "Fully satisfied, unlike the closely-related but distinct plrn:Req_28_4_6 (reviewing SUBMITTED evaluation responses, which has no modeled counterpart at all) — this story is specifically about maintaining the evaluation TEMPLATE/question set, which proflearning-sequences.ttl already models end-to-end via plrn:Seq_AdminConfiguresEvaluationQuestions. Worth noting precisely because the two are easy to conflate: template maintenance = satisfied; reviewing submitted responses = significant gap." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_ProgramCategoryMaintenance a sd:UserStory ;
+    sd:requirementId "28-BizSpec-ProgramCategoryMaintenance" ;
+    sd:title "Maintain Professional Learning Program Categories" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I will maintain Professional Learning Program Categories on an Admin screen (Add, View, Edit, Active/Inactive), so that programs can be consistently classified." ;
+    sd:acceptanceCriteria "Add/View/Edit/Active-Inactive actions on Program Categories, on an admin screen (matches Wireframe 1's 'Category/Program description' tab)." ;
+    sd:satisfiedBy plrn:Seq_AdminManagesProgramCategories, plrn:Op_ListProgramCategories, plrn:Op_CreateProgramCategory, plrn:Op_DeactivateProgramCategory ;
+    sd:notes "Fully satisfied — plrn:Seq_AdminManagesProgramCategories and its backing operations already model create/list/deactivate for both categories and subcategories, matching this story's Add/View/Edit/Active-Inactive shape closely (no distinct 'Edit category name/description' story is separately called out in the Business Specifications text, but plrn:Op_UpdateProgramCategory covers it regardless)." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_ProgramDescriptionsAdmin a sd:UserStory ;
+    sd:requirementId "28-BizSpec-ProgramDescriptionsAdmin" ;
+    sd:title "Maintain Professional Learning Program Descriptions" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I will maintain Professional Learning Program Descriptions on an Admin screen (Add, View, Edit, Active/Inactive), so that programs can reference a consistent, reusable set of description text." ;
+    sd:acceptanceCriteria "Add/View/Edit/Active-Inactive actions on Program Descriptions, on an admin screen (matches Wireframe 1's 'Category/Program description' tab, the same tab named for Program Categories above)." ;
+    sd:notes "GENUINE, PREVIOUSLY-UNFLAGGED coverage gap, distinct from Program Category maintenance (which IS fully modeled — see plrn:Req_28_BizSpec_ProgramCategoryMaintenance immediately above). 'Program Descriptions' as described here — a maintained, reusable ADMIN-CURATED library of description text/templates with its own Add/View/Edit/Active-Inactive lifecycle, presented on the very same tab as Program Categories in Wireframe 1 ('Category/Program description') — is a different concept from plrn:ProfessionalLearningProgramAggregate's own free-text 'description' field on an individual Program (which a sponsor or admin types directly on that one Program, with no separate reusable-library concept behind it). No ProgramDescription aggregate/entity/API exists anywhere in proflearning-domain.ttl or proflearning-api.ttl. Worth flagging precisely because it's easy to mistake for 'already covered by Program.description' when it is not." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "'Program Descriptions' (Add/View/Edit/Active-Inactive, admin-maintained, on the same Wireframe-1 tab as Program Categories) is a reusable-library concept distinct from Program's own free-text description field, and has no aggregate/entity/API anywhere in proflearning-domain.ttl. Not previously flagged by any earlier proflearning conversion pass — a new finding from this FDD, not a re-confirmation of an existing one." ;
+    oa:hasTarget plrn:Req_28_BizSpec_ProgramDescriptionsAdmin ;
+    sd:impact "L" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .
+
+plrn:Req_28_BizSpec_MassEmailSponsors a sd:UserStory ;
+    sd:requirementId "28-BizSpec-MassEmailSponsors" ;
+    sd:title "Compose and send mass emails to selected or all Sponsors" ;
+    sd:statement "As a MiEdWorkforce user with the Professional Learning Administrator role, I will compose and send mass emails (with attachments) to selected or All Sponsors, so that I can communicate program updates or requirements broadly." ;
+    sd:acceptanceCriteria "Compose an email with optional attachments; select specific Sponsors or All Sponsors as recipients; send (matches Wireframe 14: Email sponsors, and Wireframe 1's 'Email Sponsors' tab)." ;
+    sd:notes "CONFIRMS an already-open finding from proflearning-domain.ttl's own conversion: plrn:Question_MissingSponsorSequences (Open Question #10) already noted that plrn:ProfessionalLearningSponsorAggregate's own 'Referenced In' list cites a 'Sequence: Mass Email to Sponsors' that doesn't exist anywhere in proflearning-sequences.ttl, and specifically named this FDD ('FDD 28 (Processing) confirms mass-emailing sponsors is a real, described capability... Wireframe 14') as the evidence for it — this review is that confirmation, now made concrete with the actual FDD text and wireframe reference. Distinct from plrn:Req_28_1_4 (emailing ONE sponsor from an application review page, which IS satisfied by comm:Op_SendManualEmail): comm:Op_SendManualEmail's request shape is a single recipientEmail, with no bulk-recipient list and no attachment support — genuinely does not cover 'selected or All Sponsors' + attachments. A real gap on the Communications side (or a net-new bulk-send capability), not merely a missing proflearning-side sequence diagram for an operation that already exists elsewhere." ;
+    sd:definedIn plrn:Fdd28Doc .
+
+[] a sd:Annotation ; oa:motivatedBy oa:reviewing ; sd:findingType "coverage-gap" ;
+    rdfs:comment "Mass email to selected/All Sponsors, with attachments (Wireframe 14, Wireframe 1's 'Email Sponsors' tab) is confirmed, real, wireframed functionality with no backing API operation anywhere: comm:Op_SendManualEmail (the closest existing mechanism, and the one that DOES satisfy the single-recipient plrn:Req_28_1_4) supports only one recipientEmail and no attachments. This independently confirms plrn:Question_MissingSponsorSequences (proflearning-domain.ttl, Open Question #10), which had already flagged the same missing 'Mass Email to Sponsors' sequence from the Sponsor aggregate's own 'Referenced In' list but, at the time of that conversion, without this FDD's concrete text/wireframe to confirm it — raising confidence this is real, needed functionality rather than stale documentation." ;
+    oa:hasTarget plrn:Req_28_BizSpec_MassEmailSponsors ;
+    sd:impact "M" ; sd:status "open" ; sd:definedIn plrn:Fdd28Doc .

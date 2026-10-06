@@ -1,0 +1,481 @@
+# TEMPLATE: (Domain Name) API
+# OUTPUT FILE: (domain-slug)-api.yml
+# Remove all comment blocks before publishing.
+# See solution-level/patterns-and-principles/api-design.md for detailed guidance.
+#
+# URL PATTERNS:
+#   List/Search:  GET    /(resources)
+#   Get Single:   GET    /(resources)/{(resource)Id}
+#   Create:       POST   /(resources)
+#   Full Update:  PUT    /(resources)/{(resource)Id}
+#   Partial:      PATCH  /(resources)/{(resource)Id}
+#   Delete:       DELETE /(resources)/{(resource)Id}
+#   State Action: POST   /(resources)/{(resource)Id}/(action-verb)
+#   Bulk:         POST   /(resources)/bulk-(action)
+#
+# HTTP STATUS CODES:
+#   200 Created (GET, PUT, PATCH, state actions)
+#   201 Created (POST that creates a resource)
+#   202 Accepted (async/batch — return jobId + statusUrl)
+#   204 No Content (DELETE)
+#   400 Bad Request (validation, business rule violation)
+#   403 Forbidden (permission check failed)
+#   404 Not Found
+#   409 Conflict (optimistic concurrency, duplicate)
+#
+# SCHEMA CONVENTIONS:
+#   Each aggregate root  → (Resource)Summary (lists) + (Resource)Detail (single GET)
+#   Each value object    → reusable component schema
+#   Each state machine   → named enum under components/schemas
+#   Domain event payload → NOT exposed via API; document in domain-events table only
+#   Versioned resources  → include effectiveFrom/effectiveTo; add /history endpoint
+#
+# PAGINATION:
+#   All list endpoints take page (default 1) and pageSize (default 20, max 100).
+#   Wrap response in object with data array + PaginationMetadata component.
+#
+# ACCESS CLASSIFICATION (x-access) — required on every operation:
+#   internal-user     End-user accessing through MiLogin user token; includes delegated
+#                     user requests passthrough from other domain services
+#   internal-service  Managed Identity / mTLS; no user token;
+#                     document the expected calling service in the description
+#   external-client   External system's API client
+#   external-public   Unauthenticated; exposed via APIM; use sparingly
+#
+# PERMISSIONS (x-permissions-required) — required on every operation:
+#   Array of permission identifiers. All values must exist in
+#   solution-level/solution-permissions.csv. Use [] for external-public only.
+#
+# SCOPE SENSITIVITY (x-scope-sensitive) — required on every operation:
+#   Declares whether the IAM authorization evaluation for this endpoint considers
+#   the caller's organizational scope (per the IAM hierarchical RBAC model).
+#
+#   true   The operation is scope-sensitive. IAM will extract X-Organization-Context
+#          from the request to determine which organizational authorization applies.
+#          Required on all list/search endpoints and any write operation where the
+#          caller's org scope determines what they can act on.
+#          → Include $ref: '#/components/parameters/OrganizationContext' in parameters.
+#
+#   false  The operation is scope-agnostic. IAM grants access if the user holds the
+#          required permission at any scope. Typical for self-only operations (the
+#          resource is always the caller's own) and system-wide admin actions.
+#          → Do not include the OrganizationContext parameter.
+#
+# CHECKLIST:
+#   [ ] Every aggregate root has GET (list + single) and POST endpoints
+#   [ ] Every state transition has a POST /(resource)/{id}/(action) endpoint
+#   [ ] Every sequence in (domain)-sequences.md maps to at least one operationId here
+#   [ ] All status enums match domain model state machine values exactly
+#   [ ] Versioned resources have a /history endpoint
+#   [ ] Async operations return 202 with jobId and statusUrl
+#   [ ] Every operation declares x-access and x-permissions-required
+#   [ ] Every operation declares x-scope-sensitive
+#   [ ] Scope-sensitive operations include the OrganizationContext parameter
+#   [ ] All permission identifiers exist in solution-permissions.csv
+
+openapi: 3.0.3
+info:
+  title: MiEdWorkforce (Domain Name) API
+  version: 1.0.0
+  description: |
+    (2-3 sentences: what this API enables and who the primary consumers are.)
+
+servers:
+  - url: http://(domain-slug)-api.default.svc.cluster.local/api/v1
+    description: Internal AKS cluster
+  - url: https://api.miedworkforce.mi.gov/(domain-slug)/api/v1
+    description: External via APIM
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ----------------------------------------------------------------------------
+  # (PRIMARY RESOURCE)
+  # ----------------------------------------------------------------------------
+
+  /(resources):
+    get:
+      summary: List (resources)
+      operationId: list(Resources)
+      tags: [(Resources)]
+      x-access: internal-user
+      x-permissions-required:
+        - (domain).(resource).view
+      x-scope-sensitive: true
+      description: |
+        (What is returned and how scope is determined. If x-scope-sensitive is true,
+        describe how X-Organization-Context constrains the result set — e.g. "Returns
+        only (resources) within the organization specified by X-Organization-Context.
+        Users with ISD-level authorization will see results for all constituent
+        districts and buildings.")
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/(Resource)Status'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of (resources)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/(Resource)Summary'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationMetadata'
+
+    post:
+      summary: Create (resource)
+      operationId: create(Resource)
+      tags: [(Resources)]
+      x-access: internal-user
+      x-permissions-required:
+        - (domain).(resource).create
+      x-scope-sensitive: true
+      description: |
+        (What this creates and any prerequisites.)
+      parameters:
+        - $ref: '#/components/parameters/OrganizationContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/(Resource)Create'
+      responses:
+        '201':
+          description: (Resource) created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  (resource)Id:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/(Resource)Status'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /(resources)/{(resource)Id}:
+    get:
+      summary: Get (resource)
+      operationId: get(Resource)
+      tags: [(Resources)]
+      x-access: internal-user
+      x-permissions-required:
+        - (domain).(resource).view
+      x-scope-sensitive: false
+      description: |
+        (What is returned. Scope is resolved server-side from the resource's owning
+        organization — X-Organization-Context is not required.)
+      parameters:
+        - $ref: '#/components/parameters/(Resource)Id'
+      responses:
+        '200':
+          description: (Resource) detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/(Resource)Detail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # State transition — one endpoint per action. See api-design.md for pattern.
+  /(resources)/{(resource)Id}/(action):
+    post:
+      summary: (Action) (resource)
+      operationId: (action)(Resource)
+      tags: [(Resources)]
+      x-access: internal-user
+      x-permissions-required:
+        - (domain).(resource).(action)
+      x-scope-sensitive: false
+      description: |
+        Transitions (resource) from (PreviousState) to (NextState).
+        Scope is resolved server-side from the resource's owning organization.
+      parameters:
+        - $ref: '#/components/parameters/(Resource)Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: (Resource) updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  (resource)Id:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/(Resource)Status'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Internal service endpoint — consumed by another domain, not exposed via APIM.
+  # See api-design.md for service-to-service and Synapse job patterns.
+  /(resources)/{(resource)Id}/(service-projection):
+    get:
+      summary: Get (resource) (projection) (internal service)
+      operationId: get(Resource)(Projection)
+      tags: [(Resources)]
+      x-access: internal-service
+      x-permissions-required:
+        - (domain).(resource).view
+      x-scope-sensitive: false
+      description: |
+        Called by the (consuming-domain) domain to (reason).
+        Not exposed via APIM. Authenticated via Managed Identity / mTLS.
+        No user token is present; X-Organization-Context does not apply.
+      parameters:
+        - $ref: '#/components/parameters/(Resource)Id'
+      responses:
+        '200':
+          description: (Resource) projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/(Resource)ServiceSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+
+  parameters:
+    (Resource)Id:
+      name: (resource)Id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    OrganizationContext:
+      name: X-Organization-Context
+      in: header
+      required: true
+      description: |
+        The organization code representing the caller's active authorization context.
+        Used by IAM to determine which organizational scope applies when evaluating
+        permissions. Must match an organization for which the caller holds the required
+        permission (directly or transitively via the org hierarchy).
+        Required on all scope-sensitive operations (x-scope-sensitive: true).
+      schema:
+        type: string
+        example: district-10
+
+  schemas:
+
+    # Enums — one per state machine; values must match domain model exactly
+    (Resource)Status:
+      type: string
+      enum:
+        - (State1)
+        - (State2)
+
+    # Summary — lightweight; used in list responses
+    (Resource)Summary:
+      type: object
+      properties:
+        (resource)Id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/(Resource)Status'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Detail — full representation; used in single-resource GET
+    (Resource)Detail:
+      allOf:
+        - $ref: '#/components/schemas/(Resource)Summary'
+        - type: object
+          properties:
+            (field):
+              type: string
+
+    # Create — request body for POST
+    (Resource)Create:
+      type: object
+      required:
+        - (requiredField)
+      properties:
+        (requiredField):
+          type: string
+          description: (Description and constraints.)
+        (optionalField):
+          type: string
+          nullable: true
+
+    # ServiceSummary — leaner projection for internal-service consumers.
+    # Only needed if the consuming service needs different fields than Detail.
+    (Resource)ServiceSummary:
+      type: object
+      properties:
+        (resource)Id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/(Resource)Status'
+
+    # Versioned definition schemas — include if this resource supports versioning.
+    # See api-design.md for the full versioned definition pattern.
+    (Definition)Summary:
+      type: object
+      properties:
+        definitionId:
+          type: string
+          format: uuid
+        isActive:
+          type: boolean
+        effectiveFrom:
+          type: string
+          format: date
+
+    DefinitionVersion:
+      type: object
+      properties:
+        versionId:
+          type: string
+          format: uuid
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: string
+          format: date
+          nullable: true
+        modifiedBy:
+          type: string
+        modifiedAt:
+          type: string
+          format: date-time
+        changeDescription:
+          type: string
+        snapshot:
+          type: object
+          description: Complete definition state at this version.
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Validation error or business rule violation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              validationErrors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Conflict:
+      description: Optimistic concurrency conflict or duplicate creation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+  securitySchemes:
+    MiLogin:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://milogin.michigan.gov/oauth/authorize
+          tokenUrl: https://milogin.michigan.gov/oauth/token
+          scopes:
+            (domain-slug):read: Read access
+            (domain-slug):write: Write access
+            (domain-slug):admin: Administrative operations
+
+security:
+  - MiLogin:
+      - (domain-slug):read
