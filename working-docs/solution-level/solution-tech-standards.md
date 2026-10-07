@@ -119,7 +119,7 @@ All solution domains in MiEdWorkforce will follow these technology standards unl
 - **External Endpoints:** All public APIs routed through APIM
 - **Security:** Rate limiting (1000 req/min per user), DDoS protection, WAF
 - **Service APIs:** Direct service-to-service within AKS (no APIM, no route from outside the mesh)
-- **Application and External APIs:** Through APIM (internal VNet mode) behind Application Gateway, then the Istio internal ingress gateway. Application APIs are on the UI hostname under `/api`; external APIs are on a separate API hostname. WAF is at Application Gateway (and Cloudflare in Staging and Prod)
+- **Application and External APIs:** Through APIM (internal VNet mode) behind Application Gateway, then the Istio internal ingress gateway. Application APIs are on the UI hostname under `/api`; external APIs are on a separate API hostname. WAF is at Application Gateway (and Cloudflare in every environment)
 
 ### Data Services
 - **Azure SQL:** Managed service with automated backups, point-in-time restore

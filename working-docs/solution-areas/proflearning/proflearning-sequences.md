@@ -6,8 +6,10 @@ This document contains sequence diagrams for all workflows in the Professional L
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
 - Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- **actor** = Human only
+- **participant** = Every non-human: UI, services, Event Bus, external systems
+- Request arrows start with an API kind tag: `APP` (application API), `SVC` (service API), `EXT` (external API), `OUT` (outbound call to an external system)
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
@@ -15,7 +17,7 @@ This document contains sequence diagrams for all workflows in the Professional L
 
 **What:** Sponsor submits new/modified program for approval
 **When:** Sponsor wants to offer new program or modify existing
-**Who:** Coordinator or Assistant Coordinator
+**Who:** Coordinator or Assistant Coordinator. Permission: proflearning.program.create (scoped to the coordinator's sponsor); the admin step uses proflearning.program.view and proflearning.program.approve (system-wide)
 
 ```mermaid
 ---
@@ -23,26 +25,30 @@ title: Professional Learning - Program Application Submission
 ---
 sequenceDiagram
     actor Coordinator
-    participant ProfLearningUI
-    participant ProfLearningAPI
-    participant IAM_API
-    participant DocumentsAPI
-    participant ServiceBus
-    
-    Coordinator->>ProfLearningUI: Complete program application form
-    ProfLearningUI->>IAM_API: Check permission (proflearning.program.create)
-    IAM_API-->>ProfLearningUI: Authorized for sponsor
-    
-    Coordinator->>DocumentsAPI: Upload program agenda
-    DocumentsAPI-->>Coordinator: Document reference
-    
-    ProfLearningUI->>ProfLearningAPI: POST /program-applications
-    Note over ProfLearningAPI: Program details, agenda ref, sponsor ID
-    ProfLearningAPI->>ProfLearningAPI: Create ProgramApplication (PendingApproval)
-    ProfLearningAPI--)ServiceBus: Publish ProgramApplicationSubmitted
-    Note over ServiceBus: Notifies communications; application is now visible in the admin's pending-review list
-    ProfLearningAPI-->>ProfLearningUI: Application ID
-    ProfLearningUI-->>Coordinator: Confirmation message
+    box Browser
+        participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant DocumentsApi as Documents API
+        participant EventBus as Event Bus
+    end
+
+    Coordinator->>UI: Complete program application form
+
+    Coordinator->>UI: Upload program agenda
+    UI->>ProfLearningApi: APP Request agenda upload
+    ProfLearningApi->>DocumentsApi: SVC POST /documents/upload/request
+    ProfLearningApi-->>UI: Document reference
+    UI-->>Coordinator: Agenda uploaded
+
+    UI->>ProfLearningApi: APP POST /program-applications
+    Note over ProfLearningApi: Program details, agenda ref, sponsor ID
+    ProfLearningApi->>ProfLearningApi: Create ProgramApplication (PendingApproval)
+    ProfLearningApi--)EventBus: ProgramApplicationSubmitted
+    Note over EventBus: Notifies communications; application is now visible in the admin's pending-review list
+    ProfLearningApi-->>UI: Application ID
+    UI-->>Coordinator: Confirmation message
 ```
 
 ```mermaid
@@ -51,43 +57,47 @@ title: Professional Learning - Admin Approves Program Application
 ---
 sequenceDiagram
     actor Admin
-    participant ProfLearningAdminUI
-    participant ProfLearningAPI
-    participant DocumentsAPI
-    participant ServiceBus
-    
-    Note over ProfLearningAdminUI: Admin views the filtered, sortable program-applications list
-    Admin->>ProfLearningAdminUI: View pending program applications
-    ProfLearningAdminUI->>ProfLearningAPI: GET /program-applications?status=PendingApproval
-    ProfLearningAPI-->>ProfLearningAdminUI: Pending applications
-    
-    Admin->>ProfLearningAdminUI: Select application, review details
-    ProfLearningAdminUI->>ProfLearningAPI: GET /program-applications/{id}
-    ProfLearningAPI-->>ProfLearningAdminUI: Application details
-    ProfLearningAdminUI->>DocumentsAPI: Fetch program agenda
-    DocumentsAPI-->>ProfLearningAdminUI: Agenda content
-    
-    alt Approve
-        Admin->>ProfLearningAdminUI: Add comments, approve
-        ProfLearningAdminUI->>ProfLearningAPI: POST /program-applications/{id}/approve
-        ProfLearningAPI->>ProfLearningAPI: Update Program (Approved)
-        ProfLearningAPI--)ServiceBus: Publish ProgramApproved
-    else Reject
-        Admin->>ProfLearningAdminUI: Add comments, reject
-        ProfLearningAdminUI->>ProfLearningAPI: POST /program-applications/{id}/reject
-        ProfLearningAPI->>ProfLearningAPI: Update Application (Rejected)
-        ProfLearningAPI--)ServiceBus: Publish ProgramRejected
-    else Request More Info
-        Admin->>ProfLearningAdminUI: Add comments, request info
-        ProfLearningAdminUI->>ProfLearningAPI: POST /program-applications/{id}/request-info
-        ProfLearningAPI->>ProfLearningAPI: Update Application (RequiresInfo)
-        ProfLearningAPI--)ServiceBus: Publish InfoRequested
+    box Browser
+        participant UI as UI
     end
-    
-    ProfLearningAPI-->>ProfLearningAdminUI: Updated status
-    
-    ServiceBus--)CommunicationsWorker: Event received
-    CommunicationsWorker->>CommunicationsAPI: Notify coordinator of decision
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant DocumentsApi as Documents API
+        participant EventBus as Event Bus
+    end
+
+    Note over UI: Admin views the filtered, sortable program-applications list
+    Admin->>UI: View pending program applications
+    UI->>ProfLearningApi: APP GET /program-applications (status PendingApproval)
+    ProfLearningApi-->>UI: Pending applications
+
+    Admin->>UI: Select application, review details
+    UI->>ProfLearningApi: APP GET /program-applications/{applicationId}
+    ProfLearningApi->>DocumentsApi: SVC GET /documents/{documentId}/download
+    DocumentsApi-->>ProfLearningApi: Agenda content
+    ProfLearningApi-->>UI: Application details with agenda
+
+    alt Approve
+        Admin->>UI: Add comments, approve
+        UI->>ProfLearningApi: APP POST /program-applications/{applicationId}/approve
+        ProfLearningApi->>ProfLearningApi: Update Program (Approved)
+        ProfLearningApi--)EventBus: ProgramApproved
+        Note over EventBus: Consumed by Communications (notifies the coordinator of the decision)
+    else Reject
+        Admin->>UI: Add comments, reject
+        UI->>ProfLearningApi: APP POST /program-applications/{applicationId}/reject
+        ProfLearningApi->>ProfLearningApi: Update Application (Rejected)
+        ProfLearningApi--)EventBus: ProgramRejected
+        Note over EventBus: Consumed by Communications (notifies the coordinator of the decision)
+    else Request More Info
+        Admin->>UI: Add comments, request info
+        UI->>ProfLearningApi: APP POST /program-applications/{applicationId}/request-info
+        ProfLearningApi->>ProfLearningApi: Update Application (RequiresInfo)
+        ProfLearningApi--)EventBus: InfoRequested
+        Note over EventBus: Consumed by Communications (notifies the coordinator of the decision)
+    end
+
+    ProfLearningApi-->>UI: Updated status
 ```
 
 **Key Decisions:**
@@ -116,7 +126,7 @@ sequenceDiagram
 
 **What:** Coordinator enrolls educators in program session
 **When:** Before or during program delivery
-**Who:** Coordinator
+**Who:** Coordinator. Permission: proflearning.attendance.add (scoped to the session's program)
 
 ```mermaid
 ---
@@ -124,42 +134,43 @@ title: Professional Learning - Add Attendees
 ---
 sequenceDiagram
     actor Coordinator
-    participant ProfLearningUI
-    participant ProfLearningAPI
-    participant IAM_API
-    
-    Coordinator->>ProfLearningUI: Navigate to program session
-    ProfLearningUI->>IAM_API: Check permission (proflearning.attendance.add)
-    IAM_API-->>ProfLearningUI: Authorized
-    
-    alt Online Entry
-        Coordinator->>ProfLearningUI: Search for educator by name/ID
-        ProfLearningUI->>ProfLearningAPI: GET /educators/search?query={name}
-        ProfLearningAPI->>IAM_API: Validate educators exist
-        IAM_API-->>ProfLearningAPI: Matching educators with Unique IDs
-        ProfLearningAPI-->>ProfLearningUI: Search results
-        
-        Coordinator->>ProfLearningUI: Select educator, add to roster
-        ProfLearningUI->>ProfLearningAPI: POST /sessions/{id}/attendees
-        ProfLearningAPI->>IAM_API: GET /users/{uniqueId}
-        IAM_API-->>ProfLearningAPI: User confirmed
-        Note over ProfLearningAPI: Default awarded SCECHs to program max
-        ProfLearningAPI->>ProfLearningAPI: Add Attendee to roster
-        ProfLearningAPI-->>ProfLearningUI: Success
-    else File Upload
-        Coordinator->>ProfLearningUI: Upload attendee CSV
-        ProfLearningUI->>ProfLearningAPI: POST /sessions/{id}/attendees/bulk-upload
-        ProfLearningAPI->>ProfLearningAPI: Parse CSV, extract Unique IDs
-        loop For each Unique ID
-            ProfLearningAPI->>IAM_API: GET /users/{uniqueId}
-            IAM_API-->>ProfLearningAPI: User confirmed or not found
-        end
-        Note over ProfLearningAPI: Default awarded SCECHs to program max
-        ProfLearningAPI->>ProfLearningAPI: Add valid Attendees to roster
-        ProfLearningAPI-->>ProfLearningUI: Success with validation report
+    box Browser
+        participant UI as UI
     end
-    
-    ProfLearningUI-->>Coordinator: Attendees added (with any errors)
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant IamApi as IAM API
+    end
+
+    Coordinator->>UI: Navigate to program session
+
+    alt Online Entry
+        Coordinator->>UI: Search for educator by name/ID
+        UI->>ProfLearningApi: APP GET /educators/search
+        ProfLearningApi->>IamApi: SVC GET /users/search
+        IamApi-->>ProfLearningApi: Matching educators with Unique IDs
+        ProfLearningApi-->>UI: Search results
+
+        Coordinator->>UI: Select educator, add to roster
+        UI->>ProfLearningApi: APP POST /sessions/{sessionId}/attendees
+        ProfLearningApi->>IamApi: SVC GET /users/by-unique-id/{uniqueId}
+        IamApi-->>ProfLearningApi: User confirmed
+        Note over ProfLearningApi: Default awarded SCECHs to program max
+        ProfLearningApi->>ProfLearningApi: Add Attendee to roster
+    else File Upload
+        Coordinator->>UI: Upload attendee CSV
+        UI->>ProfLearningApi: APP POST /sessions/{sessionId}/attendees/bulk-upload
+        ProfLearningApi->>ProfLearningApi: Parse CSV, extract Unique IDs
+        loop For each Unique ID
+            ProfLearningApi->>IamApi: SVC GET /users/by-unique-id/{uniqueId}
+            IamApi-->>ProfLearningApi: User confirmed or not found
+        end
+        Note over ProfLearningApi: Default awarded SCECHs to program max
+        ProfLearningApi->>ProfLearningApi: Add valid Attendees to roster
+        ProfLearningApi-->>UI: Success with validation report
+    end
+
+    UI-->>Coordinator: Attendees added (with any errors)
 ```
 
 **Key Decisions:**
@@ -184,7 +195,7 @@ sequenceDiagram
 
 **What:** Coordinator adjusts awarded hours for partial attendance, then certifies roster
 **When:** After program completion
-**Who:** Coordinator
+**Who:** Coordinator. Permission: proflearning.attendance.view, proflearning.attendance.adjust, proflearning.attendance.certify (scoped to the session's program)
 
 ```mermaid
 ---
@@ -192,47 +203,49 @@ title: Professional Learning - Adjust SCECHs and Certify
 ---
 sequenceDiagram
     actor Coordinator
-    participant ProfLearningUI
-    participant ProfLearningAPI
-    participant CredentialingAPI
-    participant ServiceBus
-    
-    Coordinator->>ProfLearningUI: View attendance roster for session
-    ProfLearningUI->>ProfLearningAPI: GET /sessions/{id}/attendance
-    ProfLearningAPI-->>ProfLearningUI: Roster with attendees
-    
-    opt Adjust for partial attendance
-        Coordinator->>ProfLearningUI: Decrease awarded SCECHs for attendee
-        ProfLearningUI->>ProfLearningAPI: PATCH /attendees/{id}/scech-award
-        Note over ProfLearningAPI: Validate not exceeding program max
-        ProfLearningAPI->>ProfLearningAPI: Update SCECHAward entity
-        ProfLearningAPI-->>ProfLearningUI: Updated award
+    box Browser
+        participant UI as UI
     end
-    
-    Coordinator->>ProfLearningUI: Review roster, agree to attestations
-    Coordinator->>ProfLearningUI: Certify attendance
-    ProfLearningUI->>ProfLearningAPI: POST /sessions/{id}/certify
-    
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant CredApi as Credentialing API
+        participant EventBus as Event Bus
+    end
+
+    Coordinator->>UI: View attendance roster for session
+    UI->>ProfLearningApi: APP GET /sessions/{sessionId}/attendees
+    ProfLearningApi-->>UI: Roster with attendees
+
+    opt Adjust for partial attendance
+        Coordinator->>UI: Decrease awarded SCECHs for attendee
+        UI->>ProfLearningApi: APP PATCH /session-attendees/{attendeeId}/scech-award
+        Note over ProfLearningApi: Validate not exceeding program max
+        ProfLearningApi->>ProfLearningApi: Update SCECHAward entity
+        ProfLearningApi-->>UI: Updated award
+    end
+
+    Coordinator->>UI: Review roster, agree to attestations
+    Coordinator->>UI: Certify attendance
+    UI->>ProfLearningApi: APP POST /sessions/{sessionId}/certify
+
     alt Evaluation Required
-        ProfLearningAPI->>ProfLearningAPI: Check if all attendees submitted evaluation
+        ProfLearningApi->>ProfLearningApi: Check if all attendees submitted evaluation
         alt Missing evaluations
-            ProfLearningAPI-->>ProfLearningUI: Error - pending evaluations
+            ProfLearningApi-->>UI: 400 Pending evaluations
         end
     end
-    
+
     opt School Counselor SCECH validation
-        ProfLearningAPI->>CredentialingAPI: GET /credentials/{educatorId}/type
-        CredentialingAPI-->>ProfLearningAPI: Credential type
-        Note over ProfLearningAPI: Filter College/Career/Military SCECHs for non-counselors
+        ProfLearningApi->>CredApi: SVC GET /credentials/{educatorId}/type
+        CredApi-->>ProfLearningApi: Credential type
+        Note over ProfLearningApi: Filter College/Career/Military SCECHs for non-counselors
     end
-    
-    ProfLearningAPI->>ProfLearningAPI: Mark roster as Certified
-    Note over ProfLearningAPI: After certification, direct edits blocked
-    ProfLearningAPI--)ServiceBus: Publish AttendanceCertified
-    ProfLearningAPI-->>ProfLearningUI: Success
-    
-    ServiceBus--)CommunicationsWorker: AttendanceCertified event
-    CommunicationsWorker->>CommunicationsAPI: Send SCECH award notifications to attendees
+
+    ProfLearningApi->>ProfLearningApi: Mark roster as Certified
+    Note over ProfLearningApi: After certification, direct edits blocked
+    ProfLearningApi--)EventBus: AttendanceCertified
+    Note over EventBus: Consumed by Communications (sends SCECH award notifications to attendees)
+    ProfLearningApi-->>UI: Certification result
 ```
 
 **Key Decisions:**
@@ -257,7 +270,7 @@ sequenceDiagram
 
 **What:** Coordinator submits request to adjust SCECH awards after attendance has been certified
 **When:** Error discovered post-certification (e.g., incorrect attendance, data entry mistake)
-**Who:** Coordinator
+**Who:** Coordinator. Permission: proflearning.attendance.view, proflearning.correction.submit (scoped to the session's program)
 
 ```mermaid
 ---
@@ -265,28 +278,32 @@ title: Professional Learning - SCECH Correction Request
 ---
 sequenceDiagram
     actor Coordinator
-    participant ProfLearningUI
-    participant ProfLearningAPI
-    participant ServiceBus
-    
-    Coordinator->>ProfLearningUI: Navigate to certified attendance roster
-    ProfLearningUI->>ProfLearningAPI: GET /sessions/{id}/attendance
-    ProfLearningAPI-->>ProfLearningUI: Certified roster (locked)
-    
-    Coordinator->>ProfLearningUI: Select attendee, request correction
-    ProfLearningUI->>ProfLearningUI: Display correction request form
-    Note over ProfLearningUI: Shows current value, requests new value + justification
-    
-    Coordinator->>ProfLearningUI: Enter new SCECH value and justification
-    ProfLearningUI->>ProfLearningAPI: POST /correction-requests
-    Note over ProfLearningAPI: { attendeeId, sessionId, oldValue, newValue, justification }
-    
-    ProfLearningAPI->>ProfLearningAPI: Validate new value within program max
-    ProfLearningAPI->>ProfLearningAPI: Create SCECHCorrectionRequest (Submitted)
-    ProfLearningAPI--)ServiceBus: Publish SCECHCorrectionRequested
-    Note over ServiceBus: Request becomes visible in the admin's correction-request review list
-    ProfLearningAPI-->>ProfLearningUI: Correction request ID
-    ProfLearningUI-->>Coordinator: Request submitted, awaiting admin review
+    box Browser
+        participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant EventBus as Event Bus
+    end
+
+    Coordinator->>UI: Navigate to certified attendance roster
+    UI->>ProfLearningApi: APP GET /sessions/{sessionId}/attendees
+    ProfLearningApi-->>UI: Certified roster (locked)
+
+    Coordinator->>UI: Select attendee, request correction
+    UI->>UI: Display correction request form
+    Note over UI: Shows current value, requests new value + justification
+
+    Coordinator->>UI: Enter new SCECH value and justification
+    UI->>ProfLearningApi: APP POST /correction-requests
+    Note over ProfLearningApi: { attendeeId, sessionId, oldValue, newValue, justification }
+
+    ProfLearningApi->>ProfLearningApi: Validate new value within program max
+    ProfLearningApi->>ProfLearningApi: Create SCECHCorrectionRequest (Submitted)
+    ProfLearningApi--)EventBus: SCECHCorrectionRequested
+    Note over EventBus: Request becomes visible in the admin's correction-request review list
+    ProfLearningApi-->>UI: Correction request ID
+    UI-->>Coordinator: Request submitted, awaiting admin review
 ```
 
 **Key Decisions:**
@@ -311,7 +328,7 @@ sequenceDiagram
 
 **What:** Professional Learning Admin approves or denies SCECH correction request
 **When:** Correction request appears in the admin's correction-request review list
-**Who:** Professional Learning Admin
+**Who:** Professional Learning Admin. Permission: proflearning.correction.view, proflearning.correction.approve (system-wide)
 
 ```mermaid
 ---
@@ -319,38 +336,40 @@ title: Professional Learning - Admin Reviews Correction
 ---
 sequenceDiagram
     actor Admin
-    participant ProfLearningAdminUI
-    participant ProfLearningAPI
-    participant ServiceBus
-    
-    Note over ProfLearningAdminUI: Admin views the filtered, sortable correction-requests list
-    Admin->>ProfLearningAdminUI: View correction requests queue
-    ProfLearningAdminUI->>ProfLearningAPI: GET /correction-requests?status=Submitted
-    ProfLearningAPI-->>ProfLearningAdminUI: Pending correction requests
-    
-    Admin->>ProfLearningAdminUI: Select request, review details
-    ProfLearningAdminUI->>ProfLearningAPI: GET /correction-requests/{id}
-    ProfLearningAPI-->>ProfLearningAdminUI: Request details
-    Note over ProfLearningAdminUI: Shows: attendee, program, session, old value, new value, justification
-    
-    alt Approve
-        Admin->>ProfLearningAdminUI: Add notes, approve correction
-        ProfLearningAdminUI->>ProfLearningAPI: POST /correction-requests/{id}/approve
-        ProfLearningAPI->>ProfLearningAPI: Update CorrectionRequest (Approved)
-        ProfLearningAPI->>ProfLearningAPI: Update ProgramAttendance with new SCECH value
-        ProfLearningAPI--)ServiceBus: Publish SCECHCorrectionApproved
-        Note over ServiceBus: Consumed by Credentialing to update SCECH balance
-        ProfLearningAPI-->>ProfLearningAdminUI: Success
-    else Deny
-        Admin->>ProfLearningAdminUI: Add notes explaining denial, deny
-        ProfLearningAdminUI->>ProfLearningAPI: POST /correction-requests/{id}/deny
-        ProfLearningAPI->>ProfLearningAPI: Update CorrectionRequest (Denied)
-        ProfLearningAPI--)ServiceBus: Publish SCECHCorrectionDenied
-        ProfLearningAPI-->>ProfLearningAdminUI: Success
+    box Browser
+        participant UI as UI
     end
-    
-    ServiceBus--)CommunicationsWorker: Event received
-    CommunicationsWorker->>CommunicationsAPI: Notify coordinator of decision
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant EventBus as Event Bus
+    end
+
+    Note over UI: Admin views the filtered, sortable correction-requests list
+    Admin->>UI: View correction requests queue
+    UI->>ProfLearningApi: APP GET /correction-requests (status Submitted)
+    ProfLearningApi-->>UI: Pending correction requests
+
+    Admin->>UI: Select request, review details
+    UI->>ProfLearningApi: APP GET /correction-requests/{correctionRequestId}
+    ProfLearningApi-->>UI: Request details
+    Note over UI: Shows: attendee, program, session, old value, new value, justification
+
+    alt Approve
+        Admin->>UI: Add notes, approve correction
+        UI->>ProfLearningApi: APP POST /correction-requests/{correctionRequestId}/approve
+        ProfLearningApi->>ProfLearningApi: Update CorrectionRequest (Approved)
+        ProfLearningApi->>ProfLearningApi: Update ProgramAttendance with new SCECH value
+        ProfLearningApi--)EventBus: SCECHCorrectionApproved
+        Note over EventBus: Consumed by Credentialing to update SCECH balance, and by Communications (notifies the coordinator of the decision)
+    else Deny
+        Admin->>UI: Add notes explaining denial, deny
+        UI->>ProfLearningApi: APP POST /correction-requests/{correctionRequestId}/deny
+        ProfLearningApi->>ProfLearningApi: Update CorrectionRequest (Denied)
+        ProfLearningApi--)EventBus: SCECHCorrectionDenied
+        Note over EventBus: Consumed by Communications (notifies the coordinator of the decision)
+    end
+
+    ProfLearningApi-->>UI: Updated status
 ```
 
 **Key Decisions:**
@@ -375,7 +394,7 @@ sequenceDiagram
 
 **What:** Admin creates or edits evaluation templates used for program feedback
 **When:** New evaluation needed or existing template requires updates
-**Who:** Professional Learning Admin
+**Who:** Professional Learning Admin. Permission: proflearning.admin.evaluationtemplates (system-wide)
 
 ```mermaid
 ---
@@ -383,33 +402,37 @@ title: Professional Learning - Configure Evaluation Template
 ---
 sequenceDiagram
     actor Admin
-    participant AdminUI
-    participant ProfLearningAPI
-    participant QuestionSetAPI
-    
-    Admin->>AdminUI: Navigate to evaluation template management
-    AdminUI->>ProfLearningAPI: GET /evaluation-templates
-    ProfLearningAPI-->>AdminUI: Existing templates
-    
-    Admin->>AdminUI: Create new template or edit existing
-    AdminUI->>AdminUI: Display template editor
-    
-    Admin->>AdminUI: Enter template name, description
-    Admin->>AdminUI: Select applicable program categories
-    
-    Admin->>AdminUI: Add questions to template
-    AdminUI->>QuestionSetAPI: GET /question-sets?domain=proflearning
-    QuestionSetAPI-->>AdminUI: Available question sets
-    Note over AdminUI: Question Set capability manages question content
-    
-    Admin->>AdminUI: Select question set IDs to include
-    Admin->>AdminUI: Save template
-    
-    AdminUI->>ProfLearningAPI: POST /evaluation-templates
-    Note over ProfLearningAPI: { name, description, categories[], questionSetRefs[] }
-    ProfLearningAPI->>ProfLearningAPI: Create EvaluationTemplate (Active)
-    ProfLearningAPI-->>AdminUI: Template ID
-    AdminUI-->>Admin: Template saved successfully
+    box Browser
+        participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant QuestionSetApi as Question Set API
+    end
+
+    Admin->>UI: Navigate to evaluation template management
+    UI->>ProfLearningApi: APP GET /evaluation-templates
+    ProfLearningApi-->>UI: Existing templates
+
+    Admin->>UI: Create new template or edit existing
+    UI->>UI: Display template editor
+
+    Admin->>UI: Enter template name, description
+    Admin->>UI: Select applicable program categories
+
+    Admin->>UI: Add questions to template
+    UI->>QuestionSetApi: APP GET /question-sets
+    QuestionSetApi-->>UI: Available question sets
+    Note over UI: Question Set capability manages question content
+
+    Admin->>UI: Select question set IDs to include
+    Admin->>UI: Save template
+
+    UI->>ProfLearningApi: APP POST /evaluation-templates
+    Note over ProfLearningApi: { name, description, categories[], questionSetRefs[] }
+    ProfLearningApi->>ProfLearningApi: Create EvaluationTemplate (Active)
+    ProfLearningApi-->>UI: Template ID
+    UI-->>Admin: Template saved successfully
 ```
 
 **Key Decisions:**
@@ -433,7 +456,7 @@ sequenceDiagram
 
 **What:** Admin creates, edits, or deactivates program categories and subcategories
 **When:** New classification needed or existing categories require updates
-**Who:** Professional Learning Admin
+**Who:** Professional Learning Admin. Permission: proflearning.admin.categories (system-wide)
 
 ```mermaid
 ---
@@ -441,41 +464,44 @@ title: Professional Learning - Manage Program Categories
 ---
 sequenceDiagram
     actor Admin
-    participant AdminUI
-    participant ProfLearningAPI
-    
-    Admin->>AdminUI: Navigate to category management
-    AdminUI->>ProfLearningAPI: GET /program-categories
-    ProfLearningAPI-->>AdminUI: Categories and subcategories
-    
+    box Browser
+        participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+    end
+
+    Admin->>UI: Navigate to category management
+    UI->>ProfLearningApi: APP GET /program-categories
+    ProfLearningApi-->>UI: Categories and subcategories
+
     alt Create Category
-        Admin->>AdminUI: Create new category
-        AdminUI->>AdminUI: Display category form
-        Admin->>AdminUI: Enter category name, description
-        AdminUI->>ProfLearningAPI: POST /program-categories
-        ProfLearningAPI->>ProfLearningAPI: Create ProgramCategory (Active)
-        ProfLearningAPI-->>AdminUI: Category ID
+        Admin->>UI: Create new category
+        UI->>UI: Display category form
+        Admin->>UI: Enter category name, description
+        UI->>ProfLearningApi: APP POST /program-categories
+        ProfLearningApi->>ProfLearningApi: Create ProgramCategory (Active)
+        ProfLearningApi-->>UI: Category ID
     else Create Subcategory
-        Admin->>AdminUI: Create subcategory under existing category
-        AdminUI->>AdminUI: Display subcategory form
-        Admin->>AdminUI: Enter subcategory name, select parent category
-        AdminUI->>ProfLearningAPI: POST /program-categories/{parentId}/subcategories
-        ProfLearningAPI->>ProfLearningAPI: Create Subcategory under parent
-        ProfLearningAPI-->>AdminUI: Subcategory ID
+        Admin->>UI: Create subcategory under existing category
+        UI->>UI: Display subcategory form
+        Admin->>UI: Enter subcategory name, select parent category
+        UI->>ProfLearningApi: APP POST /program-categories/{categoryId}/subcategories
+        ProfLearningApi->>ProfLearningApi: Create Subcategory under parent
+        ProfLearningApi-->>UI: Subcategory ID
     else Deactivate Category
-        Admin->>AdminUI: Select category, deactivate
-        AdminUI->>ProfLearningAPI: PATCH /program-categories/{id}/deactivate
-        ProfLearningAPI->>ProfLearningAPI: Check for active programs using category
+        Admin->>UI: Select category, deactivate
+        UI->>ProfLearningApi: APP POST /program-categories/{categoryId}/deactivate
+        ProfLearningApi->>ProfLearningApi: Check for active programs using category
         alt Has active programs
-            ProfLearningAPI-->>AdminUI: Error - cannot deactivate
-            Note over AdminUI: Must reassign programs first
+            ProfLearningApi-->>UI: 400 Cannot deactivate
+            Note over UI: Must reassign programs first
         else No active programs
-            ProfLearningAPI->>ProfLearningAPI: Update category status (Inactive)
-            ProfLearningAPI-->>AdminUI: Success
+            ProfLearningApi->>ProfLearningApi: Update category status (Inactive)
         end
     end
-    
-    AdminUI-->>Admin: Operation complete
+
+    UI-->>Admin: Operation complete
 ```
 
 **Key Decisions:**
@@ -501,7 +527,7 @@ sequenceDiagram
 
 **What:** Educator selects completed college courses to count toward SCECH requirements
 **When:** Educator views available courses from STARR data
-**Who:** Educator (Citizen User)
+**Who:** Educator (Citizen User). Permission: proflearning.collegecourse.apply (self only)
 
 ```mermaid
 ---
@@ -509,29 +535,31 @@ title: Professional Learning - Apply College Course
 ---
 sequenceDiagram
     actor Educator
-    participant ProfLearningUI
-    participant ProfLearningAPI
-    participant CredentialingAPI
-    participant ServiceBus
-    
-    Educator->>ProfLearningUI: Navigate to college course credit page
-    ProfLearningUI->>ProfLearningAPI: GET /college-courses/eligible
-    ProfLearningAPI->>CredentialingAPI: GET /credentials/{educatorId}/last-issuance
-    CredentialingAPI-->>ProfLearningAPI: Last issuance date
-    ProfLearningAPI->>ProfLearningAPI: Filter STARR courses completed after issuance
-    ProfLearningAPI->>ProfLearningAPI: Exclude already-applied courses
-    ProfLearningAPI-->>ProfLearningUI: List of eligible courses
-    
-    Educator->>ProfLearningUI: Select course(s) to apply
-    ProfLearningUI->>ProfLearningAPI: POST /college-courses/apply
-    ProfLearningAPI->>ProfLearningAPI: Create CollegeCourseApplication
-    ProfLearningAPI->>ProfLearningAPI: Convert college credits to SCECH hours (1 credit = 15 SCECHs)
-    ProfLearningAPI->>ProfLearningAPI: Mark course as used
-    ProfLearningAPI--)ServiceBus: Publish CollegeCourseApplied
-    ProfLearningAPI-->>ProfLearningUI: SCECH credits awarded
-    
-    ServiceBus--)CommunicationsWorker: CollegeCourseApplied event
-    CommunicationsWorker->>CommunicationsAPI: Send confirmation to educator
+    box Browser
+        participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+        participant CredApi as Credentialing API
+        participant EventBus as Event Bus
+    end
+
+    Educator->>UI: Navigate to college course credit page
+    UI->>ProfLearningApi: APP GET /my/college-courses/eligible
+    ProfLearningApi->>CredApi: SVC GET /credentials/{educatorId}/last-issuance
+    CredApi-->>ProfLearningApi: Last issuance date
+    ProfLearningApi->>ProfLearningApi: Filter STARR courses completed after issuance
+    ProfLearningApi->>ProfLearningApi: Exclude already-applied courses
+    ProfLearningApi-->>UI: List of eligible courses
+
+    Educator->>UI: Select course(s) to apply
+    UI->>ProfLearningApi: APP POST /my/college-courses
+    ProfLearningApi->>ProfLearningApi: Create CollegeCourseApplication
+    ProfLearningApi->>ProfLearningApi: Convert college credits to SCECH hours (1 credit = 15 SCECHs)
+    ProfLearningApi->>ProfLearningApi: Mark course as used
+    ProfLearningApi--)EventBus: CollegeCourseApplied
+    Note over EventBus: Consumed by Communications (sends confirmation to the educator)
+    ProfLearningApi-->>UI: SCECH credits awarded
 ```
 
 **Key Decisions:**
@@ -556,7 +584,7 @@ sequenceDiagram
 
 **What:** Public searches for professional learning programs or sponsors
 **When:** Anyone wants to discover learning opportunities
-**Who:** Public (unauthenticated) or Educator (authenticated for bookmarking)
+**Who:** Public (unauthenticated) or Educator (authenticated for bookmarking). Permission: proflearning.catalog.search (unauthenticated); proflearning.catalog.bookmark (authenticated); proflearning.program.view and proflearning.sponsor.view for details
 
 ```mermaid
 ---
@@ -564,35 +592,38 @@ title: Professional Learning - Public Catalog Search
 ---
 sequenceDiagram
     actor Public
-    participant CatalogUI
-    participant ProfLearningAPI
-    
-    Public->>CatalogUI: Navigate to Professional Learning Resources
-    CatalogUI->>CatalogUI: Display basic search field
-    
-    Public->>CatalogUI: Enter search criteria (basic or advanced)
-    CatalogUI->>ProfLearningAPI: GET /catalog/search?query={criteria}
-    Note over ProfLearningAPI: Filter by Active status only
-    ProfLearningAPI-->>CatalogUI: Programs and sponsors matching criteria
-    
-    CatalogUI-->>Public: Display search results grid
-    
-    alt View Program Details
-        Public->>CatalogUI: Click Program Name hyperlink
-        CatalogUI->>ProfLearningAPI: GET /programs/{id}/details
-        ProfLearningAPI-->>CatalogUI: Program details (description, fees, contact, etc.)
-        CatalogUI-->>Public: Display program detail page
-    else View Sponsor Details
-        Public->>CatalogUI: Click Sponsor Name hyperlink
-        CatalogUI->>ProfLearningAPI: GET /sponsors/{id}/details
-        ProfLearningAPI-->>CatalogUI: Sponsor details and active programs
-        CatalogUI-->>Public: Display sponsor detail page
+    box Browser
+        participant UI as UI
     end
-    
+    box MiEdWorkforce (AKS)
+        participant ProfLearningApi as Professional Learning API
+    end
+
+    Public->>UI: Navigate to Professional Learning Resources
+    UI->>UI: Display basic search field
+
+    Public->>UI: Enter search criteria (basic or advanced)
+    UI->>ProfLearningApi: EXT public GET /catalog/search
+    Note over ProfLearningApi: Filter by Active status only
+    ProfLearningApi-->>UI: Programs and sponsors matching criteria
+
+    UI-->>Public: Display search results grid
+
+    alt View Program Details
+        Public->>UI: Click Program Name hyperlink
+        UI->>ProfLearningApi: EXT public GET /programs/{programId}
+        ProfLearningApi-->>UI: Program details (description, fees, contact, etc.)
+        UI-->>Public: Display program detail page
+    else View Sponsor Details
+        Public->>UI: Click Sponsor Name hyperlink
+        UI->>ProfLearningApi: EXT public GET /sponsors/{sponsorId}
+        ProfLearningApi-->>UI: Sponsor details and active programs
+        UI-->>Public: Display sponsor detail page
+    end
+
     opt Bookmark (authenticated only)
-        Public->>CatalogUI: Click bookmark icon
-        CatalogUI->>ProfLearningAPI: POST /bookmarks
-        ProfLearningAPI-->>CatalogUI: Bookmark saved
+        Public->>UI: Click bookmark icon
+        UI->>ProfLearningApi: APP POST /my/bookmarks
     end
 ```
 

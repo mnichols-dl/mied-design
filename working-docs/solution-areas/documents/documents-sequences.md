@@ -8,8 +8,11 @@ This document contains sequence diagrams for business workflows in the Documents
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
 - Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- **actor** = Human only
+- **participant** = Every non-human, including internal services, components and external systems
+- Request arrows start with an API-kind tag: `APP` (Application API, UI to owning API), `SVC` (Service API, API to API inside the cluster), `EXT` (External API, inbound from an external system), `OUT` (outbound call to an external or Azure platform service)
+- Participants are grouped in boxes: Browser, MiEdWorkforce (AKS), External
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
@@ -17,7 +20,8 @@ This document contains sequence diagrams for business workflows in the Documents
 
 **What:** A domain API authorizes an upload or download action, then delegates file mechanics to the Documents API  
 **When:** Any time a domain feature requires a user to attach, retrieve, or manage a file  
-**Who:** Any domain API acting on behalf of an authenticated user (Credentialing, Staffing, Professional Learning, EPP, Audit)
+**Who:** Any domain API acting on behalf of an authenticated user (Credentialing, Staffing, Professional Learning, EPP, Audit)  
+**Permission:** The calling domain's own permission (for example `credentialing.application.submit`); see the Upload Permission Model in `documents-permissions.md`
 
 > **This is the canonical integration pattern for all upload and download flows.** The sequences that follow (single upload, bulk upload, staging upload, replacement) are Documents-internal views of what happens after this handoff. When building a domain feature that involves documents, this is the pattern to implement.
 ```mermaid
@@ -26,31 +30,34 @@ title: Documents - Integration Pattern: Domain API Calling Documents
 ---
 sequenceDiagram
     actor User
-    participant DomainUI as Domain UI (e.g. Credentialing)
-    participant DomainAPI as Domain API (e.g. Credentialing API)
-    participant DocsAPI as Documents API
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API (e.g. Credentialing API)
+    participant DocsApi as Documents API
+    end
+    box External
     participant BlobStorage as Azure Blob Storage
+    end
 
-    User->>DomainUI: Initiate upload (e.g. attach transcript to application)
-    DomainUI->>DomainAPI: Request upload token
-    Note over DomainUI,DomainAPI: Domain-specific request context
+    User->>UI: Initiate upload (e.g. attach transcript to application)
+    UI->>DomainApi: APP POST /{domain}/{upload-route}
+    Note over UI,DomainApi: Domain-specific request context
 
-    DomainAPI->>DomainAPI: Validate: user has [domain permission]
-    Note over DomainAPI: e.g. credentialing.application.submit<br/>This is the only authorization check for this upload.
+    DomainApi->>DocsApi: SVC POST /documents/upload/request
+    Note over DomainApi,DocsApi: {filename, size, mime_type, category, attachment_type, attachment_id}
 
-    DomainAPI->>DocsAPI: POST /api/documents/upload/request
-    Note over DomainAPI,DocsAPI: Authenticated service-to-service call (Managed Identity)<br/>{filename, size, mime_type, category, attachment_type, attachment_id}
+    DocsApi->>DocsApi: Validate file type and size against category limits
+    DocsApi-->>DomainApi: {document_id, upload_url}
 
-    DocsAPI->>DocsAPI: Validate file type and size against category limits
-    DocsAPI-->>DomainAPI: {document_id, upload_url}
-
-    DomainAPI-->>DomainUI: {document_id, upload_url}
-    DomainUI->>BlobStorage: Upload file via SAS token
+    DomainApi-->>UI: {document_id, upload_url}
+    UI->>BlobStorage: OUT PUT {upload_url} (SAS token)
 ```
 
 **Key Decisions:**
 - **Single authorization check:** The domain API is the only place business authorization is enforced. Documents trusts authenticated internal callers.
-- **Service-to-service auth:** Domain APIs call Documents using Managed Identity. Documents does not accept direct unauthenticated calls from browsers.
+- **Service-to-service auth:** Domain APIs call Documents as Service APIs over in-cluster mTLS using service account identity. Documents does not accept direct unauthenticated calls from browsers.
 - **Technical validation only:** Documents enforces file size, format, and category rules — not business rules about who may upload what.
 - **Bulk vs. single is a UX concern only:** There is no separate permission for bulk uploads. If a user is authorized to upload a file for a given purpose, they are authorized to upload multiple files for that same purpose.
 
@@ -58,115 +65,124 @@ sequenceDiagram
 - Domain API authorization fails -> Domain API returns 403 to UI; Documents is never called
 - File type not in category allowlist -> Documents returns 400 to domain API; domain API surfaces error to UI
 - File size exceeds category limit -> Documents returns 400 to domain API; domain API surfaces error to UI
-- Managed Identity auth failure -> Documents returns 401; domain API should alert on this as it indicates a misconfiguration, not a user error
+- Service identity (mTLS) authentication failure -> Documents returns 401; domain API should alert on this as it indicates a misconfiguration, not a user error
 
 ---
 
-## Document Upload with Malware Scanning
+## Request Upload and Upload File
 
-**What:** User uploads file, system scans for malware, stores if clean  
+**What:** User uploads file, system issues a time-limited upload URL and the browser sends the file straight to blob storage  
 **When:** User needs to attach supporting document to credential application, PPR disclosure, or other context  
-**Who:** Educator, District Staff, Administrator
+**Who:** Educator, District Staff, Administrator  
+**Permission:** The calling domain's upload permission (see Upload Permission Model in `documents-permissions.md`); Documents applies technical constraints only  
+**See also:** Process Malware Scan Result (what happens after the file lands), Bulk Document Upload (multiple files)
 
 ```mermaid
 ---
-title: Documents - Document Upload with Malware Scanning
+title: Documents - Request Upload and Upload File
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant BlobStorage as Azure Blob Storage
-    participant Defender as Azure Defender
-    participant EventGrid
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    
-    User->>UI: Select file for upload
-    UI->>DocsAPI: POST /api/documents/upload/request
-    Note over UI,DocsAPI: {filename, size, mime_type, category, attachment_type, attachment_id}
-    
-    Note over DocsAPI: Calling domain has already authorized this action.<br/>Documents validates technical constraints only.
-    DocsAPI->>DocsAPI: Validate file type against allowable formats
-    DocsAPI->>DocsAPI: Validate file size against category limit
-    
-    DocsAPI->>DocsAPI: Generate document_id (UUID)
-    DocsAPI->>DocsAPI: Sanitize original filename
-    DocsAPI->>DocsAPI: Build blob path
-    Note over DocsAPI: documents-{category}/{year}/{month}/<br/>{attachment-type}/{attachment-id}/{doc-id}
-    
-    DocsAPI->>MetadataDB: Create Document record
-    Note over MetadataDB: Status: Scanning<br/>blob_path, original_filename
-    MetadataDB-->>DocsAPI: document_id
-    
-    DocsAPI->>BlobStorage: Generate upload SAS token (write-only, 15 min)
-    BlobStorage-->>DocsAPI: SAS URL
-    
-    DocsAPI-->>UI: 200 OK {document_id, upload_url, status: Scanning}
-    
-    UI->>BlobStorage: Upload file directly to blob storage via SAS
-    BlobStorage-->>UI: Upload complete
-    UI-->>User: "File uploaded, scanning for malware..."
-    
-    Note over Defender: Azure Defender detects blob upload<br/>and scans in-place
-    Defender->>BlobStorage: Scan blob for malware
-    Defender->>BlobStorage: Write blob index tags
-    
-    alt Clean Scan Result
-        Defender--)EventGrid: MalwareScanningResult {scanResultType: "No threats found"}
-        EventGrid->>DocsAPI: Webhook: /api/webhooks/defender-scan-result
-        
-        DocsAPI->>MetadataDB: Update Document
-        Note over MetadataDB: Status: Available
-        
-        DocsAPI--)EventBus: DocumentUploaded
-        DocsAPI->>UI: Notification (SSE/webhook)
-        UI-->>User: "File uploaded successfully"
-        
-    else Malware Detected
-        Defender--)EventGrid: MalwareScanningResult {scanResultType: "Malicious", threatName}
-        EventGrid->>DocsAPI: Webhook: Malware detected
-        
-        DocsAPI->>BlobStorage: Delete infected blob
-        
-        DocsAPI->>MetadataDB: Update Document
-        Note over MetadataDB: Status: Infected<br/>threat_details
-        
-        DocsAPI--)EventBus: DocumentMalwareDetected
-        DocsAPI->>UI: Notification (SSE/webhook)
-        UI-->>User: "File rejected due to security concerns"
-        
-        Note over DocsAPI: Alert security team
-        
-    else Scan Timeout/Failure
-        Note over DocsAPI: Background job detects no webhook<br/>received within 60 seconds
-        
-        DocsAPI->>BlobStorage: Delete blob
-        DocsAPI->>MetadataDB: Update Document
-        Note over MetadataDB: Status: Scan Failed
-        DocsAPI->>UI: Notification (SSE/webhook)
-        UI-->>User: "Upload failed, please try again"
     end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    end
+    box External
+    participant BlobStorage as Azure Blob Storage
+    end
+
+    User->>UI: Select file for upload
+    UI->>DomainApi: APP POST /{domain}/{upload-route}
+    DomainApi->>DocsApi: SVC POST /documents/upload/request
+    Note over DomainApi,DocsApi: {filename, size, mime_type, category, attachment_type, attachment_id}
+
+    DocsApi->>DocsApi: Validate file type and size, generate document_id, sanitize filename
+    Note over DocsApi: Blob path: documents-{category}/{year}/{month}/<br/>{attachment-type}/{attachment-id}/{doc-id}
+    DocsApi->>DocsApi: Create Document record (status Scanning), generate write-only SAS token (15 min)
+
+    DocsApi-->>DomainApi: 200 OK {document_id, upload_url, status: Scanning}
+    DomainApi-->>UI: {document_id, upload_url, status: Scanning}
+
+    UI->>BlobStorage: OUT PUT {upload_url} (SAS token)
+    UI-->>User: "File uploaded, scanning for malware..."
 ```
 
 **Key Decisions:**
 - **Browser-based upload:** File uploaded directly from browser to blob storage via SAS token (no proxy through API)
+- **Domain API fronts the call:** The UI calls the domain API, which calls Documents as a Service API (see the integration pattern above)
+
+**State Changes:**
+- Document status: `None` -> `Scanning`
+
+**Error Scenarios:**
+- Invalid file type -> 400 Bad Request, upload rejected before SAS generation
+- File size exceeds limit -> 400 Bad Request
+- Blob storage quota exceeded -> 503 Service Unavailable, alert admins
+
+---
+
+## Process Malware Scan Result
+
+**What:** Azure Defender reports the scan result for an uploaded blob, system makes the document available or rejects it  
+**When:** After any file lands in blob storage (single upload, replacement, bulk upload)  
+**Who:** Azure Defender for Storage (system callback, no user involved)  
+**See also:** Request Upload and Upload File (what happens before), Document Replacement and Versioning, Bulk Document Upload
+
+```mermaid
+---
+title: Documents - Process Malware Scan Result
+---
+sequenceDiagram
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ScanHook as Scan Webhook Endpoint
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant Defender as Azure Defender for Storage
+    end
+
+    Note over Defender: Detects the blob upload and scans it in place
+    Defender->>ScanHook: EXT POST /webhooks/defender-scan-result
+    Note over Defender,ScanHook: MalwareScanningResult {scanResultType, threatName}, delivered by Event Grid
+    ScanHook->>DocsApi: Apply scan result
+    Note over ScanHook,DocsApi: Handoff inside the Documents capability, not an API call
+
+    alt Clean scan result
+        DocsApi->>DocsApi: Set Document status Available
+        DocsApi--)EventBus: DocumentUploaded
+        DocsApi--)UI: Scan status (SSE)
+        UI-->>UI: "File uploaded successfully"
+    else Malware detected
+        DocsApi->>DocsApi: Delete infected blob, set Document status Infected
+        DocsApi--)EventBus: DocumentMalwareDetected
+        DocsApi--)UI: Scan status (SSE)
+        UI-->>UI: "File rejected due to security concerns"
+        Note over DocsApi: Alert security team
+    end
+```
+
+**Key Decisions:**
 - **Scan in-place:** Azure Defender scans blob in target container (no quarantine/copy required)
 - **Async notification:** UI uses SSE or polling for scan result (don't block user during scan)
 - **Timeout handling:** Background job marks as `Scan Failed` if no webhook received within 60 seconds
+- **Shared by other flows:** Replacement, bulk upload and staged upload reuse this result handling
 
 **State Changes:**
-- Document status: `None` -> `Scanning` -> `Available` OR `Infected` OR `Scan Failed`
+- Document status: `Scanning` -> `Available` OR `Infected` OR `Scan Failed`
 
 **Events Published:**
 - `DocumentUploaded` - Scan clean, document available
 - `DocumentMalwareDetected` - Malware found, security alert
 
 **Error Scenarios:**
-- Invalid file type -> 400 Bad Request, upload rejected before SAS generation
-- File size exceeds limit -> 400 Bad Request
-- Blob storage quota exceeded -> 503 Service Unavailable, alert admins
-- Scan timeout (>60 seconds) -> Mark as `Scan Failed`, delete blob
+- Scan timeout (>60 seconds, no webhook received) -> Background job marks as `Scan Failed`, deletes blob, notifies UI "Upload failed, please try again"
 
 ---
 
@@ -174,7 +190,8 @@ sequenceDiagram
 
 **What:** User requests document, system generates time-limited access URL  
 **When:** User views document from credential application, a filtered pending-items list view, or document library  
-**Who:** Educator, District Staff, Administrator
+**Who:** Educator, District Staff, Administrator  
+**Permission:** The calling domain's permission to view the attachment context; `documents.admin.view-all` for cross-context admin viewing
 
 ```mermaid
 ---
@@ -182,37 +199,33 @@ title: Documents - Document Download with SAS Token
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
+    end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
     participant BlobStorage as Azure Blob Storage
-    participant EventBus
-    
-    Note over UI,DocsAPI: Caller has already verified the user may access<br/>this document. Documents does not re-check business authorization.
+    end
 
     User->>UI: Click "View Document"
-    UI->>DocsAPI: GET /api/documents/{document_id}/download
-    
-    DocsAPI->>MetadataDB: Get Document metadata
-    MetadataDB-->>DocsAPI: {blob_path, status, original_filename}
-    
-    alt Document not available
-        DocsAPI-->>UI: 404 Not Found OR 410 Gone (if soft-deleted)
-        UI-->>User: "Document not available"
-    else Document still scanning
-        DocsAPI-->>UI: 202 Accepted {status: Scanning}
-        UI-->>User: "Document is being processed, please try again shortly"
+    UI->>DomainApi: APP GET /{domain}/{download-route}
+    DomainApi->>DocsApi: SVC GET /documents/{documentId}/download
+
+    alt Document not available or still scanning
+        DocsApi-->>DomainApi: 404 Not Found, 410 Gone (soft-deleted) or 202 Accepted {status: Scanning}
+        DomainApi-->>UI: Status passed through
+        UI-->>User: "Document not available" or "Document is being processed, please try again shortly"
     else Document available
-        DocsAPI->>BlobStorage: Generate download SAS token (read-only, 15 min)
-        BlobStorage-->>DocsAPI: SAS URL
-        
-        DocsAPI->>MetadataDB: Log access
-        Note over MetadataDB: DocumentAccessLog:<br/>{document_id, user_id, action: view, timestamp}
-        
-        DocsAPI--)EventBus: DocumentViewed
-        
-        DocsAPI-->>UI: 200 OK {sas_url, original_filename}
-        UI->>BlobStorage: Direct download via SAS URL
+        DocsApi->>DocsApi: Generate read-only SAS token (15 min), log access
+        Note over DocsApi: DocumentAccessLog: {document_id, user_id, action: view, timestamp}
+        DocsApi--)EventBus: DocumentViewed
+        DocsApi-->>DomainApi: 200 OK {sas_url, original_filename}
+        DomainApi-->>UI: {sas_url, original_filename}
+        UI->>BlobStorage: OUT GET {sas_url}
         BlobStorage-->>UI: Blob content
         UI-->>User: Browser downloads file as original_filename
     end
@@ -238,7 +251,9 @@ sequenceDiagram
 
 **What:** User replaces existing document, old version archived  
 **When:** User uploads wrong file or needs to update supporting document  
-**Who:** Educator (own documents), Administrator (any document in scope)
+**Who:** Educator (own documents), Administrator (any document in scope)  
+**Permission:** The calling domain's permission for the attachment context (Documents enforces technical constraints only)  
+**See also:** Process Malware Scan Result (scan of the new version)
 
 ```mermaid
 ---
@@ -246,70 +261,37 @@ title: Documents - Document Replacement and Versioning
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
+    end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
     participant BlobStorage as Azure Blob Storage
-    participant ArchiveContainer as Archive Container
-    participant Defender as Azure Defender
-    participant EventGrid
-    participant EventBus
-    
+    end
+
     User->>UI: Upload new version of document
-    UI->>DocsAPI: POST /api/documents/{document_id}/replace/request
-    Note over UI,DocsAPI: {filename, size, mime_type}
-    
-    DocsAPI->>MetadataDB: Get current Document
-    MetadataDB-->>DocsAPI: {current_version, blob_path, category}
-    
-    DocsAPI->>DocsAPI: Validate: max 10 versions not exceeded
-    DocsAPI->>DocsAPI: Validate: document not soft-deleted
-    
-    DocsAPI->>DocsAPI: Generate new document_id for version
-    DocsAPI->>DocsAPI: Increment version number (e.g., 1.0 -> 2.0)
-    
-    Note over DocsAPI: Archive old version
-    DocsAPI->>BlobStorage: Read current blob
-    BlobStorage-->>DocsAPI: Blob content
-    DocsAPI->>ArchiveContainer: Copy to archive
-    Note over ArchiveContainer: document-versions/{original_doc_id}/v1.0
-    
-    DocsAPI->>MetadataDB: Create DocumentVersion record
-    Note over MetadataDB: {original_document_id, version: 1.0,<br/>archived_blob_path, replaced_at}
-    
-    DocsAPI->>MetadataDB: Update original Document
-    Note over MetadataDB: current_version = false<br/>soft_deleted = true<br/>replaced_by_version_id = new_doc_id
-    
-    Note over DocsAPI: Upload new version (follows standard upload flow)
-    DocsAPI->>DocsAPI: Build new blob path
-    DocsAPI->>MetadataDB: Create new Document record
-    Note over MetadataDB: {document_id: new_doc_id, version: 2.0,<br/>replaces_version_id: original_doc_id,<br/>status: Scanning}
-    
-    DocsAPI->>BlobStorage: Generate upload SAS token
-    BlobStorage-->>DocsAPI: SAS URL
-    
-    DocsAPI-->>UI: 200 OK {new_document_id, upload_url, version: 2.0}
-    
-    UI->>BlobStorage: Upload new file via SAS
-    BlobStorage-->>UI: Upload complete
-    
-    Note over Defender: Scan new version in-place
-    Defender->>BlobStorage: Scan blob
-    Defender--)EventGrid: MalwareScanningResult
-    
-    alt Clean scan
-        EventGrid->>DocsAPI: Webhook: Clean
-        DocsAPI->>MetadataDB: Update new Document status = Available
-        DocsAPI--)EventBus: DocumentReplaced
-        DocsAPI->>UI: Notification
-        UI-->>User: "Document updated successfully"
-    else Malware detected
-        EventGrid->>DocsAPI: Webhook: Malware
-        DocsAPI->>BlobStorage: Delete infected blob
-        DocsAPI->>MetadataDB: Update new Document status = Infected
-        DocsAPI->>UI: Notification
-        UI-->>User: "Replacement file rejected - original version remains"
-        Note over DocsAPI: Original version restored as current
+    UI->>DomainApi: APP POST /{domain}/{replace-route}
+    DomainApi->>DocsApi: SVC POST /documents/{documentId}/replace/request
+    Note over DomainApi,DocsApi: {filename, size, mime_type}
+
+    alt Max 10 versions reached or document soft-deleted
+        DocsApi-->>DomainApi: 400 Bad Request
+        DomainApi-->>UI: Error surfaced
+    else Replacement allowed
+        DocsApi->>DocsApi: Archive old version (copy blob to document-versions/{original_doc_id}/v1.0, record DocumentVersion, soft delete original)
+        DocsApi->>DocsApi: Create new Document record (version 2.0, status Scanning), generate write-only SAS token
+        DocsApi-->>DomainApi: 200 OK {new_document_id, upload_url, version: 2.0}
+        DomainApi-->>UI: {new_document_id, upload_url, version: 2.0}
+
+        UI->>BlobStorage: OUT PUT {upload_url} (SAS token)
+        Note over DocsApi: New version is scanned in place and the result is handled as in Process Malware Scan Result
+        DocsApi--)EventBus: DocumentReplaced
+        Note over EventBus: Published only after the new version scans clean
+        UI-->>User: "Document updated successfully" (after clean scan)
     end
 ```
 
@@ -330,80 +312,102 @@ sequenceDiagram
 **Error Scenarios:**
 - Max 10 versions exceeded -> 400 Bad Request "Maximum versions reached"
 - Document soft-deleted -> 400 Bad Request "Restore document before replacing"
-- New file infected -> Upload fails, old version remains current
+- New file infected -> Upload fails, old version remains current ("Replacement file rejected - original version remains")
 
 ---
 
-## Soft Delete and Hard Delete Lifecycle
+## Soft Delete Document
 
-**What:** User deletes document, system soft-deletes immediately, hard-deletes after retention period  
+**What:** User deletes document, system soft-deletes immediately  
 **When:** User removes incorrect upload or document no longer needed  
-**Who:** Educator (own documents), Administrator (any document in scope)
+**Who:** Educator (own documents), Administrator (any document in scope)  
+**Permission:** The calling domain's permission for the attachment context (soft delete is an implicit baseline capability in Documents)  
+**See also:** Hard Delete Expired Documents (Nightly Job)
 
 ```mermaid
 ---
-title: Documents - Soft Delete and Hard Delete Lifecycle
+title: Documents - Soft Delete Document
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    participant HardDeleteJob as Hard Delete Job (nightly)
-    participant BlobStorage as Azure Blob Storage
-    
-    Note over User,UI: SOFT DELETE (User-Initiated)
-    User->>UI: Click "Delete Document"
-    UI->>DocsAPI: DELETE /api/documents/{document_id}
-    
-    DocsAPI->>MetadataDB: Get Document
-    MetadataDB-->>DocsAPI: {status, retention_expiry_date, legal_hold}
-    
-    DocsAPI->>MetadataDB: Update Document
-    Note over MetadataDB: soft_deleted = true<br/>soft_deleted_at = NOW()<br/>soft_deleted_by_user_id = user_id<br/>Status: Soft Deleted
-    
-    DocsAPI--)EventBus: DocumentSoftDeleted
-    DocsAPI-->>UI: 200 OK
-    UI-->>User: "Document deleted"
-    
-    Note over MetadataDB: Document hidden from user queries<br/>but blob remains in storage
-    
-    Note over HardDeleteJob: HARD DELETE (System-Automated)
-    loop Nightly at 2:00 AM EST
-        HardDeleteJob->>MetadataDB: Query eligible documents
-        Note over MetadataDB: WHERE soft_deleted = true<br/>AND soft_deleted_at + retention_days < NOW()<br/>AND legal_hold = false
-        MetadataDB-->>HardDeleteJob: List of eligible documents
-        
-        loop For each document (batch 100)
-            HardDeleteJob->>BlobStorage: Delete blob
-            BlobStorage-->>HardDeleteJob: Success
-            
-            HardDeleteJob->>MetadataDB: Update Document
-            Note over MetadataDB: hard_deleted = true<br/>hard_deleted_at = NOW()<br/>Status: Hard Deleted<br/>(metadata retained, blob removed)
-            
-            HardDeleteJob--)EventBus: DocumentHardDeleted
-        end
-        
-        HardDeleteJob->>HardDeleteJob: Generate summary report
-        Note over HardDeleteJob: Total evaluated, deleted,<br/>skipped (legal hold), errors
     end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
+    User->>UI: Click "Delete Document"
+    UI->>DomainApi: APP DELETE /{domain}/{document-route}
+    DomainApi->>DocsApi: SVC DELETE /documents/{documentId}
+
+    DocsApi->>DocsApi: Soft delete (soft_deleted, soft_deleted_at, soft_deleted_by_user_id)
+    Note over DocsApi: Document hidden from user queries but blob remains in storage
+
+    DocsApi--)EventBus: DocumentSoftDeleted
+    UI-->>User: "Document deleted"
 ```
 
 **Key Decisions:**
 - **Soft delete is immediate:** User action hides document instantly
+
+**State Changes:**
+- Document status: `Available` -> `Soft Deleted` (user action)
+
+**Events Published:**
+- `DocumentSoftDeleted` - User deletes document
+
+**Error Scenarios:**
+- User tries to delete document with legal hold -> 403 Forbidden "Document has active legal hold"
+
+---
+
+## Hard Delete Expired Documents (Nightly Job)
+
+**What:** System hard-deletes soft-deleted documents after the retention period  
+**When:** Nightly at 2:00 AM EST  
+**Who:** Hard Delete Job (system-automated, no user involved)  
+**See also:** Soft Delete Document
+
+```mermaid
+---
+title: Documents - Hard Delete Expired Documents (Nightly Job)
+---
+sequenceDiagram
+    box MiEdWorkforce (AKS)
+    participant HardDeleteJob as Hard Delete Job (nightly)
+    participant EventBus as Event Bus
+    end
+    box External
+    participant BlobStorage as Azure Blob Storage
+    end
+
+    Note over HardDeleteJob: Nightly at 2:00 AM EST
+    HardDeleteJob->>HardDeleteJob: Query eligible documents (soft deleted, retention expired, no legal hold)
+
+    loop For each document (batch 100)
+        HardDeleteJob->>BlobStorage: OUT DELETE blob
+        HardDeleteJob->>HardDeleteJob: Mark Document hard deleted (metadata retained, blob removed)
+        HardDeleteJob--)EventBus: DocumentHardDeleted
+    end
+
+    HardDeleteJob->>HardDeleteJob: Generate summary report
+    Note over HardDeleteJob: Total evaluated, deleted,<br/>skipped (legal hold), errors
+```
+
+**Key Decisions:**
 - **Hard delete is automated:** No user permission to force hard delete
 - **Metadata preserved:** Even after hard delete, metadata remains for audit
 
 **State Changes:**
-- Document status: `Available` -> `Soft Deleted` (user action) -> `Hard Deleted` (job)
+- Document status: `Soft Deleted` -> `Hard Deleted` (job)
 
 **Events Published:**
-- `DocumentSoftDeleted` - User deletes document
 - `DocumentHardDeleted` - Blob permanently removed (nightly job)
 
 **Error Scenarios:**
-- User tries to delete document with legal hold -> 403 Forbidden "Document has active legal hold"
 - Hard delete blob fails -> Retry next night (max 3 attempts), alert admin after 3 failures
 
 ---
@@ -412,7 +416,8 @@ sequenceDiagram
 
 **What:** Administrator applies legal hold preventing deletion, later releases after legal matter concludes  
 **When:** Litigation, investigation, or audit requires document preservation  
-**Who:** Legal Counsel, Compliance Officer
+**Who:** Legal Counsel, Compliance Officer  
+**Permission:** `documents.legal-hold.apply` (apply), `documents.legal-hold.release` (release); system-wide
 
 ```mermaid
 ---
@@ -420,56 +425,42 @@ title: Documents - Legal Hold Application and Release
 ---
 sequenceDiagram
     actor LegalCounsel as Legal Counsel
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
     Note over LegalCounsel,UI: APPLY LEGAL HOLD
     LegalCounsel->>UI: Search documents for case
-    UI->>DocsAPI: GET /api/documents/search?attachment=application-12345
-    DocsAPI->>MetadataDB: Query documents
-    MetadataDB-->>DocsAPI: List of documents
-    DocsAPI-->>UI: Document list
-    
+    UI->>DocsApi: APP GET /documents/search
+    DocsApi-->>UI: Document list
+
     LegalCounsel->>UI: Select documents, "Apply Legal Hold"
-    UI->>DocsAPI: POST /api/documents/legal-hold/apply
-    Note over UI,DocsAPI: {document_ids[], justification,<br/>case_number, hold_reason}
-    
-    DocsAPI->>DocsAPI: Validate: user has documents.legal-hold.apply
-    
+    UI->>DocsApi: APP POST /documents/legal-hold/apply
+    Note over UI,DocsApi: {document_ids[], justification,<br/>case_number, hold_reason}
+
     loop For each document_id
-        DocsAPI->>MetadataDB: Update Document
-        Note over MetadataDB: legal_hold = true<br/>legal_hold_applied_at = NOW()<br/>legal_hold_applied_by = user_id<br/>legal_hold_justification = text<br/>legal_hold_case_number = case_number
-        
-        DocsAPI--)EventBus: LegalHoldApplied
+        DocsApi->>DocsApi: Set legal hold (applied_at, applied_by, justification, case_number)
+        DocsApi--)EventBus: LegalHoldApplied
     end
-    
-    DocsAPI-->>UI: 200 OK {applied_count}
+
+    DocsApi-->>UI: 200 OK {applied_count}
     UI-->>LegalCounsel: "Legal hold applied to X documents"
-    
-    Note over MetadataDB: Documents cannot be hard-deleted<br/>even if retention period expires
-    
+
     Note over LegalCounsel,UI: RELEASE LEGAL HOLD (Later)
-    LegalCounsel->>UI: View legal hold documents
     LegalCounsel->>UI: Select documents, "Release Legal Hold"
-    UI->>DocsAPI: POST /api/documents/legal-hold/release
-    Note over UI,DocsAPI: {document_ids[], release_reason,<br/>case_closure_date}
-    
-    DocsAPI->>DocsAPI: Validate: user has documents.legal-hold.release
-    
+    UI->>DocsApi: APP POST /documents/legal-hold/release
+    Note over UI,DocsApi: {document_ids[], release_reason,<br/>case_closure_date}
+
     loop For each document_id
-        DocsAPI->>MetadataDB: Update Document
-        Note over MetadataDB: legal_hold = false<br/>legal_hold_released_at = NOW()<br/>legal_hold_released_by = user_id<br/>legal_hold_release_reason = text
-        
-        DocsAPI--)EventBus: LegalHoldReleased
-        
-        alt Document was soft-deleted
-            Note over DocsAPI: Document now eligible for hard delete<br/>if retention period expired
-        end
+        DocsApi->>DocsApi: Clear legal hold (released_at, released_by, release_reason)
+        DocsApi--)EventBus: LegalHoldReleased
     end
-    
-    DocsAPI-->>UI: 200 OK {released_count}
+
+    DocsApi-->>UI: 200 OK {released_count}
     UI-->>LegalCounsel: "Legal hold released for X documents"
 ```
 
@@ -492,75 +483,49 @@ sequenceDiagram
 
 **What:** Administrator uploads multiple files simultaneously, system processes batch with malware scanning  
 **When:** District uploads employee roster CSV, EPP uploads candidate tracking file, Sponsor uploads attendee list  
-**Who:** District Admin, EPP Admin, Professional Learning Sponsor
+**Who:** District Admin, EPP Admin, Professional Learning Sponsor  
+**Permission:** The calling domain's upload permission (the same permission that controls single uploads for this context)  
+**See also:** Request Upload and Upload File (single file), Process Malware Scan Result (per-file scan)
 
 ```mermaid
 ---
-title: Documents - Bulk Document Upload
+title: Documents - Request Upload and Upload File - Bulk Variant
 ---
 sequenceDiagram
     actor Admin
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
-    participant BlobStorage as Azure Blob Storage
-    participant Defender as Azure Defender
-    participant EventGrid
-    participant BulkProcessor as Bulk Processor (async)
-    participant EventBus
-    
-    Admin->>UI: Select multiple files, click "Upload All"
-    Note over UI,DocsAPI: Bulk vs. single upload is a UX distinction only.<br/>Authorization is governed by the same source domain permission<br/>that controls single uploads for this context.
-    UI->>DocsAPI: POST /api/documents/bulk-upload/request
-    Note over UI,DocsAPI: {files: [{filename, size, mime_type}],<br/>category, attachment_type, attachment_id}
-    
-    DocsAPI->>DocsAPI: Validate: all files match allowable formats
-    DocsAPI->>DocsAPI: Validate: all files within size limits
-    
-    DocsAPI->>MetadataDB: Create BulkOperation
-    Note over MetadataDB: {operation_type: upload, status: Queued,<br/>total_count: file count,<br/>initiated_by_user_id}
-    MetadataDB-->>DocsAPI: operation_id
-    
-    loop For each file
-        DocsAPI->>DocsAPI: Generate document_id, build blob path
-        DocsAPI->>MetadataDB: Create Document (status: Scanning)
-        DocsAPI->>MetadataDB: Create BulkOperationItem
-        Note over MetadataDB: {operation_id, document_id, filename, status: Queued}
-        DocsAPI->>BlobStorage: Generate upload SAS token
     end
-    
-    DocsAPI-->>UI: 200 OK {operation_id, upload_urls[]}
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant BlobStorage as Azure Blob Storage
+    end
+
+    Admin->>UI: Select multiple files, click "Upload All"
+    UI->>DomainApi: APP POST /{domain}/{bulk-upload-route}
+    DomainApi->>DocsApi: SVC POST /documents/bulk-upload/request
+    Note over DomainApi,DocsApi: {files: [{filename, size, mime_type}],<br/>category, attachment_type, attachment_id}
+
+    DocsApi->>DocsApi: Validate all files, create BulkOperation (Queued)
+    DocsApi->>DocsApi: Per file: create Document (Scanning), BulkOperationItem (Queued), upload SAS token
+    DocsApi-->>DomainApi: 200 OK {operation_id, upload_urls[]}
+    DomainApi-->>UI: {operation_id, upload_urls[]}
     UI-->>Admin: "Upload started, processing X files..."
-    
+
     loop For each file (parallel, max 10 concurrent)
-        UI->>BlobStorage: Upload file via SAS token
-        BlobStorage-->>UI: Upload complete
-        
-        Defender->>BlobStorage: Scan blob in-place
-        Defender--)EventGrid: MalwareScanningResult
-        
-        alt Scan clean
-            EventGrid->>BulkProcessor: Webhook: Clean
-            BulkProcessor->>MetadataDB: Update Document status = Available
-            BulkProcessor->>MetadataDB: Update BulkOperationItem status = Succeeded
-            BulkProcessor--)EventBus: DocumentUploaded
-        else Scan infected or failed
-            EventGrid->>BulkProcessor: Webhook: Malware/Error
-            BulkProcessor->>BlobStorage: Delete blob
-            BulkProcessor->>MetadataDB: Update Document status = Infected/Scan Failed
-            BulkProcessor->>MetadataDB: Update BulkOperationItem
-            Note over MetadataDB: status: Failed<br/>error_message: scan result
-        end
-        
-        BulkProcessor->>UI: Progress update (SSE/polling)
+        UI->>BlobStorage: OUT PUT {upload_url} (SAS token)
+        Note over DocsApi: Scan result handled as in Process Malware Scan Result, then BulkOperationItem is updated
+        DocsApi--)EventBus: DocumentUploaded
+        DocsApi--)UI: Progress update (SSE or polling)
         UI-->>Admin: "12 of 50 files processed..."
     end
-    
-    BulkProcessor->>MetadataDB: Update BulkOperation
-    Note over MetadataDB: status: Completed or Partially Failed<br/>succeeded_count, failed_count
-    
-    BulkProcessor--)EventBus: BulkOperationCompleted
-    BulkProcessor->>UI: Completion notification
+
+    DocsApi->>DocsApi: Update BulkOperation (Completed or Partially Failed, succeeded_count, failed_count)
+    DocsApi--)EventBus: BulkOperationCompleted
     UI-->>Admin: "Upload complete: 48 succeeded, 2 failed"
 ```
 
@@ -580,7 +545,7 @@ sequenceDiagram
 - `BulkOperationCompleted` - Summary of entire operation
 
 **Error Scenarios:**
-- Malware detected in 1 file -> That file fails, others continue
+- Malware detected in 1 file -> That file fails (item status `Failed`, error_message: scan result, blob deleted), others continue
 - All files fail scan -> Operation status `Failed`
 - User cancels mid-upload -> Operation status `Cancelled`, uploaded files remain
 
@@ -590,7 +555,8 @@ sequenceDiagram
 
 **What:** Administrator marks multiple documents for soft delete, system validates retention policies  
 **When:** Cleanup of obsolete documents, removing test data, or bulk document management  
-**Who:** Document Administrator, District Admin (scoped to their documents)
+**Who:** Document Administrator, District Admin (scoped to their documents)  
+**Permission:** `documents.admin.bulk-delete` (system-wide)
 
 ```mermaid
 ---
@@ -598,53 +564,35 @@ title: Documents - Bulk Document Soft Delete with Validation
 ---
 sequenceDiagram
     actor Admin
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
     Admin->>UI: Select multiple documents, click "Delete Selected"
-    UI->>DocsAPI: POST /api/documents/bulk-delete
-    Note over UI,DocsAPI: {document_ids[], mode: permissive}
-    
-    DocsAPI->>DocsAPI: Validate: user has documents.document.bulk-delete
-    
-    Note over DocsAPI: Pre-validation phase
-    DocsAPI->>MetadataDB: Query documents
-    MetadataDB-->>DocsAPI: Document list with retention/legal hold status
-    
-    DocsAPI->>DocsAPI: Validate retention and legal holds
-    Note over DocsAPI: Separate into:<br/>- Eligible (no restrictions)<br/>- Ineligible (legal hold or retention not expired)
-    
+    UI->>DocsApi: APP POST /documents/bulk-delete
+    Note over UI,DocsApi: {document_ids[], mode: permissive}
+
+    DocsApi->>DocsApi: Pre-validate retention and legal holds
+    Note over DocsApi: Separate into:<br/>- Eligible (no restrictions)<br/>- Ineligible (legal hold or retention not expired)
+
     alt Strict mode AND any ineligible
-        DocsAPI-->>UI: 400 Bad Request
-        Note over UI: "Cannot delete: 2 documents have legal holds"
-        UI-->>Admin: Error message with ineligible document list
+        DocsApi-->>UI: 400 Bad Request
+        UI-->>Admin: "Cannot delete: 2 documents have legal holds" with ineligible document list
     else Permissive mode (default)
-        DocsAPI->>MetadataDB: Create BulkOperation
-        Note over MetadataDB: {operation_type: delete, status: In Progress,<br/>total_count, eligible_count, ineligible_count}
-        MetadataDB-->>DocsAPI: operation_id
-        
+        DocsApi->>DocsApi: Create BulkOperation (delete, In Progress)
+
         loop For each eligible document
-            DocsAPI->>MetadataDB: Update Document
-            Note over MetadataDB: soft_deleted = true<br/>soft_deleted_at = NOW()<br/>soft_deleted_by_user_id = admin_id
-            
-            DocsAPI->>MetadataDB: Create BulkOperationItem
-            Note over MetadataDB: {document_id, status: Succeeded}
-            
-            DocsAPI--)EventBus: DocumentSoftDeleted
+            DocsApi->>DocsApi: Soft delete, create BulkOperationItem (Succeeded)
+            DocsApi--)EventBus: DocumentSoftDeleted
         end
-        
-        loop For each ineligible document
-            DocsAPI->>MetadataDB: Create BulkOperationItem
-            Note over MetadataDB: {document_id, status: Skipped,<br/>skip_reason: legal hold or retention}
-        end
-        
-        DocsAPI->>MetadataDB: Update BulkOperation
-        Note over MetadataDB: status: Completed or Partially Failed<br/>succeeded_count, skipped_count
-        
-        DocsAPI--)EventBus: BulkOperationCompleted
-        DocsAPI-->>UI: 200 OK {operation_id, succeeded, skipped}
+
+        DocsApi->>DocsApi: Record ineligible documents as BulkOperationItem (Skipped), update BulkOperation
+        DocsApi--)EventBus: BulkOperationCompleted
+        DocsApi-->>UI: 200 OK {operation_id, succeeded, skipped}
         UI-->>Admin: "98 documents deleted, 2 skipped (legal hold)"
     end
 ```
@@ -665,238 +613,222 @@ sequenceDiagram
 
 ---
 
-## Administrator Requests Retention Override
+## Request Retention Override
 
-**What:** Admin requests exception to retention policy, business owner approves  
+**What:** Admin requests exception to retention policy, business owner is notified  
 **When:** Need to delete documents before retention expiry (e.g., GDPR request, legal mandate, storage emergency)  
-**Who:** Document Administrator (requestor), Business Owner (approver)
+**Who:** Document Administrator (requestor)  
+**Permission:** `documents.retention-override.request` (system-wide)  
+**See also:** Approve Retention Override, Execute Approved Override
 
 ```mermaid
 ---
-title: Documents - Administrator Requests Retention Override
+title: Documents - Request Retention Override
 ---
 sequenceDiagram
     actor DocAdmin as Document Admin
-    actor BusinessOwner as Business Owner
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    participant NotificationService as Notifications
-    
-    Note over DocAdmin,UI: REQUEST OVERRIDE
-    DocAdmin->>UI: Select documents blocked by retention
-    DocAdmin->>UI: Click "Request Deletion Override"
-    UI->>DocsAPI: POST /api/documents/override-requests
-    Note over UI,DocsAPI: {document_ids[], justification,<br/>urgency, business_reason}
-    
-    DocsAPI->>DocsAPI: Validate: user has documents.retention.override.request
-    DocsAPI->>DocsAPI: Determine approval requirements
-    Note over DocsAPI: High-value docs (legal hold history,<br/>>5 years retention) = dual approval<br/>Standard = single approval
-    
-    DocsAPI->>MetadataDB: Create OverrideRequest
-    Note over MetadataDB: {status: Pending, requested_by,<br/>document_ids[], approval_count_required,<br/>justification, expires_at: NOW() + 7 days}
-    MetadataDB-->>DocsAPI: request_id
-    
-    DocsAPI--)EventBus: OverrideRequestCreated
-    DocsAPI->>NotificationService: Notify Business Owner(s)
-    NotificationService-->>BusinessOwner: Email: "Override request pending review"
-    
-    DocsAPI-->>UI: 200 OK {request_id}
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
+    DocAdmin->>UI: Select documents blocked by retention, click "Request Deletion Override"
+    UI->>DocsApi: APP POST /documents/override-requests
+    Note over UI,DocsApi: {document_ids[], justification,<br/>urgency, business_reason}
+
+    DocsApi->>DocsApi: Determine approval requirements, create OverrideRequest (Pending, expires in 7 days)
+    Note over DocsApi: High-value docs (legal hold history,<br/>>5 years retention) = dual approval<br/>Standard = single approval
+
+    DocsApi--)EventBus: OverrideRequestCreated
+    Note over EventBus: Consumed by Communications (sends email to Business Owner(s))
+
+    DocsApi-->>UI: 200 OK {request_id}
     UI-->>DocAdmin: "Override request submitted, awaiting approval"
-    
-    Note over BusinessOwner,UI: APPROVE OVERRIDE
-    BusinessOwner->>UI: Review override request
-    UI->>DocsAPI: GET /api/documents/override-requests/{request_id}
-    DocsAPI->>MetadataDB: Get OverrideRequest with documents
-    MetadataDB-->>DocsAPI: Request details
-    DocsAPI-->>UI: Request + document list + retention info
-    
-    BusinessOwner->>UI: Review justification, click "Approve"
-    UI->>DocsAPI: POST /api/documents/override-requests/{request_id}/approve
-    Note over UI,DocsAPI: {approval_comments}
-    
-    DocsAPI->>DocsAPI: Validate: user has documents.retention.override.approve
-    
-    DocsAPI->>MetadataDB: Create OverrideApproval
-    Note over MetadataDB: {request_id, approved_by, approved_at,<br/>comments}
-    
-    DocsAPI->>MetadataDB: Update OverrideRequest
-    Note over MetadataDB: approval_count += 1
-    
-    alt Sufficient approvals received
-        DocsAPI->>MetadataDB: Update OverrideRequest
-        Note over MetadataDB: status: Approved
-        DocsAPI--)EventBus: OverrideRequestApproved
-        DocsAPI->>NotificationService: Notify requester
-        NotificationService-->>DocAdmin: Email: "Override approved, execute within 7 days"
-    else More approvals needed (dual approval)
-        DocsAPI->>NotificationService: Notify second approver
-        Note over DocsAPI: Awaiting second approval
-    end
-    
-    DocsAPI-->>UI: 200 OK
-    UI-->>BusinessOwner: "Override approved"
-    
-    Note over DocAdmin,UI: EXECUTE OVERRIDE (Within 7 days)
-    DocAdmin->>UI: View approved override, click "Execute"
-    UI->>DocsAPI: POST /api/documents/override-requests/{request_id}/execute
-    
-    DocsAPI->>MetadataDB: Get OverrideRequest
-    MetadataDB-->>DocsAPI: {status: Approved, document_ids[], expires_at}
-    
-    DocsAPI->>DocsAPI: Validate: not expired (< 7 days since approval)
-    
-    loop For each document_id
-        DocsAPI->>MetadataDB: Force soft delete (bypass retention check)
-        Note over MetadataDB: soft_deleted = true<br/>deletion_override_request_id = request_id
-        DocsAPI--)EventBus: DocumentSoftDeleted {override: true}
-    end
-    
-    DocsAPI->>MetadataDB: Update OverrideRequest
-    Note over MetadataDB: status: Executed, executed_at, executed_by
-    
-    DocsAPI--)EventBus: OverrideRequestExecuted
-    DocsAPI-->>UI: 200 OK
-    UI-->>DocAdmin: "Override executed, documents deleted"
 ```
 
 **Key Decisions:**
 - **Dual approval for high-value:** Documents with legal hold history or >5 year retention require 2 approvals
-- **7-day execution window:** Approved overrides expire if not executed within 7 days
 - **Justification mandatory:** All overrides require business reason for audit trail
-- **Cannot be reversed:** Once executed, deletion is permanent (standard retention applies to hard delete)
 
 **State Changes:**
-- OverrideRequest: `Pending` -> `Approved` -> `Executed`
-- Documents: Bypass retention, immediate soft delete eligibility
+- OverrideRequest: `Pending`
 
 **Events Published:**
 - `OverrideRequestCreated` - Admin submits request
+
+**Error Scenarios:**
+- Override request is not approved within 7 days -> Request expires (`expires_at`)
+
+---
+
+## Approve Retention Override
+
+**What:** Business owner reviews and approves an override request (two approvers for high-value documents)  
+**When:** An override request is pending review  
+**Who:** Business Owner (approver)  
+**Permission:** `documents.retention-override.approve` (system-wide)  
+**See also:** Request Retention Override, Execute Approved Override
+
+```mermaid
+---
+title: Documents - Approve Retention Override
+---
+sequenceDiagram
+    actor BusinessOwner as Business Owner
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
+    BusinessOwner->>UI: Review override request
+    UI->>DocsApi: APP GET /documents/override-requests/{requestId}
+    DocsApi-->>UI: Request + document list + retention info
+
+    BusinessOwner->>UI: Review justification, click "Approve"
+    UI->>DocsApi: APP POST /documents/override-requests/{requestId}/approve
+    Note over UI,DocsApi: {approval_comments}
+
+    DocsApi->>DocsApi: Create OverrideApproval, increment approval_count
+
+    alt Sufficient approvals received
+        DocsApi->>DocsApi: Set OverrideRequest status Approved
+        DocsApi--)EventBus: OverrideRequestApproved
+        Note over EventBus: Consumed by Communications (sends email to the requester: "Override approved, execute within 7 days")
+    else More approvals needed (dual approval)
+        Note over DocsApi: Awaiting second approval, second approver is notified by Communications
+    end
+
+    DocsApi-->>UI: 200 OK
+    UI-->>BusinessOwner: "Override approved"
+```
+
+**Key Decisions:**
+- **Dual approval for high-value:** Documents with legal hold history or >5 year retention require 2 approvals
+- **Justification mandatory:** All overrides require business reason for audit trail
+
+**State Changes:**
+- OverrideRequest: `Pending` -> `Approved`
+
+**Events Published:**
 - `OverrideRequestApproved` - Business owner approves
+
+**Error Scenarios:**
+- Insufficient approvals -> 403 Forbidden "Awaiting second approval"
+- Approver is same as requester -> 403 Forbidden "Cannot approve own request"
+
+---
+
+## Execute Approved Override
+
+**What:** Admin executes an approved override, bypassing retention to soft delete the documents  
+**When:** Within 7 days of approval  
+**Who:** Document Administrator (requestor)  
+**Permission:** `documents.retention-override.request` (system-wide)  
+**See also:** Request Retention Override, Approve Retention Override
+
+```mermaid
+---
+title: Documents - Execute Approved Override
+---
+sequenceDiagram
+    actor DocAdmin as Document Admin
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+
+    DocAdmin->>UI: View approved override, click "Execute"
+    UI->>DocsApi: APP POST /documents/override-requests/{requestId}/execute
+
+    alt Override expired (more than 7 days since approval)
+        DocsApi-->>UI: 400 Bad Request "Override expired, request new approval"
+        UI-->>DocAdmin: Error message
+    else Override valid
+        loop For each document_id
+            DocsApi->>DocsApi: Force soft delete (bypass retention check)
+            Note over DocsApi: soft_deleted = true<br/>deletion_override_request_id = request_id
+            DocsApi--)EventBus: DocumentSoftDeleted {override: true}
+        end
+
+        DocsApi->>DocsApi: Set OverrideRequest status Executed (executed_at, executed_by)
+        DocsApi--)EventBus: OverrideRequestExecuted
+        DocsApi-->>UI: 200 OK
+        UI-->>DocAdmin: "Override executed, documents deleted"
+    end
+```
+
+**Key Decisions:**
+- **7-day execution window:** Approved overrides expire if not executed within 7 days
+- **Cannot be reversed:** Once executed, deletion is permanent (standard retention applies to hard delete)
+
+**State Changes:**
+- OverrideRequest: `Approved` -> `Executed`
+- Documents: Bypass retention, immediate soft delete eligibility
+
+**Events Published:**
 - `OverrideRequestExecuted` - Admin executes deletion
 - `DocumentSoftDeleted` - Per document, flagged as override deletion
 
 **Error Scenarios:**
 - Override expired (>7 days) -> 400 Bad Request "Override expired, request new approval"
-- Insufficient approvals -> 403 Forbidden "Awaiting second approval"
 - Request already executed -> 409 Conflict "Override already executed"
-- Approver is same as requester -> 403 Forbidden "Cannot approve own request"
 
 ---
 
-## Staged File Upload for Synapse Processing
+## Stage and Scan Import File
 
-**What:** User uploads bulk import file to staging area, Synapse pipeline processes  
+**What:** User uploads bulk import file to staging area, system scans it and announces it is ready for Synapse  
 **When:** District uploads employee roster CSV, EPP uploads candidate enrollment file  
-**Who:** District Admin, EPP Admin
+**Who:** District Admin, EPP Admin  
+**Permission:** The calling domain's upload permission (for example `staffing.roster.upload`, `epp.candidates.upload`)  
+**See also:** Process Staged File in Synapse, Staging File Cleanup Job, Process Malware Scan Result
 
 ```mermaid
 ---
-title: Documents - Staged File Upload for Synapse Processing
+title: Documents - Stage and Scan Import File
 ---
 sequenceDiagram
     actor Admin
+    box Browser
     participant UI
-    participant DocsAPI as Documents API
-    participant BlobStorage as Staging Container
-    participant Defender as Azure Defender
-    participant EventGrid
-    participant MetadataDB as SQL Metadata DB
-    participant EventBus
-    participant Synapse as Azure Synapse
-    participant DataWarehouse as Data Warehouse
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant DomainApi as Domain API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant StagingContainer as Staging Container
+    end
+
     Admin->>UI: Upload bulk import file (CSV/XLSX)
-    UI->>DocsAPI: POST /api/documents/staging/upload/request
-    Note over UI,DocsAPI: {filename, size, mime_type,<br/>functional_area: staffing,<br/>import_type: employee_roster}
-    
-    DocsAPI->>DocsAPI: Validate: file format (CSV, XLSX only)
-    DocsAPI->>DocsAPI: Validate: file size (max 500 MB)
-    
-    DocsAPI->>DocsAPI: Generate upload_id
-    DocsAPI->>DocsAPI: Build staging path
-    Note over DocsAPI: documents-bulk-import-staging-staffing/<br/>{upload_id}_{timestamp}_{filename}
-    
-    DocsAPI->>MetadataDB: Create StagingFile record
-    Note over MetadataDB: {upload_id, blob_path, functional_area,<br/>import_type, status: Scanning,<br/>uploaded_by, uploaded_at}
-    
-    DocsAPI->>BlobStorage: Generate upload SAS token
-    BlobStorage-->>DocsAPI: SAS URL
-    
-    DocsAPI-->>UI: 200 OK {upload_id, upload_url, status: Scanning}
-    
-    UI->>BlobStorage: Upload file via SAS token
-    BlobStorage-->>UI: Upload complete
+    UI->>DomainApi: APP POST /{domain}/{staging-upload-route}
+    DomainApi->>DocsApi: SVC POST /documents/staging/upload/request
+    Note over DomainApi,DocsApi: {filename, size, mime_type,<br/>functional_area: staffing,<br/>import_type: employee_roster}
+
+    DocsApi->>DocsApi: Validate format (CSV, XLSX only) and size (max 500 MB), generate upload_id
+    Note over DocsApi: Staging path: documents-bulk-import-staging-staffing/<br/>{upload_id}_{timestamp}_{filename}
+    DocsApi->>DocsApi: Create StagingFile record (status Scanning), generate upload SAS token
+
+    DocsApi-->>DomainApi: 200 OK {upload_id, upload_url, status: Scanning}
+    DomainApi-->>UI: {upload_id, upload_url, status: Scanning}
+
+    UI->>StagingContainer: OUT PUT {upload_url} (SAS token)
     UI-->>Admin: "File uploaded, scanning..."
-    
-    Note over Defender: Scan staging file in-place
-    Defender->>BlobStorage: Scan blob for malware
-    Defender--)EventGrid: MalwareScanningResult
-    
-    alt Scan clean
-        EventGrid->>DocsAPI: Webhook: Clean
-        DocsAPI->>MetadataDB: Update StagingFile status = Uploaded
-        DocsAPI--)EventBus: BulkFileUploaded
-        Note over EventBus: {upload_id, functional_area,<br/>import_type, blob_path}
-        DocsAPI->>UI: Notification
-        UI-->>Admin: "File uploaded, processing will begin shortly"
-        
-        Note over Synapse: Synapse subscribes to BulkFileUploaded
-        EventBus->>Synapse: BulkFileUploaded event
-        
-        Synapse->>Synapse: Trigger appropriate pipeline
-        Note over Synapse: Based on functional_area + import_type
-        
-        Synapse->>BlobStorage: Read file (using Managed Identity)
-        BlobStorage-->>Synapse: File content
-        
-        Synapse->>Synapse: Parse and validate data
-        
-        alt Processing successful
-            Synapse->>DataWarehouse: Insert/update records
-            Synapse--)EventBus: BulkFileProcessed
-            Note over EventBus: {upload_id, status: Success,<br/>records_processed}
-            
-            EventBus->>DocsAPI: BulkFileProcessed event
-            DocsAPI->>MetadataDB: Update StagingFile
-            Note over MetadataDB: status: Processed,<br/>processed_at, records_count
-            
-            DocsAPI->>UI: Notification (webhook/SSE)
-            UI-->>Admin: "Import complete: 150 records processed"
-            
-        else Processing failed
-            Synapse--)EventBus: BulkFileProcessed
-            Note over EventBus: {upload_id, status: Failed,<br/>error_details}
-            
-            EventBus->>DocsAPI: BulkFileProcessed event
-            DocsAPI->>MetadataDB: Update StagingFile
-            Note over MetadataDB: status: Failed,<br/>error_message
-            
-            DocsAPI->>UI: Notification
-            UI-->>Admin: "Import failed: invalid data format on row 23"
-        end
-    else Scan infected/failed
-        EventGrid->>DocsAPI: Webhook: Malware/Error
-        DocsAPI->>BlobStorage: Delete infected/failed blob
-        DocsAPI->>MetadataDB: Update StagingFile
-        Note over MetadataDB: status: Scan Failed / Infected
-        DocsAPI->>UI: Notification
-        UI-->>Admin: "Upload failed due to security concerns"
-    end
-    
-    Note over BlobStorage: Auto-cleanup after 7 days
-    loop Daily cleanup job
-        DocsAPI->>MetadataDB: Query old staging files
-        Note over MetadataDB: WHERE uploaded_at < NOW() - 7 days
-        MetadataDB-->>DocsAPI: Old file list
-        
-        loop For each old file
-            DocsAPI->>BlobStorage: Delete blob
-            DocsAPI->>MetadataDB: Update StagingFile
-            Note over MetadataDB: blob_deleted: true
-        end
-    end
+
+    Note over DocsApi: Staging file is scanned in place and the result is handled as in Process Malware Scan Result
+    DocsApi--)EventBus: BulkFileUploaded
+    Note over EventBus: Published only after a clean scan {upload_id, functional_area,<br/>import_type, blob_path}
+    UI-->>Admin: "File uploaded, processing will begin shortly"
 ```
 
 **Key Decisions:**
@@ -904,18 +836,112 @@ sequenceDiagram
 - **Browser-based upload:** File uploaded via SAS token directly to staging container
 - **Scan in-place:** Defender scans staging files where they sit
 - **Event-driven decoupling:** Documents domain doesn't know about Synapse pipelines
-- **Synapse reads directly:** Synapse uses Managed Identity to access staging containers
-- **Auto-cleanup:** Files deleted after 7 days regardless of processing status
 
 **State Changes:**
-- StagingFile status: `Scanning` -> `Uploaded` -> `Processed` OR `Failed`
+- StagingFile status: `Scanning` -> `Uploaded`
 
 **Events Published:**
 - `BulkFileUploaded` - File scanned clean, ready for processing
-- `BulkFileProcessed` - Synapse publishes after processing (consumed by Documents)
 
 **Error Scenarios:**
 - Invalid file format -> 400 Bad Request before upload
-- Malware detected -> File deleted, status `Infected`
+- Malware detected -> File deleted, status `Infected`; UI shows "Upload failed due to security concerns"
+
+---
+
+## Process Staged File in Synapse
+
+**What:** Synapse pipeline picks up a scanned staging file, loads the data and reports the outcome back to Documents  
+**When:** A `BulkFileUploaded` event is published  
+**Who:** Azure Synapse (system pipeline, no user involved)  
+**See also:** Stage and Scan Import File, Staging File Cleanup Job
+
+```mermaid
+---
+title: Documents - Process Staged File in Synapse
+---
+sequenceDiagram
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant Synapse as Azure Synapse
+    participant StagingContainer as Staging Container
+    participant DataWarehouse as Data Warehouse
+    end
+
+    EventBus--)Synapse: BulkFileUploaded
+    Synapse->>Synapse: Trigger pipeline for functional_area and import_type
+    Synapse->>StagingContainer: OUT READ file (Managed Identity)
+    StagingContainer-->>Synapse: File content
+    Synapse->>Synapse: Parse and validate data
+
+    alt Processing successful
+        Synapse->>DataWarehouse: OUT Insert or update records
+        Synapse--)EventBus: BulkFileProcessed {upload_id, status: Success, records_processed}
+        EventBus--)DocsApi: BulkFileProcessed
+        DocsApi->>DocsApi: Update StagingFile (Processed, processed_at, records_count)
+        DocsApi--)UI: Import result (SSE)
+        UI-->>UI: "Import complete: 150 records processed"
+    else Processing failed
+        Synapse--)EventBus: BulkFileProcessed {upload_id, status: Failed, error_details}
+        EventBus--)DocsApi: BulkFileProcessed
+        DocsApi->>DocsApi: Update StagingFile (Failed, error_message)
+        DocsApi--)UI: Import result (SSE)
+        UI-->>UI: "Import failed: invalid data format on row 23"
+    end
+```
+
+**Key Decisions:**
+- **Event-driven decoupling:** Documents domain doesn't know about Synapse pipelines
+- **Synapse reads directly:** Synapse uses Managed Identity to access staging containers
+
+**State Changes:**
+- StagingFile status: `Uploaded` -> `Processed` OR `Failed`
+
+**Events Published:**
+- `BulkFileProcessed` - Synapse publishes after processing (consumed by Documents)
+
+**Error Scenarios:**
 - Synapse pipeline failure -> Status `Failed`, file remains for retry
 - Synapse timeout (>30 min) -> Alert admins, file remains for manual investigation
+
+---
+
+## Staging File Cleanup Job
+
+**What:** Daily job deletes staging files older than 7 days regardless of processing status  
+**When:** Daily  
+**Who:** Documents cleanup job (system-automated, no user involved)  
+**See also:** Stage and Scan Import File
+
+```mermaid
+---
+title: Documents - Staging File Cleanup Job
+---
+sequenceDiagram
+    box MiEdWorkforce (AKS)
+    participant DocsApi as Documents API
+    end
+    box External
+    participant StagingContainer as Staging Container
+    end
+
+    Note over DocsApi: Daily cleanup job, auto-cleanup after 7 days
+    DocsApi->>DocsApi: Query staging files uploaded more than 7 days ago
+
+    loop For each old file
+        DocsApi->>StagingContainer: OUT DELETE blob
+        DocsApi->>DocsApi: Mark StagingFile blob_deleted = true
+    end
+```
+
+**Key Decisions:**
+- **Auto-cleanup:** Files deleted after 7 days regardless of processing status
+
+**State Changes:**
+- StagingFile: `blob_deleted` = true

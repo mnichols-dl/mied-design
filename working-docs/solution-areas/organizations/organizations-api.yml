@@ -28,6 +28,7 @@ paths:
     get:
       summary: Typeahead search for organizations
       operationId: searchOrganizations
+      x-access: internal-user, internal-service
       tags: [Organizations]
       description: |
         Returns organizations matching a partial name query. Minimum 2-character query
@@ -86,6 +87,7 @@ paths:
     get:
       summary: Get organization details
       operationId: getOrganization
+      x-access: internal-user, internal-service
       tags: [Organizations]
       description: |
         Returns full organization detail including grade band, Lead Administrator
@@ -111,6 +113,7 @@ paths:
     get:
       summary: Get materialized ancestor chain (internal — IAM only)
       operationId: getOrganizationHierarchy
+      x-access: internal-user, internal-service
       tags: [Organizations]
       description: |
         Returns the ordered ancestor chain for an organization, from root to
@@ -151,6 +154,7 @@ paths:
     get:
       summary: Get organizations by Lead Administrator email (internal — IAM only)
       operationId: getOrganizationsByLeadAdmin
+      x-access: internal-user, internal-service
       tags: [Organizations]
       description: |
         Returns all Active organizations where the provided email address is
@@ -201,6 +205,7 @@ paths:
     get:
       summary: List active organization types
       operationId: listOrganizationTypes
+      x-access: internal-user, internal-service
       tags: [OrganizationTypes]
       description: |
         Returns all active organization type codes and display names.

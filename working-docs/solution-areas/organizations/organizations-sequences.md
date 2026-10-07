@@ -6,8 +6,11 @@ This document contains sequence diagrams for all workflows in the Organizations 
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
 - Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- **actor** = Human only
+- **participant** = Service, component or external system
+- Every request arrow starts with its API-kind tag: `APP` (application API, UI to owning API), `SVC` (service API, API to API inside the cluster), `EXT` (external API, inbound from an external system) or `OUT` (outbound call to an external system), followed by the verb and path.
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
+- Participants are grouped with `box` (Browser, MiEdWorkforce (AKS), External).
 
 ---
 
@@ -16,55 +19,57 @@ This document contains sequence diagrams for all workflows in the Organizations 
 **What:** Pulls current organization data from the CEPI CEDS JSON-LD API, updates the local replica, rebuilds the materialized hierarchy, and publishes change events for high-impact mutations.
 **When:** Nightly at 1 AM EST via Azure Synapse scheduled trigger. May also be triggered manually by a System Admin via `POST /admin/jobs/sync` in recovery scenarios.
 **Who:** Azure Synapse Pipeline (system-initiated)
+**Permission:** `organizations.sync.trigger` applies to the manual trigger only (System Admin); the scheduled run is pipeline-driven
 
 ```mermaid
 ---
 title: Organizations - CEPI Nightly Sync
 ---
 sequenceDiagram
+    box Azure Platform
     participant Synapse as Azure Synapse Pipeline
-    participant CEPI as CEPI CEDS JSON-LD API
-    participant OrgAPI as Organizations API
-    participant OrgDB as Organizations Database
+    end
+    box MiEdWorkforce (AKS)
+    participant OrgApi as Organizations API
     participant EventBus as Event Bus
+    end
+    box External
+    participant CEPI as CEPI
+    end
 
-    Synapse->>OrgDB: Open sync transaction; insert sync log record (status=Running)
+    Synapse->>Synapse: Open sync transaction; insert sync log record (status=Running)
 
-    Synapse->>CEPI: Authenticate (OAuth2 client credentials)
-    CEPI-->>Synapse: Access token
+    Synapse->>CEPI: OUT Authenticate (OAuth2 client credentials)
 
-    Synapse->>CEPI: GET /organizations (full snapshot or delta since last sync)
+    Synapse->>CEPI: OUT GET /organizations (full snapshot or delta since last sync)
     CEPI-->>Synapse: Organization records (CEDS JSON-LD)
 
     loop For each organization record
-        Synapse->>OrgDB: Upsert organization (code, name, type, status, lead_admin_email, grade_band, ceds_metadata)
+        Synapse->>Synapse: Upsert organization (code, name, type, status, lead_admin_email, grade_band, ceds_metadata)
 
         alt Organization type changed on existing record
-            Synapse->>OrgDB: Deactivate existing record (status=Inactive, deactivated_at=now)
-            Synapse->>OrgDB: Insert new record with same code, new type
+            Synapse->>Synapse: Deactivate existing record; insert new record with same code, new type
             Note over Synapse: Treat-as-new path; type is immutable on a record
         else Organization newly absent from CEPI feed
-            Synapse->>OrgDB: Set status=Inactive, deactivated_at=now
+            Synapse->>Synapse: Set status=Inactive, deactivated_at=now
         end
     end
 
-    Synapse->>OrgDB: Rebuild organization_hierarchy table
-    Note over Synapse,OrgDB: Recompute parent_organization_code and<br/>ancestor_organization_codes JSON array for all active orgs
+    Note over Synapse: Rebuild organization_hierarchy (parent_organization_code and<br/>ancestor_organization_codes JSON array for all active orgs);<br/>update sync log record (status=Succeeded, counts)
 
-    Synapse->>OrgDB: Update sync log record (status=Succeeded, counts)
-    Synapse->>OrgAPI: POST /admin/jobs/sync/complete (notify API layer)
+    Synapse->>OrgApi: SVC POST /admin/jobs/sync/complete
 
-    OrgAPI->>OrgAPI: Identify high-impact changes (deactivations, lead admin changes)
+    Note over OrgApi: Identify high-impact changes (deactivations, lead admin changes)
 
     loop For each deactivated organization
-        OrgAPI--)EventBus: OrganizationDeactivated
+        OrgApi--)EventBus: OrganizationDeactivated
     end
 
     loop For each lead admin change
-        OrgAPI--)EventBus: LeadAdministratorChanged
+        OrgApi--)EventBus: LeadAdministratorChanged
     end
 
-    OrgAPI--)EventBus: OrganizationSyncCompleted
+    OrgApi--)EventBus: OrganizationSyncCompleted
 
     Note over EventBus: IAM worker receives events and invalidates<br/>affected cache entries
 ```
@@ -96,6 +101,7 @@ sequenceDiagram
 **What:** Returns a list of organizations matching a partial name query, optionally filtered by type and status. Used in authorization request forms, org selectors across domains, and admin lookups.
 **When:** User types in an organization search field (typically debounced at 300ms in the UI)
 **Who:** Authenticated user via UI, or internal service
+**Permission:** `organizations.organization.view` (system-wide)
 
 ```mermaid
 ---
@@ -103,26 +109,27 @@ title: Organizations - Organization Search
 ---
 sequenceDiagram
     actor User
-    participant UI as Domain UI
-    participant OrgAPI as Organizations API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant OrgApi as Organizations API
     participant Cache as Consumer Cache (Redis)
-    participant OrgDB as Organizations Database
-
-    User->>UI: Type organization name (≥2 characters)
-    UI->>OrgAPI: GET /organizations/search?query={text}&type={type}&status=Active
-
-    OrgAPI->>Cache: GET org-search:{queryHash}
-
-    alt Cache hit
-        Cache-->>OrgAPI: Cached results (TTL: 15 min)
-        OrgAPI-->>UI: Matching organizations
-    else Cache miss
-        OrgAPI->>OrgDB: SELECT WHERE name ILIKE '%{query}%'<br/>AND type = {type} (if provided)<br/>AND status = 'Active'<br/>LIMIT 20
-        OrgDB-->>OrgAPI: Matching records
-        OrgAPI->>Cache: SET org-search:{queryHash} TTL=15min
-        OrgAPI-->>UI: Matching organizations
     end
 
+    User->>UI: Type organization name (≥2 characters)
+    UI->>OrgApi: APP GET /organizations/search
+
+    OrgApi->>Cache: GET org-search:{queryHash}
+
+    alt Cache hit
+        Cache-->>OrgApi: Cached results (TTL: 15 min)
+    else Cache miss
+        OrgApi->>OrgApi: Query organizations (name contains text, type if provided, status Active, limit 20)
+        OrgApi->>Cache: SET org-search:{queryHash} TTL=15min
+    end
+
+    OrgApi-->>UI: Matching organizations
     UI-->>User: Display suggestions (code, name, type)
 ```
 
@@ -147,30 +154,34 @@ sequenceDiagram
 **What:** Retrieves full details for a single organization by code, including grade band, Lead Administrator, and hierarchy summary.
 **When:** User selects an organization from search results, or a domain service needs org context for a record being processed.
 **Who:** Authenticated user via UI, or internal service
+**Permission:** `organizations.organization.view` (system-wide)
 
 ```mermaid
 ---
 title: Organizations - Organization Detail Lookup
 ---
 sequenceDiagram
-    participant Caller as Caller (UI or Internal Service)
-    participant OrgAPI as Organizations API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant OrgApi as Organizations API
     participant Cache as Consumer Cache (Redis)
-    participant OrgDB as Organizations Database
+    end
 
-    Caller->>OrgAPI: GET /organizations/{code}
+    UI->>OrgApi: APP GET /organizations/{organizationCode}
+    Note over UI,OrgApi: Internal services call the same operation as SVC GET /organizations/{organizationCode}
 
-    OrgAPI->>Cache: GET org:{organizationCode}
+    OrgApi->>Cache: GET org:{organizationCode}
 
     alt Cache hit
-        Cache-->>OrgAPI: Cached organization detail (TTL: 60 min)
-        OrgAPI-->>Caller: Organization detail
+        Cache-->>OrgApi: Cached organization detail (TTL: 60 min)
     else Cache miss
-        OrgAPI->>OrgDB: SELECT org + hierarchy WHERE organization_code = {code}
-        OrgDB-->>OrgAPI: Organization record + direct parent
-        OrgAPI->>Cache: SET org:{organizationCode} TTL=60min
-        OrgAPI-->>Caller: Organization detail
+        OrgApi->>OrgApi: Load organization with direct parent and hierarchy summary
+        OrgApi->>Cache: SET org:{organizationCode} TTL=60min
     end
+
+    OrgApi-->>UI: Organization detail
 ```
 
 **Key Decisions:**
@@ -191,30 +202,31 @@ sequenceDiagram
 **What:** Returns the full ancestor chain for an organization, used by IAM to evaluate transitive permissions (e.g., does a user authorized at ISD-50 have access to Building-123?).
 **When:** IAM permission check encounters a scope-sensitive permission and needs to determine whether the user's authorization scope is an ancestor of the target organization.
 **Who:** Internal service (IAM API only)
+**Permission:** `organizations.hierarchy.view` (internal service, IAM service account only)
 
 ```mermaid
 ---
 title: Organizations - Hierarchy Resolution
 ---
 sequenceDiagram
-    participant IAM as IAM API
-    participant OrgAPI as Organizations API
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgApi as Organizations API
     participant Cache as IAM Local Cache (Redis)
-    participant OrgDB as Organizations Database
+    end
 
-    IAM->>Cache: GET org-hierarchy:{organizationCode}
+    IamApi->>Cache: GET org-hierarchy:{organizationCode}
 
     alt Cache hit
-        Cache-->>IAM: Cached ancestor chain (TTL: 60 min)
-        IAM->>IAM: Evaluate transitive match against user authorizations
+        Cache-->>IamApi: Cached ancestor chain (TTL: 60 min)
     else Cache miss
-        IAM->>OrgAPI: GET /organizations/{code}/hierarchy
-        OrgAPI->>OrgDB: SELECT ancestor_organization_codes<br/>FROM organization_hierarchy<br/>WHERE organization_code = {code}
-        OrgDB-->>OrgAPI: Ancestor chain array
-        OrgAPI-->>IAM: Ancestor chain (ordered root to direct parent)
-        IAM->>Cache: SET org-hierarchy:{organizationCode} TTL=60min
-        IAM->>IAM: Evaluate transitive match
+        IamApi->>OrgApi: SVC GET /organizations/{organizationCode}/hierarchy
+        OrgApi->>OrgApi: Read ancestor_organization_codes from organization_hierarchy
+        OrgApi-->>IamApi: Ancestor chain (ordered root to direct parent)
+        IamApi->>Cache: SET org-hierarchy:{organizationCode} TTL=60min
     end
+
+    IamApi->>IamApi: Evaluate transitive match against user authorizations
 ```
 
 **Key Decisions:**
@@ -237,30 +249,31 @@ sequenceDiagram
 **What:** Returns all organizations for which a given email address is designated Lead Administrator. Used by IAM during authorization request routing and Lead Admin bootstrap.
 **When:** (1) A business user submits an authorization request — IAM looks up the Lead Admin for the target organization. (2) A new user authenticates for the first time — IAM checks whether their email matches any Lead Admin designation to trigger bootstrap grants.
 **Who:** Internal service (IAM API only)
+**Permission:** `organizations.lead-admin.view` (internal service, IAM service account only)
 
 ```mermaid
 ---
 title: Organizations - Lead Admin Lookup
 ---
 sequenceDiagram
-    participant IAM as IAM API
-    participant OrgAPI as Organizations API
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgApi as Organizations API
     participant Cache as IAM Local Cache (Redis)
-    participant OrgDB as Organizations Database
-
-    IAM->>Cache: GET org-lead-admin:{organizationCode}
-
-    alt Cache hit
-        Cache-->>IAM: Cached lead admin detail (TTL: 60 min)
-    else Cache miss
-        IAM->>OrgAPI: GET /organizations/by-lead-admin?email={email}
-        OrgAPI->>OrgDB: SELECT * FROM organizations<br/>WHERE lead_admin_email = {email}<br/>AND status = 'Active'
-        OrgDB-->>OrgAPI: Matching organizations
-        OrgAPI-->>IAM: Organizations where user is Lead Admin
-        IAM->>Cache: SET org-lead-admin:{orgCode} TTL=60min (per org)
     end
 
-    IAM->>IAM: Route approval request or trigger bootstrap grant
+    IamApi->>Cache: GET org-lead-admin:{organizationCode}
+
+    alt Cache hit
+        Cache-->>IamApi: Cached lead admin detail (TTL: 60 min)
+    else Cache miss
+        IamApi->>OrgApi: SVC GET /organizations/by-lead-admin
+        OrgApi->>OrgApi: Find Active organizations where lead_admin_email matches
+        OrgApi-->>IamApi: Organizations where user is Lead Admin
+        IamApi->>Cache: SET org-lead-admin:{orgCode} TTL=60min (per org)
+    end
+
+    IamApi->>IamApi: Route approval request or trigger bootstrap grant
 ```
 
 **Key Decisions:**
@@ -289,25 +302,26 @@ sequenceDiagram
 title: Organizations - Degraded Operation (Sync Failure)
 ---
 sequenceDiagram
+    box Azure Platform
     participant Synapse as Azure Synapse Pipeline
-    participant OrgDB as Organizations Database
-    participant OrgAPI as Organizations API
     participant Monitor as Azure Monitor
+    end
+    box MiEdWorkforce (AKS)
+    participant OrgApi as Organizations API
     participant Consumers as Domain Services (IAM, Staffing, etc.)
+    end
 
-    Synapse->>OrgDB: Sync attempt fails (CEPI unavailable or transaction rollback)
-    OrgDB->>OrgDB: No partial writes committed; replica unchanged
-    Synapse->>OrgDB: Update sync log (status=Failed, failure_reason=...)
+    Synapse->>Synapse: Sync attempt fails (CEPI unavailable or transaction rollback); no partial writes committed, replica unchanged
+    Synapse->>Synapse: Update sync log (status=Failed, failure_reason=...)
 
     Synapse->>Monitor: Alert fires: "CEPI Org Sync Failed"
     Note over Monitor: Platform operations team notified
 
-    Note over OrgAPI: OrganizationSyncCompleted NOT published<br/>Consumer caches remain valid; TTL expiry continues normally
+    Note over OrgApi: OrganizationSyncCompleted NOT published<br/>Consumer caches remain valid; TTL expiry continues normally
 
-    Consumers->>OrgAPI: Requests continue normally
-    OrgAPI->>OrgDB: Serve from existing replica (last successful sync data)
-    OrgDB-->>OrgAPI: Data returned as normal
-    OrgAPI-->>Consumers: Responses unchanged from pre-failure behavior
+    Consumers->>OrgApi: SVC GET /organizations/{organizationCode} (requests continue normally)
+    OrgApi->>OrgApi: Serve from existing replica (last successful sync data)
+    OrgApi-->>Consumers: Responses unchanged from pre-failure behavior
 
     Note over Consumers: Worst-case staleness increases by one sync cycle (~24 hrs)<br/>No user-facing degradation unless failure persists multiple cycles
 ```

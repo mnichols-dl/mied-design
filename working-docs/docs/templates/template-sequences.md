@@ -12,6 +12,7 @@ This document contains sequence diagrams for all workflows in the [Domain Name] 
 - Dotted arrows (`--)`) = Async/fire-and-forget
 - **actor** = Human or external system
 - **participant** = Internal service/component
+- Every request arrow carries an API-kind tag followed by the verb and path: `APP` (Application API, UI to owning service), `SVC` (Service API, system call, calling service authorized only), `SVC+USER` (Service API, delegated call, calling service and signed-in user both authorized), `EXT` (External API, inbound from an external caller), `OUT` (outbound call to an external system). Responses carry no tag.
 
 <!--
 SEQUENCES AUTHORING RULES (remove this comment block before publishing):

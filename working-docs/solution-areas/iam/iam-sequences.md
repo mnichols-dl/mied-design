@@ -5,79 +5,121 @@ This document contains sequence diagrams for all workflows in the IAM domain.
 **Conventions:**
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
-- Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- Dotted arrows (`--)`) = Async/fire-and-forget (events)
+- **actor** = Human users only
+- **participant** = Every non-human: UI, internal services, event bus, and external systems
+- Participants are grouped with `box`: Browser (UI), MiEdWorkforce (AKS) (services and Event Bus), External (external systems)
+- Every request arrow carries an API-kind tag followed by the verb and path from the API catalog: `APP` (Application API, UI to owning service), `SVC` (Service API, system call, calling service authorized only), `SVC+USER` (Service API, delegated call, calling service and signed-in user both authorized), `EXT` (External API, inbound from an external caller), `OUT` (outbound call to an external system). Responses carry no tag.
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
-## Citizen User - Initial Sign-In & Identity Resolution
+## Citizen User - Sign-In and Authorization Check
 
-**What:** Citizen user authenticates, completes identity matching, and receives auto-approved Individual scope access  
+**What:** Citizen user authenticates via MiLogin and is checked for an existing Unique ID and authorization (identity matching and auto-approved Individual scope access continue in Citizen User - Account Creation (Mi-Key Match))  
 **When:** First-time citizen logs in via MiLogin  
-**Who:** Citizen User (teacher, educator)
+**Who:** Citizen User (teacher, educator); Permission: iam.authorization.view-own (own authorizations only)
+
+See also: Citizen User - Account Creation (Mi-Key Match)
 
 ```mermaid
 ---
-title: IAM - Citizen User Initial Sign-In & Identity Resolution
+title: IAM - Citizen Sign-In - Authorization Check
 ---
 sequenceDiagram
     actor Citizen
-    participant MiLogin
-    participant IAM
-    participant IdentityRes as Identity Resolution
-    participant EventBus
-    
-    Citizen->>MiLogin: Authenticate
-    MiLogin-->>Citizen: Auth token (MiLogin Citizen) + redirect to MiEdWorkforce
-    
-    Citizen->>IAM: Access MiEdWorkforce with token
-    IAM->>IAM: Validate token, extract MiLoginID, type=Citizen
-    IAM->>IAM: Check for existing authorizations (filtered by MiLogin type)
-    
-    alt User has no Unique ID
-        IAM-->>Citizen: Redirect to Account Creation Landing Page
-        Citizen->>IAM: Submit demographic data (+ attestation)<br/>Optional: PIC/Unique ID hint, "No SSN" flag
-        IAM->>IAM: Validate against Identity Validations rules
-        alt Validation fails
-            IAM-->>Citizen: Display errors; data not sent to Mi-Key, not persisted
-        else Validation passes
-            IAM->>IAM: Create IdentityResolutionRequest (origin=CitizenSelfService, type=AccountCreation, PendingMiKeyMatch)
-            IAM->>IdentityRes: Submit demographic data (Mi-Key Assignment Service)
-            IdentityRes->>IdentityRes: Perform Mi-Key probabilistic identity matching
-
-            alt Match (score above threshold)
-                IdentityRes--)EventBus: UniqueIdAssigned
-                IAM->>IAM: IdentityResolutionRequest.status > Matched
-                IdentityRes-->>Citizen: Unique ID confirmation
-            else No Match (score below threshold) - New ID created
-                IdentityRes--)EventBus: UniqueIdAssigned
-                IAM->>IAM: IdentityResolutionRequest.status > NoMatchCreated
-                IdentityRes-->>Citizen: New Unique ID confirmation
-            else Near Match (score between thresholds)
-                IAM->>IAM: IdentityResolutionRequest.status > RequiresResolution<br/>(candidate match data withheld from citizen)
-                IAM--)EventBus: IdentityResolutionRequiresReview
-                IAM->>Notification: Notify citizen: request "Requires Review" (not "Near Match")
-                IAM-->>Citizen: Display "Requires Review" status; dashboard access blocked
-                Note over IAM: See sequence: Identity Administrator - Resolve Identity Request
-            end
-        end
+    box Browser
+    participant UI
     end
-    
-    alt IdentityResolutionRequest resolved to a Unique ID (Matched, NoMatchCreated, or Identity-Admin-resolved)
-        IAM->>IAM: Receive UniqueIdAssigned / IdentityResolutionCompleted
-        IAM->>IAM: Auto-create Individual scope authorization
-        
-        Note over IAM: Authorization status: None > Active<br/>Scope: Individual<br/>MiLogin Type: Citizen
-        
-        IAM--)EventBus: NewCitizenUserAuthorized
-        IAM-->>Citizen: Redirect to Educational Staff Dashboard
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    end
+    box External
+    participant MiLogin
+    end
+
+    Citizen->>UI: Open MiEdWorkforce
+    UI->>MiLogin: OUT OIDC authorize (browser redirect)
+    MiLogin-->>UI: Auth token (MiLogin Citizen) and redirect to MiEdWorkforce
+
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    Note over IamApi: Validate token, extract MiLoginID, type=Citizen<br/>Existing authorizations filtered by MiLogin type
+
+    alt User has no Unique ID
+        IamApi-->>UI: Redirect to Account Creation Landing Page
+        Note over IamApi: See sequence: Citizen User - Account Creation (Mi-Key Match)
+    end
+```
+
+**Key Decisions:**
+- **MiLogin context:** Authorization is tied to Citizen identity type
+
+**State Changes:**
+- None (read-only check)
+
+**Events Published:**
+- None
+
+**Error Scenarios:**
+- Authentication fails at MiLogin > Display user-friendly error; allow retry
+
+---
+
+## Citizen User - Account Creation (Mi-Key Match)
+
+**What:** Citizen user completes identity matching and receives auto-approved Individual scope access  
+**When:** First-time citizen logs in via MiLogin and has no Unique ID  
+**Who:** Citizen User (teacher, educator); Permission: iam.citizen-identity.submit-request (citizen users only)
+
+See also: Citizen User - Sign-In and Authorization Check; Identity Administrator - Resolve Identity Request
+
+```mermaid
+---
+title: IAM - Citizen Sign-In - Account Creation (Mi-Key Match)
+---
+sequenceDiagram
+    actor Citizen
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
+    end
+
+    Citizen->>UI: Submit demographic data (+ attestation)<br/>Optional: PIC/Unique ID hint, "No SSN" flag
+    UI->>IamApi: APP POST /citizen-identity/account-creation
+    Note over IamApi: Validate against Identity Validations rules<br/>Create IdentityResolutionRequest (origin=CitizenSelfService, type=AccountCreation, PendingMiKeyMatch)
+    IamApi->>MiKey: OUT REST submit demographic data (Mi-Key Assignment Service)
+    MiKey-->>IamApi: Probabilistic match result
+
+    alt Match (score above threshold)
+        IamApi--)EventBus: UniqueIdAssigned
+        IamApi-->>UI: Unique ID confirmation (status Matched)
+    else No Match (score below threshold) - New ID created
+        IamApi--)EventBus: UniqueIdAssigned
+        IamApi-->>UI: New Unique ID confirmation (status NoMatchCreated)
+    else Near Match (score between thresholds)
+        IamApi->>IamApi: IdentityResolutionRequest.status to RequiresResolution<br/>(candidate match data withheld from citizen)
+        IamApi--)EventBus: IdentityResolutionRequiresReview
+        Note over EventBus: Consumed by Communications (notifies citizen: request "Requires Review", not "Near Match")
+        IamApi-->>UI: "Requires Review" status, dashboard access blocked
+        Note over IamApi: See sequence: Identity Administrator - Resolve Identity Request
+    end
+
+    opt IdentityResolutionRequest resolved to a Unique ID (Matched, NoMatchCreated, or Identity-Admin-resolved)
+        IamApi->>IamApi: Auto-create Individual scope authorization
+        Note over IamApi: Authorization status: None to Active<br/>Scope: Individual<br/>MiLogin Type: Citizen
+        IamApi--)EventBus: NewCitizenUserAuthorized
+        IamApi-->>UI: Redirect to Educational Staff Dashboard
     end
 ```
 
 **Key Decisions:**
 - **Citizen auto-approval:** No Lead Admin approval required; citizen is accessing their own data
-- **MiLogin context:** Authorization is tied to Citizen identity type
 - **Near Match withholds candidate data:** Per FDD 15.8 §15.8.5, the citizen is never shown potential-match details or the term "Near Match" — only a generic "Requires Review"/"On Hold" status, to avoid exposing another individual's demographic data
 
 **State Changes:**
@@ -89,7 +131,7 @@ sequenceDiagram
 - `NewCitizenUserAuthorized` - Fires when Unique ID assigned/resolved and Individual authorization created
 
 **Error Scenarios:**
-- Validation failure > User corrects and resubmits or cancels; nothing sent to Mi-Key
+- Validation failure > User corrects and resubmits or cancels; nothing sent to Mi-Key (errors displayed, data not persisted)
 - Identity matching fails (Mi-Key unavailable) > User remains on Account Creation page with error
 - Near Match > User cannot proceed to dashboard until Identity Administrator resolves (see below)
 
@@ -99,7 +141,7 @@ sequenceDiagram
 
 **What:** Business user submits authorization request for roles at a specific scope  
 **When:** Business user first attempts to access MiEdWorkforce after MiLogin authentication  
-**Who:** Business User (district admin, EPP coordinator, etc.)
+**Who:** Business User (district admin, EPP coordinator, etc.); Permission: iam.authorization.request (any authenticated Business or Worker user)
 
 ```mermaid
 ---
@@ -107,45 +149,46 @@ title: IAM - Business User Initial Authorization Request
 ---
 sequenceDiagram
     actor BizUser as Business User
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgsApi as Organizations API
+    participant EventBus as Event Bus
+    end
+    box External
     participant MiLogin
-    participant IAM
-    participant OrgsAPI as Organizations API
-    participant Notification
-    participant EventBus
-    
-    BizUser->>MiLogin: Authenticate
-    MiLogin-->>BizUser: Auth token (MiLogin Business/Worker) + redirect to MiEdWorkforce
-    
-    BizUser->>IAM: Access MiEdWorkforce with token
-    IAM->>IAM: Validate token, extract MiLoginID, type=Business/Worker
-    IAM->>IAM: Check for existing authorizations (filtered by MiLogin type)
-    
+    end
+
+    BizUser->>UI: Open MiEdWorkforce
+    UI->>MiLogin: OUT OIDC authorize (browser redirect)
+    MiLogin-->>UI: Auth token (MiLogin Business/Worker) and redirect to MiEdWorkforce
+
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    Note over IamApi: Validate token, extract MiLoginID, type=Business/Worker<br/>Existing authorizations filtered by MiLogin type
+
     alt No existing authorizations for this MiLogin type
-        IAM-->>BizUser: Display Authorization Request Form
-        
-        BizUser->>IAM: Search for Organization (start typing)
-        IAM->>OrgsAPI: GET /organizations/search?query={query}&status=Active
-        Note over OrgsAPI: Local replica synced daily from EEM<br/>Sub-10ms query performance
-        OrgsAPI-->>IAM: Matching organizations
-        IAM-->>BizUser: Display Organization suggestions
-        
-        BizUser->>IAM: Select Organization, roles, justification
-        BizUser->>IAM: Submit request
-        
-        IAM->>IAM: Validate role-scope compatibility
-        IAM->>OrgsAPI: Get Lead Administrator for organization
-        OrgsAPI-->>IAM: Lead Admin contact (email, name)
-        
-        IAM->>IAM: Create AuthorizationRequest (Pending)
-        IAM->>IAM: Generate single-use approval link (expires in 7 days)
-        
-        Note over IAM: Request status: > Pending<br/>Linked to MiLogin type: Business/Worker
-        
-        IAM--)EventBus: AuthorizationRequested
-        IAM->>Notification: Send approval email to Lead Admin
-        IAM->>Notification: Send confirmation email to BizUser
-        
-        IAM-->>BizUser: Confirmation: Request submitted
+        IamApi-->>UI: Authorization Request Form
+
+        BizUser->>UI: Search for Organization (start typing)
+        UI->>IamApi: APP GET /organizations/search?query={query}&status=Active
+        IamApi->>OrgsApi: SVC GET /organizations/search?query={query}&status=Active
+        Note over OrgsApi: Local replica synced daily from EEM<br/>Sub-10ms query performance
+        OrgsApi-->>IamApi: Matching organizations
+        IamApi-->>UI: Organization suggestions
+
+        BizUser->>UI: Select Organization, roles, justification and submit
+        UI->>IamApi: APP POST /authorization-requests
+        IamApi->>OrgsApi: SVC GET /organizations/{organizationCode}
+        OrgsApi-->>IamApi: Lead Admin contact (email, name)
+
+        Note over IamApi: Validate role-scope compatibility<br/>Create AuthorizationRequest (Pending), single-use approval link (expires in 7 days)<br/>Linked to MiLogin type: Business/Worker
+
+        IamApi--)EventBus: AuthorizationRequested
+        Note over EventBus: Consumed by Communications (approval email to Lead Admin, confirmation email to BizUser)
+
+        IamApi-->>UI: Confirmation: Request submitted
     end
 ```
 
@@ -180,40 +223,39 @@ title: IAM - Lead Administrator Bootstrap (First Login)
 ---
 sequenceDiagram
     actor LeadAdmin as Lead Administrator
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgsApi as Organizations API
+    participant EventBus as Event Bus
+    end
+    box External
     participant MiLogin
-    participant IAM
-    participant OrgsAPI as Organizations API
-    participant EventBus
-    participant Notification
-    
-    LeadAdmin->>MiLogin: Authenticate
-    MiLogin-->>LeadAdmin: Auth token (MiLogin Business/Worker)
-    
-    LeadAdmin->>IAM: Access MiEdWorkforce with token
-    IAM->>IAM: Validate token, extract email, MiLoginID, type
-    IAM->>IAM: Check for existing authorizations (filtered by MiLogin type)
-    
-    alt No existing authorizations AND MiLogin type is Business/Worker
-        IAM->>OrgsAPI: GET /organizations/by-lead-admin?email={userEmail}
-        Note over OrgsAPI: Returns unmasked Lead Admin email<br/>IAM caches result keyed by org code (60-min TTL)<br/>for subsequent approval routing
-        OrgsAPI-->>IAM: List of organizations where user is Lead Admin
-        
-        alt User is Lead Admin for one or more organizations
-            loop For each organization
-                IAM->>IAM: Create Authorization (Active)<br/>Role: "Organization Lead Administrator"<br/>Scope: Organization<br/>GrantedBy: SYSTEM-BOOTSTRAP
-                
-                Note over IAM: Authorization status: > Active<br/>No approval workflow<br/>System-managed role
-                
-                IAM--)EventBus: AuthorizationApproved (bootstrap=true)
-            end
-            
-            IAM->>Notification: Send welcome email to Lead Admin
-            IAM-->>LeadAdmin: Redirect to Lead Admin dashboard
-        else User is not a Lead Admin
-            IAM-->>LeadAdmin: Redirect to Authorization Request Form
+    end
+
+    LeadAdmin->>UI: Open MiEdWorkforce
+    UI->>MiLogin: OUT OIDC authorize (browser redirect)
+    MiLogin-->>UI: Auth token (MiLogin Business/Worker)
+
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    Note over IamApi: Validate token, extract email, MiLoginID, type<br/>The lookup below runs only when there are no existing authorizations AND MiLogin type is Business/Worker<br/>A user who already has authorizations is redirected to the dashboard
+
+    IamApi->>OrgsApi: SVC GET /organizations/by-lead-admin?email={userEmail}
+    Note over OrgsApi: Returns unmasked Lead Admin email<br/>IAM caches result keyed by org code (60-min TTL)<br/>for subsequent approval routing
+    OrgsApi-->>IamApi: List of organizations where user is Lead Admin
+
+    alt User is Lead Admin for one or more organizations
+        loop For each organization
+            IamApi->>IamApi: Create Authorization (Active)<br/>Role: "Organization Lead Administrator"<br/>Scope: Organization<br/>GrantedBy: SYSTEM-BOOTSTRAP
+            Note over IamApi: Authorization status: to Active<br/>No approval workflow<br/>System-managed role
+            IamApi--)EventBus: AuthorizationApproved (bootstrap=true)
         end
-    else User already has authorizations
-        IAM-->>LeadAdmin: Redirect to dashboard
+        Note over EventBus: Consumed by Communications (welcome email to Lead Admin)
+        IamApi-->>UI: Redirect to Lead Admin dashboard
+    else User is not a Lead Admin
+        IamApi-->>UI: Redirect to Authorization Request Form
     end
 ```
 
@@ -240,7 +282,7 @@ sequenceDiagram
 
 **What:** Lead Administrator reviews authorization request and approves it (optionally modifying roles)  
 **When:** Lead Admin clicks approval link in email notification  
-**Who:** Scope Authorization Approver (Lead Administrator per EEM)
+**Who:** Scope Authorization Approver (Lead Administrator per EEM); Permission: iam.authorization.approve (scope of the request's organization)
 
 ```mermaid
 ---
@@ -248,42 +290,34 @@ title: IAM - Scope Approver Approves Authorization Request
 ---
 sequenceDiagram
     actor LeadAdmin as Lead Administrator
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    LeadAdmin->>IAM: Click approval link in email
-    IAM->>IAM: Validate link (not expired, not used, request still Pending)
-    
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    LeadAdmin->>UI: Click approval link in email
+    UI->>IamApi: APP GET /authorization-approvals/{token}
+    Note over IamApi: Validate link (not expired, not used, request still Pending)
+
     alt Link valid
-        IAM-->>LeadAdmin: Display request details & requested roles
-        
-        opt Modify roles
-            LeadAdmin->>IAM: Edit requested roles (add/remove)
-            IAM->>IAM: Validate modified roles are compatible with scope
-        end
-        
-        LeadAdmin->>IAM: Optional: Add comments
-        LeadAdmin->>IAM: Click Approve
-        
-        IAM->>IAM: Create Authorization (Active) with approved roles
-        IAM->>IAM: Record ApprovalAction (timestamp, comments, approver ID)
-        IAM->>IAM: Mark link as used
-        IAM->>IAM: Update request status to Approved
-        
-        Note over IAM: Request status: Pending > Approved<br/>Authorization status: > Active<br/>Cache invalidation: user authorizations
-        
-        IAM--)EventBus: AuthorizationApproved
-        IAM->>Notification: Send approval email to BizUser
-        IAM->>Notification: Send push notification to BizUser
-        
-        IAM-->>LeadAdmin: Confirmation: Request approved
-    else Link expired
-        IAM-->>LeadAdmin: Error: Link expired (request must be resubmitted)
-    else Link already used
-        IAM-->>LeadAdmin: Error: Link already used
-    else Request withdrawn/denied
-        IAM-->>LeadAdmin: Error: Request no longer pending
+        IamApi-->>UI: Request details and requested roles
+
+        LeadAdmin->>UI: Optionally edit requested roles (add/remove), add comments, click Approve
+        UI->>IamApi: APP POST /authorization-approvals/{token}
+
+        IamApi->>IamApi: Validate modified roles are compatible with scope<br/>Create Authorization (Active), record ApprovalAction, mark link used, set request to Approved
+
+        Note over IamApi: Request status: Pending to Approved<br/>Authorization status: to Active<br/>Cache invalidation: user authorizations
+
+        IamApi--)EventBus: AuthorizationApproved
+        Note over EventBus: Consumed by Communications (approval email and push notification to BizUser)
+
+        IamApi-->>UI: Confirmation: Request approved
+    else Link not usable (expired, already used, or request no longer pending)
+        IamApi-->>UI: Error: link expired, link already used, or request no longer pending
     end
 ```
 
@@ -310,7 +344,7 @@ sequenceDiagram
 
 **What:** Lead Administrator denies authorization request with optional comments  
 **When:** Lead Admin clicks approval link and chooses to deny  
-**Who:** Scope Authorization Approver (Lead Administrator per EEM)
+**Who:** Scope Authorization Approver (Lead Administrator per EEM); Permission: iam.authorization.deny (scope of the request's organization)
 
 ```mermaid
 ---
@@ -318,29 +352,30 @@ title: IAM - Scope Approver Rejects Authorization Request
 ---
 sequenceDiagram
     actor LeadAdmin as Lead Administrator
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    LeadAdmin->>IAM: Click approval link in email
-    IAM->>IAM: Validate link (not expired, not used, request still Pending)
-    
-    IAM-->>LeadAdmin: Display request details & requested roles
-    
-    LeadAdmin->>IAM: Enter denial reason (optional but recommended)
-    LeadAdmin->>IAM: Click Deny
-    
-    IAM->>IAM: Record denial with comments
-    IAM->>IAM: Mark link as used
-    IAM->>IAM: Update request status to Denied
-    
-    Note over IAM: Request status: Pending > Denied
-    
-    IAM--)EventBus: AuthorizationDenied
-    IAM->>Notification: Send denial email to BizUser (includes reason)
-    IAM->>Notification: Send push notification to BizUser
-    
-    IAM-->>LeadAdmin: Confirmation: Request denied
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    LeadAdmin->>UI: Click approval link in email
+    UI->>IamApi: APP GET /authorization-approvals/{token}
+    Note over IamApi: Validate link (not expired, not used, request still Pending)
+    IamApi-->>UI: Request details and requested roles
+
+    LeadAdmin->>UI: Enter denial reason (optional but recommended), click Deny
+    UI->>IamApi: APP POST /authorization-denials/{token}
+
+    IamApi->>IamApi: Record denial with comments, mark link used, set request to Denied
+
+    Note over IamApi: Request status: Pending to Denied
+
+    IamApi--)EventBus: AuthorizationDenied
+    Note over EventBus: Consumed by Communications (denial email with reason and push notification to BizUser)
+
+    IamApi-->>UI: Confirmation: Request denied
 ```
 
 **Key Decisions:**
@@ -362,7 +397,7 @@ sequenceDiagram
 
 **What:** Business user cancels their own pending authorization request  
 **When:** User changes mind before Lead Admin takes action  
-**Who:** Business User
+**Who:** Business User; Permission: iam.authorization.withdraw (own requests only)
 
 ```mermaid
 ---
@@ -370,27 +405,29 @@ title: IAM - Business User Withdraws Pending Authorization Request
 ---
 sequenceDiagram
     actor BizUser as Business User
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    BizUser->>IAM: Login, navigate to "My Authorization Requests"
-    IAM-->>BizUser: Display pending requests (filtered by user)
-    
-    BizUser->>IAM: Select request
-    BizUser->>IAM: Optional: Enter withdrawal reason
-    BizUser->>IAM: Click Withdraw
-    
-    IAM->>IAM: Validate request is still Pending
-    IAM->>IAM: Mark request as Withdrawn
-    IAM->>IAM: Invalidate approval link
-    
-    Note over IAM: Request status: Pending > Withdrawn
-    
-    IAM--)EventBus: AuthorizationWithdrawn
-    IAM->>Notification: Notify Lead Admin (request withdrawn)
-    
-    IAM-->>BizUser: Confirmation: Request withdrawn
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    BizUser->>UI: Navigate to "My Authorization Requests"
+    UI->>IamApi: APP GET /authorization-requests
+    IamApi-->>UI: Pending requests (filtered by user)
+
+    BizUser->>UI: Select request, optionally enter withdrawal reason, click Withdraw
+    UI->>IamApi: APP POST /authorization-requests/{requestId}/withdraw
+
+    IamApi->>IamApi: Validate request is still Pending, mark Withdrawn, invalidate approval link
+
+    Note over IamApi: Request status: Pending to Withdrawn
+
+    IamApi--)EventBus: AuthorizationWithdrawn
+    Note over EventBus: Consumed by Communications (notifies Lead Admin that the request was withdrawn)
+
+    IamApi-->>UI: Confirmation: Request withdrawn
 ```
 
 **Key Decisions:**
@@ -412,33 +449,32 @@ sequenceDiagram
 
 **What:** Automated expiration of approval links after configured timeout  
 **When:** Scheduled job runs (e.g., nightly) and identifies expired requests  
-**Who:** System (automated)
+**Who:** System (automated); Permission: iam.inactivity.run (job trigger, per iam-api.yml)
 
 ```mermaid
 ---
 title: IAM - Authorization Request Link Expiration (Automated)
 ---
 sequenceDiagram
+    box MiEdWorkforce (AKS)
     participant Scheduler
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    Scheduler->>IAM: Run expiration check job (e.g., nightly)
-    IAM->>IAM: Query AuthorizationRequests<br/>WHERE status = Pending<br/>AND createdAt < (now - expirationThreshold)
-    
-    loop For each expired request
-        IAM->>IAM: Mark request as Expired
-        IAM->>IAM: Invalidate approval link
-        
-        Note over IAM: Request status: Pending > Expired
-        
-        IAM--)EventBus: AuthorizationExpired
-        IAM->>Notification: Send expiration email to BizUser
-        IAM->>Notification: Send notification to Lead Admin (FYI)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
     end
-    
-    IAM->>IAM: Log summary of expired requests
+
+    Scheduler->>IamApi: SVC POST /admin/jobs/expire-requests
+    Note over IamApi: Query AuthorizationRequests<br/>WHERE status = Pending<br/>AND createdAt < (now - expirationThreshold)
+
+    loop For each expired request
+        IamApi->>IamApi: Mark request as Expired, invalidate approval link
+
+        Note over IamApi: Request status: Pending to Expired
+
+        IamApi--)EventBus: AuthorizationExpired
+        Note over EventBus: Consumed by Communications (expiration email to BizUser, FYI notification to Lead Admin)
+    end
+
+    IamApi->>IamApi: Log summary of expired requests
 ```
 
 **Key Decisions:**
@@ -461,7 +497,7 @@ sequenceDiagram
 
 **What:** User adds new roles or Organization to existing authorization  
 **When:** User needs expanded access  
-**Who:** Business User with existing active authorization
+**Who:** Business User with existing active authorization; Permission: iam.authorization.request (any authenticated Business or Worker user)
 
 ```mermaid
 ---
@@ -469,45 +505,43 @@ title: IAM - Business User Request Authorization Update (Add Roles/Organization)
 ---
 sequenceDiagram
     actor BizUser as Business User
-    participant IAM
-    participant OrgsAPI as Organizations API
-    participant Notification
-    participant EventBus
-    
-    BizUser->>IAM: Login, navigate to "Manage My Authorizations"
-    IAM-->>BizUser: Display current authorizations
-    
-    BizUser->>IAM: Click "Request Additional Access"
-    IAM-->>BizUser: Display form showing current authorizations
-    
-    alt Add roles to existing organization
-        BizUser->>IAM: Select organization, add roles
-    else Add new organization
-        BizUser->>IAM: Search for new organization
-        IAM->>OrgsAPI: GET /organizations/search?query={query}&status=Active
-        OrgsAPI-->>IAM: Matching organizations
-        BizUser->>IAM: Select organization and roles
+    box Browser
+    participant UI
     end
-    
-    BizUser->>IAM: Enter justification
-    BizUser->>IAM: Submit update request
-    
-    IAM->>IAM: Validate new roles are compatible with scope
-    IAM->>OrgsAPI: GET /organizations/{organizationCode}
-    OrgsAPI-->>IAM: Organization detail incl. Lead Admin contact
-    
-    IAM->>IAM: Create AuthorizationRequest (Pending) for additions
-    IAM->>IAM: Generate approval link
-    
-    Note over IAM: Request status: > Pending (for additions)<br/>Current authorizations for existing organizations remain Active
-    
-    IAM--)EventBus: AuthorizationRequested
-    IAM->>Notification: Send approval email to Lead Admin
-    IAM->>Notification: Send confirmation email to BizUser
-    
-    IAM-->>BizUser: Confirmation: Update request submitted
-    
-    Note right of IAM: User retains existing access to current organizations<br/>until new request approved
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgsApi as Organizations API
+    participant EventBus as Event Bus
+    end
+
+    BizUser->>UI: Navigate to "Manage My Authorizations", click "Request Additional Access"
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    IamApi-->>UI: Current authorizations
+
+    alt Add roles to existing organization
+        BizUser->>UI: Select organization, add roles
+    else Add new organization
+        BizUser->>UI: Search for new organization
+        UI->>IamApi: APP GET /organizations/search?query={query}&status=Active
+        IamApi->>OrgsApi: SVC GET /organizations/search?query={query}&status=Active
+        OrgsApi-->>IamApi: Matching organizations
+        IamApi-->>UI: Organization suggestions
+        BizUser->>UI: Select organization and roles
+    end
+
+    BizUser->>UI: Enter justification, submit update request
+    UI->>IamApi: APP POST /authorization-requests
+
+    IamApi->>OrgsApi: SVC GET /organizations/{organizationCode}
+    OrgsApi-->>IamApi: Organization detail incl. Lead Admin contact
+
+    Note over IamApi: Validate new roles are compatible with scope<br/>Create AuthorizationRequest (Pending) for additions, generate approval link<br/>Current authorizations for existing organizations remain Active
+
+    IamApi--)EventBus: AuthorizationRequested
+    Note over EventBus: Consumed by Communications (approval email to Lead Admin, confirmation email to BizUser)
+
+    IamApi-->>UI: Confirmation: Update request submitted
+    Note right of IamApi: User retains existing access to current organizations<br/>until new request approved
 ```
 
 **Key Decisions:**
@@ -532,7 +566,7 @@ sequenceDiagram
 
 **What:** User removes their own authorization for an Organization or role  
 **When:** User no longer needs access or leaves position  
-**Who:** Business User
+**Who:** Business User; Permission: iam.authorization.remove-own (own authorizations only)
 
 ```mermaid
 ---
@@ -540,32 +574,33 @@ title: IAM - Business User Self-Remove Authorization (Immediate)
 ---
 sequenceDiagram
     actor BizUser as Business User
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    BizUser->>IAM: Login, navigate to "Manage My Authorizations"
-    IAM-->>BizUser: Display current authorizations (filtered by MiLogin type)
-    
-    BizUser->>IAM: Select authorization(s) to remove
-    BizUser->>IAM: Optional: Enter removal reason
-    BizUser->>IAM: Confirm removal
-    
-    IAM->>IAM: Validate user is removing their own authorization
-    IAM->>IAM: Revoke selected authorization(s)
-    IAM->>IAM: Invalidate authorization cache for user
-    
-    Note over IAM: Authorization status: Active > Inactive<br/>Cache invalidation: immediate
-    
-    IAM--)EventBus: AuthorizationRevoked
-    IAM->>Notification: Send confirmation email to BizUser
-    IAM->>Notification: Notify Lead Admin of self-removal (FYI)
-    
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    BizUser->>UI: Navigate to "Manage My Authorizations"
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    IamApi-->>UI: Current authorizations (filtered by MiLogin type)
+
+    BizUser->>UI: Select authorization(s) to remove, optionally enter removal reason, confirm removal
+    UI->>IamApi: APP DELETE /authorizations/{authorizationId}
+
+    IamApi->>IamApi: Validate user is removing their own authorization<br/>Revoke selected authorization(s), invalidate authorization cache for user
+
+    Note over IamApi: Authorization status: Active to Inactive<br/>Cache invalidation: immediate
+
+    IamApi--)EventBus: AuthorizationRevoked
+    Note over EventBus: Consumed by Communications (confirmation email to BizUser, FYI notification to Lead Admin)
+
     alt User has no remaining authorizations for this MiLogin type
-        IAM-->>BizUser: Redirect to "No Access" page
-        Note over BizUser: User can submit new request<br/>or logout
+        IamApi-->>UI: Redirect to "No Access" page
+        Note over UI: User can submit new request<br/>or logout
     else User has other authorizations
-        IAM-->>BizUser: Remain on authorization management page
+        IamApi-->>UI: Remain on authorization management page
     end
 ```
 
@@ -589,7 +624,7 @@ sequenceDiagram
 
 **What:** Unauthenticated party submits public form to request removal of a user's authorization  
 **When:** Ex-supervisor, HR, or other party needs to revoke access for a user  
-**Who:** External Requesting Individual (no login required)
+**Who:** External Requesting Individual (no login required); Permission: none (public endpoint, external-public)
 
 ```mermaid
 ---
@@ -597,29 +632,27 @@ title: IAM - External Party Request User Authorization Removal (Public Form)
 ---
 sequenceDiagram
     actor Requestor as External Requestor
-    participant PublicForm as Public Website
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    Requestor->>PublicForm: Access public "Authorization Removal Request" form
-    PublicForm-->>Requestor: Display form
-    
-    Requestor->>PublicForm: Enter:<br/>- Target user details (name, email, MiLoginID)<br/>- Requestor info (name, email, relationship)<br/>- Justification/reason<br/>- Attestation (checkbox)
-    Requestor->>PublicForm: Submit request
-    
-    PublicForm->>IAM: Create RemovalRequest (Pending Admin Approval)
-    IAM->>IAM: Store request with status Pending
-    IAM->>IAM: Record requestor identity (IP, timestamp, details)
-    
-    Note over IAM: RemovalRequest status: > Pending Approval
-    
-    IAM--)EventBus: AuthorizationRemovalRequested
-    IAM->>Notification: Send review request to System Admin queue
-    IAM->>Notification: Send confirmation to Requestor email
-    
-    IAM-->>PublicForm: Confirmation: Request submitted (display reference ID)
-    PublicForm-->>Requestor: Display confirmation message + reference ID
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamExtApi as IAM External API
+    participant EventBus as Event Bus
+    end
+
+    Requestor->>UI: Open public "Authorization Removal Request" form
+    Requestor->>UI: Enter target user details (name, email, MiLoginID), requestor info (name, email, relationship), justification, attestation, and submit
+
+    UI->>IamExtApi: EXT POST /removal-requests (public)
+    IamExtApi->>IamExtApi: Store request with status Pending<br/>Record requestor identity (IP, timestamp, details)
+
+    Note over IamExtApi: RemovalRequest status: to Pending Approval
+
+    IamExtApi--)EventBus: AuthorizationRemovalRequested
+    Note over EventBus: Consumed by Communications (review request to System Admin queue, confirmation to Requestor email)
+
+    IamExtApi-->>UI: Confirmation: Request submitted (reference ID)
+    UI-->>Requestor: Display confirmation message + reference ID
 ```
 
 **Key Decisions:**
@@ -639,7 +672,7 @@ sequenceDiagram
 
 **What:** System Admin reviews and approves/denies external authorization removal request  
 **When:** After external party submits removal request  
-**Who:** System Administrator
+**Who:** System Administrator; Permission: iam.removal-request.review (system-wide, System Admin only)
 
 ```mermaid
 ---
@@ -647,44 +680,41 @@ title: IAM - System Admin Reviews External Authorization Removal Request
 ---
 sequenceDiagram
     actor SysAdmin as System Administrator
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    SysAdmin->>IAM: Login, navigate to "Pending Removal Requests" queue
-    IAM-->>SysAdmin: Display pending removal requests
-    
-    SysAdmin->>IAM: Select request, review details
-    IAM-->>SysAdmin: Display:<br/>- Requestor info<br/>- Target user details<br/>- Justification<br/>- Target user's current authorizations
-    
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    SysAdmin->>UI: Navigate to "Pending Removal Requests" queue
+    UI->>IamApi: APP GET /removal-requests
+    IamApi-->>UI: Pending removal requests with requestor info, target user details, justification, and target user's current authorizations
+
+    SysAdmin->>UI: Select request, review details
+
     alt Approve removal
-        SysAdmin->>IAM: Optional: Add admin notes
-        SysAdmin->>IAM: Click Approve
-        
-        IAM->>IAM: Revoke target user's authorization(s)
-        IAM->>IAM: Mark RemovalRequest as Approved
-        IAM->>IAM: Invalidate user authorization cache
-        
-        Note over IAM: Authorization status: Active > Inactive<br/>RemovalRequest status: Pending > Approved
-        
-        IAM--)EventBus: AuthorizationRevoked
-        IAM->>Notification: Notify target user (authorization removed)
-        IAM->>Notification: Notify requestor (request approved)
-        IAM->>Notification: Notify Lead Admin (authorization removed by admin)
-        
-        IAM-->>SysAdmin: Confirmation: Removal approved
-        
+        SysAdmin->>UI: Optionally add admin notes, click Approve
+        UI->>IamApi: APP POST /removal-requests/{referenceId}/approve
+
+        IamApi->>IamApi: Revoke target user's authorization(s), mark RemovalRequest as Approved, invalidate user authorization cache
+
+        Note over IamApi: Authorization status: Active to Inactive<br/>RemovalRequest status: Pending to Approved
+
+        IamApi--)EventBus: AuthorizationRevoked
+        Note over EventBus: Consumed by Communications (notifies target user, requestor, and Lead Admin)
+
+        IamApi-->>UI: Confirmation: Removal approved
     else Deny removal
-        SysAdmin->>IAM: Enter denial reason
-        SysAdmin->>IAM: Click Deny
-        
-        IAM->>IAM: Mark RemovalRequest as Denied
-        
-        Note over IAM: RemovalRequest status: Pending > Denied
-        
-        IAM->>Notification: Notify requestor (request denied with reason)
-        
-        IAM-->>SysAdmin: Confirmation: Removal denied
+        SysAdmin->>UI: Enter denial reason, click Deny
+        UI->>IamApi: APP POST /removal-requests/{referenceId}/deny
+
+        IamApi->>IamApi: Mark RemovalRequest as Denied
+
+        Note over IamApi: RemovalRequest status: Pending to Denied<br/>Requestor is notified of the denial with reason
+
+        IamApi-->>UI: Confirmation: Removal denied
     end
 ```
 
@@ -709,37 +739,34 @@ sequenceDiagram
 
 **What:** Scheduled job automatically deactivates user accounts inactive beyond configured threshold  
 **When:** Scheduled job runs (e.g., first Friday of month)  
-**Who:** System (automated)
+**Who:** System (automated); Permission: iam.inactivity.run (job trigger)
 
 ```mermaid
 ---
 title: IAM - Automated Inactivity-Based Account Deactivation
 ---
 sequenceDiagram
+    box MiEdWorkforce (AKS)
     participant Scheduler
-    participant IAM
-    participant Notification
-    participant EventBus
-    
-    Scheduler->>IAM: Run deactivation job (per InactivityPolicy schedule)
-    IAM->>IAM: Load active InactivityPolicy configuration
-    IAM->>IAM: Query users WHERE:<br/>- lastLoginAt < (now - inactivityThreshold)<br/>- MiLogin type matches policy filter<br/>- Authorization status = Active
-    
-    loop For each inactive user
-        IAM->>IAM: Revoke all authorizations for user
-        IAM->>IAM: Mark user account as Inactive
-        IAM->>IAM: Invalidate user authorization cache
-        
-        Note over IAM: Authorization status: Active > Inactive<br/>Account status: Active > Inactive
-        
-        IAM--)EventBus: UserAccountDeactivated
-        IAM--)EventBus: AuthorizationRevoked (one per authorization)
-        IAM->>Notification: Send deactivation email to user
-        IAM->>Notification: Notify Lead Admin(s) of deactivation
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
     end
-    
-    IAM->>IAM: Generate deactivation summary report
-    IAM->>Notification: Send summary report to System Admins
+
+    Scheduler->>IamApi: SVC POST /admin/jobs/deactivate-inactive-users
+    IamApi->>IamApi: Load active InactivityPolicy configuration<br/>Query users WHERE:<br/>- lastLoginAt < (now - inactivityThreshold)<br/>- MiLogin type matches policy filter<br/>- Authorization status = Active
+
+    loop For each inactive user
+        IamApi->>IamApi: Revoke all authorizations for user, mark user account as Inactive, invalidate user authorization cache
+
+        Note over IamApi: Authorization status: Active to Inactive<br/>Account status: Active to Inactive
+
+        IamApi--)EventBus: UserAccountDeactivated
+        IamApi--)EventBus: AuthorizationRevoked (one per authorization)
+        Note over EventBus: Consumed by Communications (deactivation email to user, notification to Lead Admin(s))
+    end
+
+    IamApi->>IamApi: Generate deactivation summary report
+    Note over IamApi: Summary report is sent to System Admins through Communications
 ```
 
 **Key Decisions:**
@@ -765,7 +792,7 @@ sequenceDiagram
 
 **What:** System Admin directly grants authorization without approval workflow  
 **When:** Emergency access needed or special circumstances (e.g., manual grant for testing)  
-**Who:** System Administrator
+**Who:** System Administrator; Permission: iam.authorization.grant (system-wide, System Admin only)
 
 ```mermaid
 ---
@@ -773,44 +800,43 @@ title: IAM - System Admin Manual Authorization Grant
 ---
 sequenceDiagram
     actor SysAdmin as System Administrator
-    participant IAM
-    participant OrgsAPI as Organizations API
-    participant Notification
-    participant EventBus
-    
-    SysAdmin->>IAM: Navigate to "Manage User Authorizations"
-    IAM-->>SysAdmin: Display user search
-    
-    SysAdmin->>IAM: Search for user (by email, MiLoginID, or name)
-    IAM-->>SysAdmin: Display user details and current authorizations
-    
-    SysAdmin->>IAM: Click "Grant New Authorization"
-    IAM-->>SysAdmin: Display authorization form
-    
-    SysAdmin->>IAM: Search for organization
-    IAM->>OrgsAPI: GET /organizations/search?query={query}
-    OrgsAPI-->>IAM: Matching organizations
-    
-    SysAdmin->>IAM: Select organization, select roles
-    IAM->>IAM: Validate role-scope compatibility
-    
-    SysAdmin->>IAM: Enter justification/notes (required)
-    SysAdmin->>IAM: Submit
-    
-    IAM->>IAM: Create Authorization (Active, bypass approval workflow)
-    IAM->>IAM: Record manual grant in audit log
-    IAM->>IAM: Invalidate user authorization cache
-    
-    Note over IAM: Authorization status: > Active<br/>(No Pending state, no approval workflow)<br/>GrantedBy: SysAdmin ID
-    
-    IAM--)EventBus: AuthorizationApproved (manualGrant=true)
-    IAM->>Notification: Notify user (access granted)
-    
-    IAM->>OrgsAPI: GET /organizations/{organizationCode}
-    OrgsAPI-->>IAM: Organization detail incl. Lead Admin contact
-    IAM->>Notification: Notify Lead Admin (admin-granted access)
-    
-    IAM-->>SysAdmin: Confirmation: Authorization granted
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgsApi as Organizations API
+    participant EventBus as Event Bus
+    end
+
+    SysAdmin->>UI: Navigate to "Manage User Authorizations", search for user (by email, MiLoginID, or name)
+    UI->>IamApi: APP GET /users/search
+    IamApi-->>UI: Matching users
+
+    SysAdmin->>UI: Select user
+    UI->>IamApi: APP GET /users/{userId}
+    IamApi-->>UI: User details and current authorizations
+
+    SysAdmin->>UI: Click "Grant New Authorization", search for organization
+    UI->>IamApi: APP GET /organizations/search?query={query}
+    IamApi->>OrgsApi: SVC GET /organizations/search?query={query}
+    OrgsApi-->>IamApi: Matching organizations
+    IamApi-->>UI: Organization suggestions
+
+    SysAdmin->>UI: Select organization, select roles, enter justification/notes (required), submit
+    UI->>IamApi: APP POST /authorizations/manual-grant
+
+    IamApi->>IamApi: Validate role-scope compatibility<br/>Create Authorization (Active, bypass approval workflow)<br/>Record manual grant in audit log, invalidate user authorization cache
+
+    Note over IamApi: Authorization status: to Active<br/>(No Pending state, no approval workflow)<br/>GrantedBy: SysAdmin ID
+
+    IamApi--)EventBus: AuthorizationApproved (manualGrant=true)
+
+    IamApi->>OrgsApi: SVC GET /organizations/{organizationCode}
+    OrgsApi-->>IamApi: Organization detail incl. Lead Admin contact
+    Note over EventBus: Consumed by Communications (notifies user of access granted, notifies Lead Admin of admin-granted access)
+
+    IamApi-->>UI: Confirmation: Authorization granted
 ```
 
 **Key Decisions:**
@@ -835,7 +861,7 @@ sequenceDiagram
 
 **What:** Citizen User updates their own demographic data, subject to active-employment field locking, and Mi-Key re-matching  
 **When:** Citizen navigates to Account Details > Personal Information > Update personal information  
-**Who:** Citizen User with an established Unique ID
+**Who:** Citizen User with an established Unique ID; Permission: iam.citizen-identity.submit-request (citizen users only)
 
 ```mermaid
 ---
@@ -843,48 +869,34 @@ title: IAM - Citizen User Update Account Demographics
 ---
 sequenceDiagram
     actor Citizen
-    participant IAM
-    participant IdentityRes as Identity Resolution
-    participant StaffingAPI as Staffing (if active employment)
-    participant Notification
-    participant EventBus
-
-    Citizen->>IAM: Navigate to Personal Information > Update personal information
-    IAM-->>Citizen: Display demographic fields (SSN masked to last 4)
-
-    alt Unique ID associated with active employment
-        IAM-->>Citizen: Primary Demographic fields read-only<br/>("contact your district to update")
-        Citizen->>IAM: Edit Secondary/Contact fields only
-    else No active employment
-        Citizen->>IAM: Edit Primary, Secondary, and/or Contact fields<br/>(may also uncheck "No SSN" and supply SSN, if applicable)
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
     end
 
-    Citizen->>IAM: Agree to Attestation, click Submit
-    IAM->>IAM: Validate against Identity Validations rules
+    Citizen->>UI: Edit demographic fields, agree to Attestation, click Submit<br/>(Primary fields read-only if Unique ID has active employment, SSN masked to last 4)
+    UI->>IamApi: APP POST /citizen-identity/account-update
+    Note over IamApi: Validate against Identity Validations rules<br/>Create IdentityResolutionRequest (origin=CitizenSelfService, type=AccountUpdate, PendingMiKeyMatch)
+    IamApi->>MiKey: OUT REST submit updated demographic data (Mi-Key Assignment Service)
+    MiKey-->>IamApi: Probabilistic match result against Master Record
 
-    alt Validation fails
-        IAM-->>Citizen: Display errors; not sent to Mi-Key, not persisted
-    else Validation passes
-        IAM->>IAM: Create IdentityResolutionRequest (origin=CitizenSelfService, type=AccountUpdate, PendingMiKeyMatch)
-        IAM->>IdentityRes: Submit updated demographic data (Mi-Key Assignment Service)
-        IdentityRes->>IdentityRes: Perform Mi-Key probabilistic matching against Master Record
-
-        alt Match (exact or above threshold)
-            IdentityRes-->>IAM: Match confirmed; Master Record updated with non-matching fields
-            IAM->>IAM: IdentityResolutionRequest.status > Matched
-            IAM--)EventBus: PersonRecordUpdated
-            IAM->>Notification: Notify citizen: update successful (fields not itemized)
-            opt Active employment AND Secondary fields changed
-                IAM--)EventBus: PersonRecordUpdated (affectsActiveEmployment=true)
-                Notification->>StaffingAPI: Notify employing district(s) of update
-            end
-        else Near Match
-            IAM->>IAM: IdentityResolutionRequest.status > RequiresResolution<br/>Lock Primary + Secondary fields; Contact fields remain editable
-            IAM--)EventBus: IdentityResolutionRequiresReview
-            IAM->>Notification: Notify citizen: update pending review
-            IAM-->>Citizen: Confirmation: update submitted, pending review<br/>(dashboard access NOT blocked)
-            Note over IAM: See sequence: Identity Administrator - Resolve Identity Request
-        end
+    alt Match (exact or above threshold)
+        Note over IamApi: Master Record updated with non-matching fields<br/>IdentityResolutionRequest.status to Matched
+        IamApi--)EventBus: PersonRecordUpdated
+        Note over EventBus: Consumed by Communications (notifies citizen: update successful, fields not itemized)<br/>With active employment AND Secondary fields changed: affectsActiveEmployment=true, Staffing notifies employing district(s)
+        IamApi-->>UI: Update successful
+    else Near Match
+        IamApi->>IamApi: IdentityResolutionRequest.status to RequiresResolution<br/>Lock Primary + Secondary fields, Contact fields remain editable
+        IamApi--)EventBus: IdentityResolutionRequiresReview
+        Note over EventBus: Consumed by Communications (notifies citizen: update pending review)
+        IamApi-->>UI: Confirmation: update submitted, pending review<br/>(dashboard access NOT blocked)
+        Note over IamApi: See sequence: Identity Administrator - Resolve Identity Request
     end
 ```
 
@@ -901,7 +913,7 @@ sequenceDiagram
 - `IdentityResolutionRequiresReview` - Fires on Near Match
 
 **Error Scenarios:**
-- Validation failure > user corrects or cancels
+- Validation failure > user corrects or cancels (errors displayed, not sent to Mi-Key, not persisted)
 - Mi-Key unavailable > error displayed, retry allowed
 
 ---
@@ -910,7 +922,7 @@ sequenceDiagram
 
 **What:** Citizen cancels their own pending Account Update request while it is `RequiresResolution`  
 **When:** Citizen views request status in their history and chooses to cancel  
-**Who:** Citizen User
+**Who:** Citizen User; Permission: iam.citizen-identity.cancel-own-request (own requests only)
 
 ```mermaid
 ---
@@ -918,15 +930,23 @@ title: IAM - Citizen User Cancels Pending Update Request
 ---
 sequenceDiagram
     actor Citizen
-    participant IAM
-    participant EventBus
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
 
-    Citizen->>IAM: View pending request in history, click Cancel
-    IAM->>IAM: Validate request is type=AccountUpdate and status=RequiresResolution
-    IAM->>IAM: IdentityResolutionRequest.status > Cancelled
-    IAM->>IAM: Unlock Primary/Secondary fields
-    IAM--)EventBus: IdentityRequestCancelled
-    IAM-->>Citizen: Confirmation: request cancelled
+    Citizen->>UI: Open request history
+    UI->>IamApi: APP GET /citizen-identity/requests/my-requests
+    IamApi-->>UI: Own identity requests and status
+
+    Citizen->>UI: Click Cancel on pending request
+    UI->>IamApi: APP POST /citizen-identity/requests/{requestId}/cancel
+    IamApi->>IamApi: Validate request is type=AccountUpdate and status=RequiresResolution<br/>IdentityResolutionRequest.status to Cancelled, unlock Primary/Secondary fields
+    IamApi--)EventBus: IdentityRequestCancelled
+    IamApi-->>UI: Confirmation: request cancelled
 ```
 
 **Error Scenarios:**
@@ -941,84 +961,78 @@ sequenceDiagram
 (Account Creation, Account Update, or business-user New ID escalation) or a Link ID
 request — and resolves it. This is the single resolution workflow for identity requests
 of any origin; there is one review queue (the domain's own filtered list of
-`RequiresResolution` items), not a separate one per requesting domain.
+`RequiresResolution` items), not a separate one per requesting domain. This section covers
+the Near Match requests (Match, Create New, Deny/Cancel).
 **When:** Item appears in the list of identity resolution requests requiring review
 (`GET /identity-resolution/requests?status=RequiresResolution`)
-**Who:** Identity Administrator
+**Who:** Identity Administrator; Permission: iam.identity-admin.view-pending-requests (list), iam.identity-admin.resolve-request (resolve), both system-wide
+
+See also: Identity Administrator - Resolve Link ID Request
 
 ```mermaid
 ---
-title: IAM - Identity Administrator Resolves Identity Request
+title: IAM - Resolve Identity Request - Match, Create New, Deny
 ---
 sequenceDiagram
     actor IdAdmin as Identity Administrator
-    participant IAM
-    participant IdentityRes as Identity Resolution
-    participant StaffingAPI as Staffing
-    participant Notification
-    participant EventBus
-
-    IdAdmin->>IAM: Open list of identity resolution requests requiring review
-    IAM-->>IdAdmin: Display "Requires Resolution" items (Unresolved tab; any origin/type)
-    IdAdmin->>IAM: Select item
-    IAM-->>IdAdmin: Display submitted data alongside Mi-Key potential match(es), or Link ID's primary/secondary record comparison
-
-    alt requestType = AccountCreation | AccountUpdate | NewId
-        alt Match - associate with existing Unique ID
-            IdAdmin->>IAM: Select "Match", choose existing Unique ID
-            IAM->>IdentityRes: Resolve near match: use existing Unique ID
-            IdentityRes-->>IAM: Confirmed
-            IAM->>IAM: IdentityResolutionRequest.status > Resolved (resolutionOutcome=Match)
-        else Create New - no true match
-            IdAdmin->>IAM: Select "Create New"
-            IAM->>IdentityRes: Resolve near match: create new Unique ID
-            IdentityRes-->>IAM: New Unique ID returned
-            IAM->>IAM: IdentityResolutionRequest.status > Resolved (resolutionOutcome=CreateNew)
-        else Deny/Cancel - submission invalid
-            IdAdmin->>IAM: Select "Cancel"/"Deny", enter explanatory notes
-            IAM->>IAM: IdentityResolutionRequest.status > Cancelled|Denied (resolutionOutcome=Cancel)
-        end
-
-        IAM--)EventBus: IdentityResolutionCompleted (or IdentityRequestDenied)
-        IAM->>Notification: Notify requester of outcome (email + on-screen)
-
-        alt Request origin = CitizenSelfService, type = AccountCreation, outcome != Cancel
-            IAM->>IAM: Auto-create Individual scope authorization (see Initial Sign-In sequence)
-            IAM--)EventBus: NewCitizenUserAuthorized
-        else Request origin = CitizenSelfService, type = AccountUpdate, outcome = Match/CreateNew
-            IAM->>IAM: Apply the previously-held update to the Person Record
-            IAM--)EventBus: PersonRecordUpdated
-            opt Active employment
-                Notification->>StaffingAPI: Notify employing district(s)
-            end
-        else Request origin = BusinessUserStaffing, type = NewId, outcome = CreateNew
-            StaffingAPI->>StaffingAPI: Attach assignedUniqueId to EmployeeRoster record (on IdentityResolutionCompleted)
-        end
-
-    else requestType = LinkId
-        alt Approve - Mi-Key merges secondary into primary
-            IdAdmin->>IAM: Select "Approve Link"
-            IAM->>IdentityRes: Retire secondary Unique ID, merge into primary
-            IdentityRes-->>IAM: Merge confirmed
-            IAM->>IAM: IdentityResolutionRequest.status > Resolved (resolutionOutcome=ApproveLink)
-            IAM--)EventBus: IdentityResolutionCompleted
-            StaffingAPI->>StaffingAPI: Merge all associated data (employment history, credentials) to primary Unique ID
-            Notification->>StaffingAPI: Notify requesting district, any citizen account, and any other district reporting either ID
-        else Deny
-            IdAdmin->>IAM: Select "Deny", enter denial reason
-            IAM->>IAM: IdentityResolutionRequest.status > Denied
-            IAM--)EventBus: IdentityRequestDenied
-            Notification->>StaffingAPI: Notify requesting district of denial reason
-        end
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
     end
 
-    IAM-->>IdAdmin: Confirmation: request resolved
+    IdAdmin->>UI: Open list of identity resolution requests requiring review
+    UI->>IamApi: APP GET /identity-resolution/requests?status=RequiresResolution
+    IamApi-->>UI: "Requires Resolution" items (Unresolved tab, any origin/type) with submitted data and Mi-Key potential match(es)
+
+    IdAdmin->>UI: Select item, choose Match, Create New, or Cancel/Deny (notes required on Cancel/Deny)
+    UI->>IamApi: APP POST /identity-resolution/requests/{requestId}/admin-resolve
+
+    alt Match - associate with existing Unique ID
+        IamApi->>MiKey: OUT REST resolve near match (use existing Unique ID)
+        MiKey-->>IamApi: Confirmed
+        IamApi->>IamApi: IdentityResolutionRequest.status to Resolved (resolutionOutcome=Match)
+    else Create New - no true match
+        IamApi->>MiKey: OUT REST resolve near match (create new Unique ID)
+        MiKey-->>IamApi: New Unique ID returned
+        IamApi->>IamApi: IdentityResolutionRequest.status to Resolved (resolutionOutcome=CreateNew)
+    else Deny or Cancel - submission invalid
+        IamApi->>IamApi: IdentityResolutionRequest.status to Cancelled or Denied (resolutionOutcome=Cancel)
+    end
+
+    IamApi--)EventBus: IdentityResolutionCompleted (or IdentityRequestDenied)
+    Note over EventBus: Consumed by Communications (notifies requester of outcome, email and on-screen)
+
+    opt Origin CitizenSelfService, type AccountCreation, outcome not Cancel
+        IamApi->>IamApi: Auto-create Individual scope authorization (see Citizen User - Account Creation (Mi-Key Match))
+        IamApi--)EventBus: NewCitizenUserAuthorized
+    end
+
+    opt Origin CitizenSelfService, type AccountUpdate, outcome Match or CreateNew
+        IamApi->>IamApi: Apply the previously-held update to the Person Record
+        IamApi--)EventBus: PersonRecordUpdated
+    end
+
+    IamApi-->>UI: Confirmation: request resolved
 ```
 
 **Key Decisions:**
 - **No candidate data shown to a citizen at any point** for their own request (see Near Match Resolution rule in `iam-domain.md`); business-user requesters do see candidate data for their own submissions (see Business User Near Match Self-Resolution rule)
 - **Explanatory notes required on Cancel/Deny:** the admin must provide notes the requester receives, distinguishing a deliberate denial from a silent one
 - **List shape:** displays Unresolved / Resolved tabs (backed by the `status` filter on the domain's own request list endpoint), spanning every request type and origin; Resolved tab is filterable by outcome for historical review
+
+**Follow-ups by origin (after the outcome is published):**
+
+| Request origin | Type | Outcome | Follow-up |
+|---|---|---|---|
+| CitizenSelfService | AccountCreation | Match, CreateNew | IAM auto-creates the Individual scope authorization and publishes `NewCitizenUserAuthorized` |
+| CitizenSelfService | AccountUpdate | Match, CreateNew | IAM applies the previously-held update to the Person Record and publishes `PersonRecordUpdated`; with active employment, Staffing notifies the employing district(s) |
+| BusinessUserStaffing | NewId | CreateNew | Staffing attaches `assignedUniqueId` to the EmployeeRoster record on `IdentityResolutionCompleted` |
 
 **State Changes:**
 - IdentityResolutionRequest status: `RequiresResolution` > `Resolved` | `Denied` | `Cancelled`
@@ -1033,73 +1047,123 @@ sequenceDiagram
 
 ---
 
+## Identity Administrator - Resolve Link ID Request
+
+**What:** Identity Administrator reviews a Link ID request and either approves it (Mi-Key retires the secondary Unique ID and merges it into the primary) or denies it. Link ID requests share the single review queue described in Identity Administrator - Resolve Identity Request.  
+**When:** Item appears in the list of identity resolution requests requiring review
+(`GET /identity-resolution/requests?status=RequiresResolution`)  
+**Who:** Identity Administrator; Permission: iam.identity-admin.view-pending-requests (list), iam.identity-admin.resolve-request (resolve), both system-wide
+
+See also: Identity Administrator - Resolve Identity Request; Business User - Request Link ID
+
+```mermaid
+---
+title: IAM - Resolve Identity Request - Link ID
+---
+sequenceDiagram
+    actor IdAdmin as Identity Administrator
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
+    end
+
+    IdAdmin->>UI: Open list of identity resolution requests requiring review
+    UI->>IamApi: APP GET /identity-resolution/requests?status=RequiresResolution
+    IamApi-->>UI: Link ID request with primary/secondary record comparison
+
+    IdAdmin->>UI: Select item, choose Approve Link or Deny (denial reason required on Deny)
+    UI->>IamApi: APP POST /identity-resolution/requests/{requestId}/admin-resolve
+
+    alt Approve - Mi-Key merges secondary into primary
+        IamApi->>MiKey: OUT REST retire secondary Unique ID, merge into primary
+        MiKey-->>IamApi: Merge confirmed
+        IamApi->>IamApi: IdentityResolutionRequest.status to Resolved (resolutionOutcome=ApproveLink)
+        IamApi--)EventBus: IdentityResolutionCompleted
+        Note over EventBus: Consumed by Staffing (merges all associated data to the primary Unique ID) and Communications (notifies requesting district, any citizen account, and any other district reporting either ID)
+    else Deny
+        IamApi->>IamApi: IdentityResolutionRequest.status to Denied
+        IamApi--)EventBus: IdentityRequestDenied
+        Note over EventBus: Consumed by Communications (notifies requesting district of the denial reason)
+    end
+
+    IamApi-->>UI: Confirmation: request resolved
+```
+
+**Key Decisions:**
+- **Explanatory notes required on Deny:** the admin must provide notes the requester receives, distinguishing a deliberate denial from a silent one
+- **List shape:** Link ID requests appear in the same Unresolved / Resolved tabs as every other request type and origin
+
+**State Changes:**
+- IdentityResolutionRequest status: `RequiresResolution` > `Resolved` | `Denied`
+
+**Events Published:**
+- `IdentityResolutionCompleted` or `IdentityRequestDenied`
+
+**Error Scenarios:**
+- Mi-Key unavailable during resolution call > error displayed, retry allowed; item remains `RequiresResolution` in the list
+
+---
+
 ## Business User - Request New ID (Near Match Escalation)
 
 **What:** A district user adding a new employee (or, via Staffing's own flow, updating an
 employee's demographics) triggers Mi-Key identity resolution through IAM; on a Near Match
 they review the candidate(s) and either self-resolve or escalate for Identity
-Administrator review.
+Administrator review. This section covers the submission and Mi-Key match outcome.
 **When:** During Staffing's "Add New Employee" workflow, after Staffing submits the
 employee's demographic data to IAM for identity resolution.
-**Who:** Staffing Authorized User (School District role)
+**Who:** Staffing Authorized User (School District role); Permission: staffing.employee-roster.add-employee (or staffing.employee-roster.update-demographics for demographic updates), enforced on the Staffing call
+
+See also: Business User - Request New ID - Near Match Self-Resolve or Escalate
 
 ```mermaid
 ---
-title: IAM - Business User Request New ID (Near Match Escalation)
+title: IAM - Request New ID - Submit and Match
 ---
 sequenceDiagram
     actor DistrictUser
-    participant StaffingAPI
-    participant IAM
-    participant IdentityRes as Identity Resolution
-    participant CommAPI
-    participant EventBus
-
-    Note over StaffingAPI,IAM: Staffing has already created the employee record (status: Pending) and validated demographics locally
-
-    StaffingAPI->>IAM: POST /identity-resolution/requests (origin=BusinessUserStaffing, type=NewId, employeeRecordId, demographics)
-    IAM->>IAM: Create IdentityResolutionRequest (PendingMiKeyMatch)
-    IAM->>IdentityRes: Submit demographic payload (Mi-Key Assignment Service)
-
-    alt Mi-Key returns Match
-        IdentityRes-->>IAM: 200 OK {uniqueId, matchScore}
-        IAM->>IAM: IdentityResolutionRequest.status > Matched
-        IAM--)EventBus: IdentityResolutionCompleted (resolutionOutcome=Match, assignedUniqueId)
-        IAM-->>StaffingAPI: 200 OK {requestId, status: Matched, uniqueId}
-    else Mi-Key returns No Match (New ID Created)
-        IdentityRes-->>IAM: 201 Created {newUniqueId}
-        IAM->>IAM: IdentityResolutionRequest.status > NoMatchCreated
-        IAM--)EventBus: IdentityResolutionCompleted (resolutionOutcome=CreateNew, assignedUniqueId)
-        IAM-->>StaffingAPI: 201 Created {requestId, status: NoMatchCreated, uniqueId}
-    else Mi-Key returns Near Match
-        IdentityRes-->>IAM: 202 Accepted {potentialMatches[]}
-        IAM->>IAM: IdentityResolutionRequest.status > RequiresResolution
-        IAM-->>StaffingAPI: 202 Accepted {requestId, potentialMatches[]}
-        StaffingAPI-->>DistrictUser: Show near-match resolution screen (backed by IAM)
-
-        alt District user selects existing potential match (self-resolve)
-            DistrictUser->>IAM: POST /identity-resolution/requests/{requestId}/resolve (selectedUniqueId)
-            IAM->>IdentityRes: Confirm match (submittedData, selectedUniqueId)
-            IdentityRes-->>IAM: 200 OK {confirmedUniqueId}
-            IAM->>IAM: IdentityResolutionRequest.status > Resolved (self_resolved=true)
-            IAM--)EventBus: IdentityResolutionCompleted (resolutionOutcome=Match, assignedUniqueId)
-            IAM-->>DistrictUser: 200 OK {uniqueId}
-
-        else District user rejects all potentials, escalates
-            DistrictUser->>IAM: POST /identity-resolution/requests/{requestId}/escalate (justificationText)
-            IAM->>IAM: IdentityResolutionRequest remains RequiresResolution; now appears in the Identity Administrator review list
-            IAM--)EventBus: IdentityResolutionRequiresReview
-            IAM--)CommAPI: Publish notification event
-            IAM-->>DistrictUser: 202 Accepted (pending Identity Administrator review)
-
-            Note over IAM: See sequence: Identity Administrator - Resolve Identity Request
-
-            IAM--)EventBus: IdentityResolutionCompleted (resolutionOutcome=CreateNew) or IdentityRequestDenied
-            CommAPI--)DistrictUser: Email notification of outcome
-        end
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant StaffingApi as Staffing API
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
     end
 
-    Note over StaffingAPI: On IdentityResolutionCompleted, Staffing attaches assignedUniqueId to the EmployeeRoster record (see staffing-sequences.md)
+    Note over StaffingApi,IamApi: Staffing has already created the employee record (status: Pending) and validated demographics locally
+
+    StaffingApi->>IamApi: SVC POST /identity-resolution/requests
+    IamApi->>IamApi: Create IdentityResolutionRequest (PendingMiKeyMatch)
+    IamApi->>MiKey: OUT REST submit demographic payload (Mi-Key Assignment Service)
+    MiKey-->>IamApi: Match result
+
+    alt Mi-Key returns Match
+        IamApi->>IamApi: IdentityResolutionRequest.status to Matched
+        IamApi--)EventBus: IdentityResolutionCompleted (resolutionOutcome=Match, assignedUniqueId)
+        IamApi-->>StaffingApi: 200 OK {requestId, status: Matched, uniqueId}
+    else Mi-Key returns No Match (New ID Created)
+        IamApi->>IamApi: IdentityResolutionRequest.status to NoMatchCreated
+        IamApi--)EventBus: IdentityResolutionCompleted (resolutionOutcome=CreateNew, assignedUniqueId)
+        IamApi-->>StaffingApi: 201 Created {requestId, status: NoMatchCreated, uniqueId}
+    else Mi-Key returns Near Match
+        IamApi->>IamApi: IdentityResolutionRequest.status to RequiresResolution
+        IamApi-->>StaffingApi: 202 Accepted {requestId, potentialMatches[]}
+        StaffingApi-->>UI: Near-match resolution screen (backed by IAM)
+        UI-->>DistrictUser: Show potential matches
+        Note over IamApi: See sequence: Business User - Request New ID - Near Match Self-Resolve or Escalate
+    end
+
+    Note over EventBus: Consumed by Staffing: on IdentityResolutionCompleted, Staffing attaches assignedUniqueId to the EmployeeRoster record (see staffing-sequences.md)
 ```
 
 **Key Decisions:**
@@ -1108,8 +1172,68 @@ sequenceDiagram
 - Staffing consumes `IdentityResolutionCompleted` (or `IdentityRequestDenied`) asynchronously to update its own `EmployeeRoster` record; it does not poll or hold local matching state
 
 **State Changes:**
-- IdentityResolutionRequest: `None` > `PendingMiKeyMatch` > `Matched` | `NoMatchCreated` | `RequiresResolution` > `Resolved` | `Denied`
+- IdentityResolutionRequest: `None` > `PendingMiKeyMatch` > `Matched` | `NoMatchCreated` | `RequiresResolution`
 - EmployeeRoster.unique_id (staffing, on completion): `NULL` > assigned Unique ID
+
+**Events Published:**
+- `IdentityResolutionCompleted` - Notifies Staffing that a Unique ID has been assigned
+
+**Error Scenarios:**
+- District user closes resolution screen without action > Employee record remains Pending; user must return to complete
+
+---
+
+## Business User - Request New ID - Near Match Self-Resolve or Escalate
+
+**What:** On a Near Match, the district user reviews the candidate(s) and either self-resolves by selecting a potential match or rejects all potentials and escalates for Identity Administrator review.  
+**When:** After IAM returns a Near Match with potential matches (see Business User - Request New ID (Near Match Escalation)).  
+**Who:** Staffing Authorized User (School District role); Permission: staffing.employee-roster.add-employee (or staffing.employee-roster.update-demographics for demographic updates)
+
+See also: Business User - Request New ID (Near Match Escalation); Identity Administrator - Resolve Identity Request
+
+```mermaid
+---
+title: IAM - Request New ID - Near Match Self-Resolve or Escalate
+---
+sequenceDiagram
+    actor DistrictUser
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
+    end
+
+    alt District user selects existing potential match (self-resolve)
+        DistrictUser->>UI: Select a potential match
+        UI->>IamApi: APP POST /identity-resolution/requests/{requestId}/resolve
+        IamApi->>MiKey: OUT REST confirm match (submittedData, selectedUniqueId)
+        MiKey-->>IamApi: Confirmed Unique ID
+        IamApi->>IamApi: IdentityResolutionRequest.status to Resolved (self_resolved=true)
+        IamApi--)EventBus: IdentityResolutionCompleted (resolutionOutcome=Match, assignedUniqueId)
+        IamApi-->>UI: 200 OK {uniqueId}
+    else District user rejects all potentials, escalates
+        DistrictUser->>UI: Reject all potentials, enter justification
+        UI->>IamApi: APP POST /identity-resolution/requests/{requestId}/escalate
+        IamApi->>IamApi: IdentityResolutionRequest remains RequiresResolution<br/>Now appears in the Identity Administrator review list
+        IamApi--)EventBus: IdentityResolutionRequiresReview
+        IamApi-->>UI: 202 Accepted (pending Identity Administrator review)
+        Note over IamApi: See sequence: Identity Administrator - Resolve Identity Request
+        IamApi--)EventBus: IdentityResolutionCompleted (resolutionOutcome=CreateNew) or IdentityRequestDenied
+        Note over EventBus: Consumed by Communications (email notification of outcome to the district user)
+    end
+```
+
+**Key Decisions:**
+- District user has final decision on match selection and can self-resolve without Identity Administrator involvement, unlike a citizen; Identity Administrator involvement is required only when the user cannot find a correct match among Mi-Key's potentials
+- Staffing consumes `IdentityResolutionCompleted` (or `IdentityRequestDenied`) asynchronously to update its own `EmployeeRoster` record; it does not poll or hold local matching state
+
+**State Changes:**
+- IdentityResolutionRequest: `RequiresResolution` > `Resolved` | `Denied`
 
 **Events Published:**
 - `IdentityResolutionRequiresReview` - Notifies Identity Administrators that a new item requires review
@@ -1119,7 +1243,6 @@ sequenceDiagram
 **Error Scenarios:**
 - District user selects potential match but Mi-Key confirm fails > 500 Internal Server Error, user retries
 - Identity Administrator denies new ID > `IdentityRequestDenied`; district user reviews potential matches again or contacts support
-- District user closes resolution screen without action > Employee record remains Pending; user must return to complete
 
 ---
 
@@ -1130,7 +1253,7 @@ person be merged, with a required justification. The request is always resolved 
 Identity Administrator.
 **When:** District user, viewing an employee record, identifies what appears to be a
 duplicate Unique ID for the same individual.
-**Who:** Staffing Authorized User (School District role); Identity Administrator
+**Who:** Staffing Authorized User (School District role); Identity Administrator; Permission: staffing.employee-roster.add-employee or staffing.employee-roster.update-demographics (the only keys on the IAM submission operation, no Link ID specific key)
 
 ```mermaid
 ---
@@ -1138,29 +1261,32 @@ title: IAM - Business User Request Link ID
 ---
 sequenceDiagram
     actor DistrictUser
-    participant StaffingAPI
-    participant IAM
-    participant IdentityRes as Identity Resolution
-    participant CommAPI
-    participant EventBus
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant StaffingApi as Staffing API
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
 
-    DistrictUser->>StaffingAPI: Select employee record > "Request Link ID" (primaryUniqueId, secondaryUniqueId, justification)
-    StaffingAPI->>IAM: POST /identity-resolution/requests (origin=BusinessUserStaffing, type=LinkId, primaryUniqueId, secondaryUniqueId, justification)
-    IAM->>IAM: Create IdentityResolutionRequest (status: RequiresResolution) — no Mi-Key match phase
-    IAM--)EventBus: IdentityResolutionRequiresReview
-    IAM-->>StaffingAPI: 202 Accepted {requestId, status: RequiresResolution}
-    StaffingAPI-->>DistrictUser: Display pending notification with expected timeline
+    DistrictUser->>UI: Select employee record, "Request Link ID" (primaryUniqueId, secondaryUniqueId, justification)
+    UI->>StaffingApi: APP POST /employee-roster/{employeeId}/link-id-requests
+    StaffingApi->>IamApi: SVC POST /identity-resolution/requests
+    IamApi->>IamApi: Create IdentityResolutionRequest (status: RequiresResolution) — no Mi-Key match phase
+    IamApi--)EventBus: IdentityResolutionRequiresReview
+    IamApi-->>StaffingApi: 202 Accepted {requestId, status: RequiresResolution}
+    StaffingApi-->>UI: Pending notification with expected timeline
+    UI-->>DistrictUser: Display pending notification with expected timeline
 
-    Note over IAM: See sequence: Identity Administrator - Resolve Identity Request<br/>(Approve: Mi-Key retires secondary, merges to primary. Deny: denial reason returned.)
+    Note over IamApi: See sequence: Identity Administrator - Resolve Link ID Request<br/>(Approve: Mi-Key retires secondary, merges to primary. Deny: denial reason returned.)
 
     alt Approved
-        IAM--)EventBus: IdentityResolutionCompleted (resolutionOutcome=ApproveLink)
-        StaffingAPI->>StaffingAPI: Merge employment history, credentials, and all associated records to primary Unique ID
-        CommAPI--)DistrictUser: Email notification: link approved
-        CommAPI--)DistrictUser: Notify any citizen account and any other district reporting either ID
+        IamApi--)EventBus: IdentityResolutionCompleted (resolutionOutcome=ApproveLink)
+        Note over EventBus: Consumed by Staffing (merges employment history, credentials, and all associated records to primary Unique ID) and Communications (email notification: link approved, notifies any citizen account and any other district reporting either ID)
     else Denied
-        IAM--)EventBus: IdentityRequestDenied
-        CommAPI--)DistrictUser: Email notification with denial reason
+        IamApi--)EventBus: IdentityRequestDenied
+        Note over EventBus: Consumed by Communications (email notification with denial reason to the district user)
     end
 ```
 
@@ -1191,7 +1317,7 @@ affected records accordingly. Per FDD 15.6/15.11's Addendum, neither action has 
 business-user-facing submission path in MiEdWorkforce.
 **When:** Identity Administrator determines, via Mi-Key or a Help Desk ticket, that a
 Unique ID represents multiple individuals (Split) or should no longer be used (Retire).
-**Who:** Identity Administrator (acting directly in Mi-Key)
+**Who:** Identity Administrator (acting directly in Mi-Key); Permission: none (inbound external callback)
 
 ```mermaid
 ---
@@ -1199,21 +1325,24 @@ title: IAM - Split/Retire ID (Mi-Key-Direct)
 ---
 sequenceDiagram
     actor IdAdmin as Identity Administrator
-    participant MiKey as Mi-Key (external)
-    participant IAM
-    participant StaffingAPI
-    participant EventBus
-
-    IdAdmin->>MiKey: Split or Retire Unique ID directly in Mi-Key
-    MiKey--)IAM: Callback: IdentityRecordSplit or IdentityRecordRetired
-
-    alt Split
-        IAM--)EventBus: IdentityRecordSplit (originalUniqueId, newUniqueIds[])
-    else Retire
-        IAM--)EventBus: IdentityRecordRetired (retiredUniqueId, replacementUniqueId?)
+    box MiEdWorkforce (AKS)
+    participant IamExtApi as IAM External API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant MiKey as Mi-Key
     end
 
-    StaffingAPI->>StaffingAPI: Update EMPLOYEE_ROSTER.unique_id references; flag retired IDs so search/submission reject them
+    IdAdmin->>MiKey: Split or Retire Unique ID directly in Mi-Key
+    MiKey->>IamExtApi: EXT POST /identity-resolution/callbacks (IdentityRecordSplit or IdentityRecordRetired)
+
+    alt Split
+        IamExtApi--)EventBus: IdentityRecordSplit (originalUniqueId, newUniqueIds[])
+    else Retire
+        IamExtApi--)EventBus: IdentityRecordRetired (retiredUniqueId, replacementUniqueId?)
+    end
+
+    Note over EventBus: Consumed by Staffing (updates EMPLOYEE_ROSTER.unique_id references, flags retired IDs so search/submission reject them)
 ```
 
 **Key Decisions:**
@@ -1229,6 +1358,8 @@ sequenceDiagram
 ---
 
 ## Integration Flows
+
+*Reference material, not sequences. Suggested home: solution-integrations.md (MiLogin and Mi-Key) and the Organizations capability documentation (Organizations tables and cache strategy). The MiLogin diagram below overlaps the sign-in sections above.*
 
 ### Organizations Platform Capability
 
@@ -1277,40 +1408,37 @@ title: IAM - MiLogin Integration - Authentication (OIDC)
 ---
 sequenceDiagram
     actor User
-    participant App as MiEdWorkforce
-    participant IAM
-    participant OrgsAPI as Organizations API
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant IamApi as IAM API
+    participant OrgsApi as Organizations API
+    end
+    box External
     participant MiLogin
-    
-    User->>App: Click "Login"
-    App->>MiLogin: Redirect to /authorize (OIDC authorization code flow)
+    end
+
+    User->>UI: Click "Login"
+    UI->>MiLogin: OUT OIDC authorize (authorization code flow, browser redirect)
     User->>MiLogin: Enter credentials, select identity type (Citizen/Business/Worker)
-    MiLogin-->>User: Redirect to callback with auth code
-    
-    User->>App: Callback with auth code
-    App->>MiLogin: POST /token (exchange code for tokens)
-    MiLogin-->>App: ID token + access token
-    
-    App->>IAM: Validate tokens, extract claims:<br/>- MiLoginID (sub)<br/>- MiLogin type (Citizen/Business/Worker)<br/>- Email<br/>- Name
-    IAM->>IAM: Check for existing authorizations<br/>(filtered by MiLogin type)
-    
+    MiLogin-->>UI: Redirect to callback with auth code
+    UI->>MiLogin: OUT OIDC token (exchange code for tokens)
+    MiLogin-->>UI: ID token + access token
+
+    UI->>IamApi: APP GET /authorizations/my-authorizations
+    Note over IamApi: Validate tokens, extract claims: MiLoginID (sub), MiLogin type (Citizen/Business/Worker), Email, Name<br/>Existing authorizations filtered by MiLogin type
+
     alt Has authorizations for this MiLogin type
-        IAM-->>App: Redirect to dashboard
+        IamApi-->>UI: Redirect to dashboard
     else No authorizations AND MiLogin type = Business/Worker
-        IAM->>OrgsAPI: GET /organizations/by-lead-admin?email={userEmail}
-        alt User is Lead Admin
-            IAM->>IAM: Auto-grant Organization Lead Admin role(s)
-            IAM-->>App: Redirect to dashboard
-        else User is not Lead Admin
-            IAM-->>App: Redirect to authorization request form
-        end
+        IamApi->>OrgsApi: SVC GET /organizations/by-lead-admin?email={userEmail}
+        OrgsApi-->>IamApi: Organizations where user is Lead Admin
+        IamApi->>IamApi: Auto-grant Organization Lead Admin role(s) if user is Lead Admin
+        IamApi-->>UI: Redirect to dashboard, or to authorization request form if user is not Lead Admin
     else No authorizations AND MiLogin type = Citizen
-        alt User has Unique ID
-            IAM->>IAM: Auto-grant Individual scope
-            IAM-->>App: Redirect to dashboard
-        else User has no Unique ID
-            IAM-->>App: Redirect to identity resolution
-        end
+        IamApi->>IamApi: Auto-grant Individual scope if user has Unique ID
+        IamApi-->>UI: Redirect to dashboard, or to identity resolution if user has no Unique ID
     end
 ```
 
@@ -1341,6 +1469,8 @@ sequenceDiagram
 **See:** Identity Resolution domain documentation for matching process
 
 ## Notes
+
+*Not a sequence: this is a standard about the X-Organization-Context header. Suggested home: iam-domain.md or patterns-and-principles/authentication.md.*
 
 ### UI Context Management (Active Authorization)
 

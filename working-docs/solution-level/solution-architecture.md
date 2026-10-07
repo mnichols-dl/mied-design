@@ -263,7 +263,7 @@ CEPI <--> EEM
 
 **Frontend Applications:**
 - **Framework:** React 18 Single-Page Applications (SPAs)
-- **Hosting:** Azure Static Web Apps (shared hosting for all SPAs). Standard plan with a private endpoint and no public access, behind Application Gateway in every environment; not hosted on AKS. Regional, not multi-region. Cloudflare is the edge and cache in Staging and Prod only
+- **Hosting:** Azure Static Web Apps (shared hosting for all SPAs). Standard plan with a private endpoint and no public access, behind Application Gateway in every environment; not hosted on AKS. Regional, not multi-region. Cloudflare is the edge and cache in every environment (the state's direction as of 2026-10-06; Dev and QA stay on the private frontend until the Cloudflare origin controls are in place)
 - **Authentication:** Microsoft Authentication Library (MSAL.js) for MiLogin OIDC integration
 
 **Data Storage:**
@@ -278,7 +278,7 @@ CEPI <--> EEM
 
 ### API Architecture
 
-There are three kinds of API. The request path is: (Cloudflare, Staging and Prod only) to Application Gateway (WAF), which sends the UI hostname to the Static Web App, and `/api` on that hostname plus the whole API hostname to API Management (internal VNet mode), then to the Istio internal ingress gateway and the services in AKS. Dev and QA are internal-only (reached from a VDI session, administered through a Linux jump box); Staging and Prod are public through Cloudflare.
+There are three kinds of API. The request path is: Cloudflare (every environment) to Application Gateway (WAF), which sends the UI hostname to the Static Web App, and `/api` on that hostname plus the whole API hostname to API Management (internal VNet mode), then to the Istio internal ingress gateway and the services in AKS. Cloudflare fronts every environment. Dev and QA are limited to state users at Cloudflare (used from a VDI session, administered through a Linux jump box); Staging and Prod are open to the public. Until the Cloudflare origin controls are in place, Dev and QA stay on the Application Gateway's private frontend.
 
 **Application APIs:**
 - The surface the frontend calls with the signed-in user's delegated token

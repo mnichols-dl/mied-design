@@ -2,12 +2,17 @@
 
 This document contains sequence diagrams for all workflows in the EPP domain.
 
+---
+
 **Conventions:**
 - Solid arrows (`->>`) = Synchronous calls
-- Dashed arrows (`-->>`) = Responses
-- Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- Dashed arrows (`-->>`) = Responses (drawn only when they carry data or an error status)
+- Dotted arrows (`--)`) = Async/fire-and-forget (events)
+- **actor** = Human users only
+- **participant** = Every non-human: UI, services, Event Bus, external systems
+- Every request arrow starts with its API-kind tag, then the verb and path from the API catalog: `APP` = application API (user delegated token, UI to owning API), `SVC` = service API (in-cluster mTLS, API to API), `EXT` = external API (inbound client credentials), `OUT` = outbound call to an external system
+- Participants are grouped with `box`: Browser (UI), MiEdWorkforce (AKS) (services and Event Bus), External (external systems)
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
@@ -15,7 +20,7 @@ This document contains sequence diagrams for all workflows in the EPP domain.
 
 **What:** EPP System Admin designates an existing EEM organization as an Educator Preparation Provider by adding EPP-specific configuration  
 **When:** An EEM organization receives state approval to become an educator preparation provider  
-**Who:** EPP System Admin
+**Who:** EPP System Admin. Permission: epp.provider.create (system-wide)
 
 ```mermaid
 ---
@@ -23,47 +28,37 @@ title: EPP - Designate EEM Organization as EPP
 ---
 sequenceDiagram
     actor Admin as EPP System Admin
-    participant UI as EPP Admin UI
-    participant EPPService as EPP API
-    participant OrgRef as Organization Reference Data API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant OrgApi as Organizations API
     participant EventBus as Event Bus
-    
-    Admin->>UI: Navigate to "Manage EPPs"
-    UI->>IAM: Verify permission (epp.provider.create)
-    IAM-->>UI: Permission confirmed
-    
-    Admin->>UI: Click "Add New EPP"
-    UI->>OrgRef: GET /organizations/search?query={searchTerm}
-    OrgRef-->>UI: List of EEM organizations
-    
+    end
+
+    Admin->>UI: Navigate to "Manage EPPs" and click "Add New EPP"
+    UI->>OrgApi: APP GET /organizations/search
+    OrgApi-->>UI: List of EEM organizations
+
     Admin->>UI: Select organization from search results
-    UI->>OrgRef: GET /organizations/{code}
-    OrgRef-->>UI: Organization details (name, address, FICE, fed code)
-    
+    UI->>OrgApi: APP GET /organizations/{organizationCode}
+    OrgApi-->>UI: Organization details (name, address, FICE, fed code)
+
     Admin->>UI: Enter EPP-specific configuration
     Note over Admin,UI: EPP Type, Contacts, Certificate Categories,<br/>Endorsements, Reading Diagnostics flag,<br/>Special Ed Director flag
-    
-    Admin->>UI: Add Certificate Category (cert type, pathway, dates)
-    Admin->>UI: Add Approved Endorsements for category
+
+    Admin->>UI: Add Certificate Category (cert type, pathway, dates) and Approved Endorsements for category
     Admin->>UI: Submit EPP designation
-    
-    UI->>EPPService: POST /epp-providers
-    EPPService->>OrgRef: GET /organizations/{code}
-    OrgRef-->>EPPService: Validate org exists
-    
+
+    UI->>EppApi: APP POST /epp-providers
+    EppApi->>OrgApi: SVC GET /organizations/{organizationCode}
+
     alt Organization not found in EEM
-        EPPService-->>UI: Error: Organization must exist in EEM
-        UI-->>Admin: Display error message
+        EppApi-->>UI: 400 Organization must exist in EEM
     else Organization exists
-        EPPService->>EPPService: Create EducatorPreparationProvider aggregate
-        Note over EPPService: Link to EEM org, store EPP metadata
-        EPPService->>EPPService: Create ApprovedCertificateCategory entities
-        EPPService->>EPPService: Create ApprovedEndorsement entities
-        
-        EPPService--)EventBus: EPPProviderCreated
-        EPPService-->>UI: EPP created successfully
-        UI-->>Admin: Confirmation with EPP code
+        EppApi->>EppApi: Create EducatorPreparationProvider aggregate with ApprovedCertificateCategory and ApprovedEndorsement entities, link to EEM org
+        EppApi--)EventBus: EPPProviderCreated
     end
 ```
 
@@ -88,7 +83,7 @@ sequenceDiagram
 
 **What:** EPP System Admin updates EPP-specific settings (type, contacts, flags, certificate categories, endorsements)  
 **When:** EPP metadata needs to be updated (does NOT include core organization data like name/address)  
-**Who:** EPP System Admin
+**Who:** EPP System Admin. Permission: epp.provider.edit (system-wide or scoped to the EPP)
 
 ```mermaid
 ---
@@ -96,36 +91,32 @@ title: EPP - Update EPP Configuration
 ---
 sequenceDiagram
     actor Admin as EPP System Admin
-    participant UI as EPP Admin UI
-    participant EPPService as EPP API
-    participant OrgRef as Organization Reference Data API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant OrgApi as Organizations API
     participant EventBus as Event Bus
-    
-    Admin->>UI: Navigate to "Manage EPPs"
-    UI->>IAM: Verify permission (epp.provider.edit)
-    IAM-->>UI: Permission confirmed
-    
-    Admin->>UI: Search and select EPP
-    UI->>EPPService: GET /epp-providers/{eppCode}
-    EPPService->>OrgRef: GET /organizations/{code}
-    OrgRef-->>EPPService: Organization details (read-only)
-    EPPService-->>UI: EPP configuration + org details
-    
+    end
+
+    Admin->>UI: Navigate to "Manage EPPs", search and select EPP
+    UI->>EppApi: APP GET /epp-providers/{eppCode}
+    EppApi->>OrgApi: SVC GET /organizations/{organizationCode}
+    OrgApi-->>EppApi: Organization details (read-only)
+    EppApi-->>UI: EPP configuration + org details
+
     Note over UI: Display EEM data (name, address) as read-only
-    
+
     Admin->>UI: Update EPP-specific fields
     Note over Admin,UI: EPP Type, Contacts,<br/>Reading Diagnostics flag,<br/>Special Ed Director flag
-    
+
     Admin->>UI: Submit updates
-    UI->>EPPService: PUT /epp-providers/{eppCode}
-    
-    EPPService->>EPPService: Update EducatorPreparationProvider aggregate
-    EPPService->>EPPService: Capture audit details (Modified By, Modified Date)
-    
-    EPPService--)EventBus: EPPProviderModified
-    EPPService-->>UI: Update successful
-    UI-->>Admin: Confirmation message
+    UI->>EppApi: APP PUT /epp-providers/{eppCode}
+
+    EppApi->>EppApi: Update EducatorPreparationProvider aggregate, capture audit details (Modified By, Modified Date)
+
+    EppApi--)EventBus: EPPProviderModified
 ```
 
 **Key Decisions:**
@@ -144,183 +135,165 @@ sequenceDiagram
 
 ---
 
-## Manage EPP Certificate Category Approvals
+## Add EPP Certificate Category Approval
 
-**What:** EPP System Admin adds, edits, or removes certificate type/pathway approvals with effective dates  
+**What:** EPP System Admin adds certificate type/pathway approvals with effective dates (editing an existing approval is described under Key Decisions)  
 **When:** State approves new programs for EPP or modifies existing program approvals  
-**Who:** EPP System Admin
+**Who:** EPP System Admin. Permission: epp.certificatecategory.create (system-wide or scoped to the EPP)  
+**See also:** Remove EPP Certificate Category Approval
 
 ```mermaid
 ---
-title: EPP - Manage EPP Certificate Category Approvals
+title: EPP - Add EPP Certificate Category Approval
 ---
 sequenceDiagram
     actor Admin as EPP System Admin
-    participant UI as EPP Admin UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    
+    end
+
     Admin->>UI: Navigate to EPP detail page
-    UI->>EPPService: GET /epp-providers/{eppCode}
-    EPPService-->>UI: EPP configuration with certificate categories
-    
-    alt Add Certificate Category
-        Admin->>UI: Click "Add Certificate Category"
-        Admin->>UI: Select Certificate Type, Pathway
-        Admin->>UI: Enter MDE Approval Date, Enrollment Close Date, Recommend Close Date
-        Admin->>UI: Click "Confirm"
-        
-        UI->>EPPService: POST /epp-providers/{eppCode}/certificate-categories
-        EPPService->>EPPService: Validate date order (MDE < Enrollment < Recommend)
-        
-        alt Invalid dates
-            EPPService-->>UI: Validation error
-            UI-->>Admin: Display date validation error
-        else Valid dates
-            EPPService->>EPPService: Create ApprovedCertificateCategory entity
-            EPPService--)EventBus: EPPProgramApprovalChanged
-            EPPService-->>UI: Category added
-            UI-->>Admin: Confirmation
-        end
-        
-    else Edit Certificate Category
-        Admin->>UI: Click "Edit" on existing category
-        Admin->>UI: Update dates
-        Admin->>UI: Submit changes
-        
-        UI->>EPPService: PUT /epp-providers/{eppCode}/certificate-categories/{id}
-        EPPService->>EPPService: Validate date order
-        EPPService->>EPPService: Update ApprovedCertificateCategory
-        EPPService->>EPPService: Capture audit trail
-        
-        EPPService--)EventBus: EPPProgramApprovalChanged
-        EPPService-->>UI: Category updated
-        UI-->>Admin: Confirmation
-        
-    else Delete Certificate Category
-        Admin->>UI: Click "Delete" on category
-        UI->>EPPService: DELETE /epp-providers/{eppCode}/certificate-categories/{id}
-        
-        EPPService->>EPPService: Check for active candidate enrollments
-        alt Active enrollments exist
-            EPPService-->>UI: Error: Cannot delete - active enrollments
-            UI-->>Admin: Display error with enrollment count
-        else No active enrollments
-            EPPService->>EPPService: Delete ApprovedCertificateCategory
-            EPPService--)EventBus: EPPProgramApprovalChanged
-            EPPService-->>UI: Category deleted
-            UI-->>Admin: Confirmation
-        end
+    UI->>EppApi: APP GET /epp-providers/{eppCode}
+    EppApi-->>UI: EPP configuration with certificate categories
+
+    Admin->>UI: Click "Add Certificate Category", select Certificate Type and Pathway
+    Admin->>UI: Enter MDE Approval Date, Enrollment Close Date, Recommend Close Date and click "Confirm"
+
+    UI->>EppApi: APP POST /epp-providers/{eppCode}/certificate-categories
+    EppApi->>EppApi: Validate date order (MDE < Enrollment < Recommend)
+
+    alt Invalid dates
+        EppApi-->>UI: 400 Validation error (date order)
+    else Valid dates
+        EppApi->>EppApi: Create ApprovedCertificateCategory entity
+        EppApi--)EventBus: EPPProgramApprovalChanged
     end
 ```
 
 **Key Decisions:**
 - **Date Validation:** MDE Approval Date must precede Enrollment Close Date and Recommend Close Date
-- **Deletion Protection:** Cannot delete certificate category if active candidate enrollments exist
 - **Pro Prep Impact:** Date changes affect public catalog visibility
+- **Edit (not drawn):** An existing category is edited with `APP PUT /epp-providers/{eppCode}/certificate-categories` (permission epp.certificatecategory.edit). The EPP API validates the date order, updates the ApprovedCertificateCategory, captures the audit trail and publishes `EPPProgramApprovalChanged`
 
 **State Changes:**
 - ApprovedCertificateCategory: `none` > `Active` (on add)
-- ApprovedCertificateCategory: `Active` > `deleted` (on remove, if no active enrollments)
 
 **Events Published:**
 - `EPPProgramApprovalChanged` - May trigger Pro Prep catalog updates
 
 **Error Scenarios:**
 - Invalid date order > Validation error, prevent save
-- Delete with active enrollments > Block deletion, display error
 - Attempt to add duplicate category/pathway > Validation error
 
 ---
 
-## Manage EPP Approved Endorsements
+## Remove EPP Certificate Category Approval
 
-**What:** EPP System Admin adds, edits, or removes specific endorsements within certificate types  
-**When:** EPP receives approval for new endorsements or existing endorsements are sunset  
-**Who:** EPP System Admin
+**What:** EPP System Admin removes a certificate type/pathway approval  
+**When:** State approves new programs for EPP or modifies existing program approvals  
+**Who:** EPP System Admin. Permission: epp.certificatecategory.delete (system-wide or scoped to the EPP)  
+**See also:** Add EPP Certificate Category Approval
 
 ```mermaid
 ---
-title: EPP - Manage EPP Approved Endorsements
+title: EPP - Remove EPP Certificate Category Approval
 ---
 sequenceDiagram
     actor Admin as EPP System Admin
-    participant UI as EPP Admin UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    
+    end
+
     Admin->>UI: Navigate to EPP detail page
-    UI->>EPPService: GET /epp-providers/{eppCode}
-    EPPService-->>UI: EPP configuration with approved endorsements
-    
-    alt Add Endorsement
-        Admin->>UI: Click "Add Endorsement"
-        Admin->>UI: Select Certificate Type
-        
-        UI->>CredService: GET /endorsement-definitions?certType={type}
-        CredService-->>UI: Available endorsements for cert type
-        
-        Admin->>UI: Select Endorsement, Grade Level, Code
-        Admin->>UI: Select Type (Initial Certification, Additional Endorsement)
-        Admin->>UI: Enter MDE Approval Date, Enrollment Close Date, Recommend Close Date
-        Admin->>UI: Click "Confirm"
-        
-        UI->>EPPService: POST /epp-providers/{eppCode}/endorsements
-        
-        EPPService->>EPPService: Validate EPP has approved cert type
-        alt Cert type not approved
-            EPPService-->>UI: Error: Must approve certificate type first
-            UI-->>Admin: Display error
-        else Cert type approved
-            EPPService->>EPPService: Validate date order
-            EPPService->>EPPService: Create ApprovedEndorsement entity
-            
-            EPPService--)EventBus: EPPProgramApprovalChanged
-            EPPService-->>UI: Endorsement added
-            UI-->>Admin: Confirmation
-        end
-        
-    else Edit Endorsement
-        Admin->>UI: Click "Edit" on existing endorsement
-        Admin->>UI: Update dates or type
-        Admin->>UI: Submit changes
-        
-        UI->>EPPService: PUT /epp-providers/{eppCode}/endorsements/{id}
-        EPPService->>EPPService: Update ApprovedEndorsement
-        EPPService->>EPPService: Capture audit trail
-        
-        EPPService--)EventBus: EPPProgramApprovalChanged
-        EPPService-->>UI: Endorsement updated
-        UI-->>Admin: Confirmation
-        
-    else Delete Endorsement
-        Admin->>UI: Click "Delete" on endorsement
-        UI->>EPPService: DELETE /epp-providers/{eppCode}/endorsements/{id}
-        
-        EPPService->>EPPService: Check for active candidate programs with endorsement
-        alt Active candidates pursuing endorsement
-            EPPService-->>UI: Error: Cannot delete - active candidates
-            UI-->>Admin: Display error
-        else No active candidates
-            EPPService->>EPPService: Delete ApprovedEndorsement
-            EPPService--)EventBus: EPPProgramApprovalChanged
-            EPPService-->>UI: Endorsement deleted
-            UI-->>Admin: Confirmation
-        end
+    UI->>EppApi: APP GET /epp-providers/{eppCode}
+    EppApi-->>UI: EPP configuration with certificate categories
+
+    Admin->>UI: Click "Delete" on category
+    UI->>EppApi: APP DELETE /epp-providers/{eppCode}/certificate-categories
+    EppApi->>EppApi: Check for active candidate enrollments
+
+    alt Active enrollments exist
+        EppApi-->>UI: 400 Cannot delete - active enrollments (with enrollment count)
+    else No active enrollments
+        EppApi->>EppApi: Delete ApprovedCertificateCategory
+        EppApi--)EventBus: EPPProgramApprovalChanged
+    end
+```
+
+**Key Decisions:**
+- **Deletion Protection:** Cannot delete certificate category if active candidate enrollments exist
+- **Pro Prep Impact:** Date changes affect public catalog visibility
+
+**State Changes:**
+- ApprovedCertificateCategory: `Active` > `deleted` (on remove, if no active enrollments)
+
+**Events Published:**
+- `EPPProgramApprovalChanged` - May trigger Pro Prep catalog updates
+
+**Error Scenarios:**
+- Delete with active enrollments > Block deletion, display error
+
+---
+
+## Add EPP Approved Endorsement
+
+**What:** EPP System Admin adds specific endorsements within certificate types (editing an existing endorsement is described under Key Decisions)  
+**When:** EPP receives approval for new endorsements or existing endorsements are sunset  
+**Who:** EPP System Admin. Permission: epp.endorsement.create (system-wide or scoped to the EPP)  
+**See also:** Remove EPP Approved Endorsement
+
+```mermaid
+---
+title: EPP - Add EPP Approved Endorsement
+---
+sequenceDiagram
+    actor Admin as EPP System Admin
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    participant EventBus as Event Bus
+    end
+
+    Admin->>UI: Navigate to EPP detail page
+    UI->>EppApi: APP GET /epp-providers/{eppCode}
+    EppApi-->>UI: EPP configuration with approved endorsements
+
+    Admin->>UI: Click "Add Endorsement" and select Certificate Type
+    UI->>CredApi: APP GET /endorsement-definitions
+    CredApi-->>UI: Available endorsements for cert type
+
+    Admin->>UI: Select Endorsement, Grade Level, Code and Type (Initial Certification, Additional Endorsement)
+    Admin->>UI: Enter MDE Approval Date, Enrollment Close Date, Recommend Close Date and click "Confirm"
+
+    UI->>EppApi: APP POST /epp-providers/{eppCode}/endorsements
+    EppApi->>EppApi: Validate EPP has approved cert type
+
+    alt Cert type not approved
+        EppApi-->>UI: 400 Must approve certificate type first
+    else Cert type approved
+        EppApi->>EppApi: Validate date order, create ApprovedEndorsement entity
+        EppApi--)EventBus: EPPProgramApprovalChanged
     end
 ```
 
 **Key Decisions:**
 - **Certificate Type Dependency:** Cannot add endorsement unless EPP has approved certificate type
 - **Date Validation:** Similar to certificate categories (MDE < Enrollment < Recommend)
-- **Deletion Protection:** Cannot delete if active candidates are pursuing the endorsement
+- **Edit (not drawn):** An existing endorsement is edited with `APP PUT /epp-providers/{eppCode}/endorsements` (permission epp.endorsement.edit). The EPP API updates the ApprovedEndorsement, captures the audit trail and publishes `EPPProgramApprovalChanged`
 
 **State Changes:**
 - ApprovedEndorsement: `none` > `Active` (on add)
-- ApprovedEndorsement: `Active` > `deleted` (on remove, if no active candidates)
 
 **Events Published:**
 - `EPPProgramApprovalChanged` - May trigger Pro Prep catalog updates
@@ -328,6 +301,56 @@ sequenceDiagram
 **Error Scenarios:**
 - Certificate type not approved > Block endorsement addition
 - Invalid date order > Validation error
+
+---
+
+## Remove EPP Approved Endorsement
+
+**What:** EPP System Admin removes a specific endorsement within a certificate type  
+**When:** EPP receives approval for new endorsements or existing endorsements are sunset  
+**Who:** EPP System Admin. Permission: epp.endorsement.delete (system-wide or scoped to the EPP)  
+**See also:** Add EPP Approved Endorsement
+
+```mermaid
+---
+title: EPP - Remove EPP Approved Endorsement
+---
+sequenceDiagram
+    actor Admin as EPP System Admin
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant EventBus as Event Bus
+    end
+
+    Admin->>UI: Navigate to EPP detail page
+    UI->>EppApi: APP GET /epp-providers/{eppCode}
+    EppApi-->>UI: EPP configuration with approved endorsements
+
+    Admin->>UI: Click "Delete" on endorsement
+    UI->>EppApi: APP DELETE /epp-providers/{eppCode}/endorsements
+    EppApi->>EppApi: Check for active candidate programs with endorsement
+
+    alt Active candidates pursuing endorsement
+        EppApi-->>UI: 400 Cannot delete - active candidates
+    else No active candidates
+        EppApi->>EppApi: Delete ApprovedEndorsement
+        EppApi--)EventBus: EPPProgramApprovalChanged
+    end
+```
+
+**Key Decisions:**
+- **Deletion Protection:** Cannot delete if active candidates are pursuing the endorsement
+
+**State Changes:**
+- ApprovedEndorsement: `Active` > `deleted` (on remove, if no active candidates)
+
+**Events Published:**
+- `EPPProgramApprovalChanged` - May trigger Pro Prep catalog updates
+
+**Error Scenarios:**
 - Delete with active candidates > Block deletion
 
 ---
@@ -336,7 +359,7 @@ sequenceDiagram
 
 **What:** EPP System Admin toggles program visibility and manages Pro Prep display settings  
 **When:** Managing public-facing program availability for prospective educators  
-**Who:** EPP System Admin
+**Who:** EPP System Admin. Permission: epp.proprepconfig.manage (system-wide or scoped to the EPP)
 
 ```mermaid
 ---
@@ -344,33 +367,27 @@ title: EPP - Configure Pro Prep Catalog Visibility
 ---
 sequenceDiagram
     actor Admin as EPP System Admin
-    participant UI as EPP Admin UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
     Admin->>UI: Navigate to "Pro Prep Settings" for EPP
-    UI->>IAM: Verify permission (epp.proprepconfig.manage)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /epp-providers/{eppCode}/proprepconfig
-    EPPService-->>UI: Current Pro Prep visibility settings
-    
+    UI->>EppApi: APP GET /epp-providers/{eppCode}/proprepconfig
+    EppApi-->>UI: Current Pro Prep visibility settings
+
     Admin->>UI: Review certificate categories and endorsements
     Note over UI: Display current visibility based on:<br/>- EPP status (Active/Closed)<br/>- Date comparisons (Enrollment Close, Recommend Close)
-    
+
     Admin->>UI: Toggle visibility for specific programs
     Note over Admin,UI: Admin can override date-based visibility<br/>to hide programs early or extend availability
-    
-    Admin->>UI: Update page text, links, announcements
-    Admin->>UI: Submit Pro Prep configuration
-    
-    UI->>EPPService: PUT /epp-providers/{eppCode}/proprepconfig
-    EPPService->>EPPService: Update Pro Prep visibility flags
-    EPPService->>EPPService: Update page content/links
-    EPPService->>EPPService: Capture audit trail
-    
-    EPPService-->>UI: Configuration updated
-    UI-->>Admin: Confirmation - changes live immediately
+
+    Admin->>UI: Update page text, links, announcements and submit Pro Prep configuration
+
+    UI->>EppApi: APP PUT /epp-providers/{eppCode}/proprepconfig
+    EppApi->>EppApi: Update Pro Prep visibility flags, page content/links, capture audit trail
 ```
 
 **Key Decisions:**
@@ -390,51 +407,53 @@ sequenceDiagram
 
 ---
 
-## Search Pending Enrollment Verifications
+## Search and View Candidate Enrollments
 
-**What:** EPP Coordinator filters and searches candidates awaiting enrollment verification  
-**When:** EPP needs to review new enrollment submissions from candidates  
-**Who:** EPP Coordinator
+**What:** EPP Coordinator filters and searches candidates awaiting enrollment verification and candidates with verified enrollment status, and views a candidate's enrollment records at all EPPs  
+**When:** EPP needs to review new enrollment submissions, review/manage current enrolled candidates, or get full context when a candidate has transferred or dual-enrolled  
+**Who:** EPP Coordinator. Permission: epp.enrollment.view (scoped to the caller's EPP, self-only where the catalog allows). The Pending Verification queue is entered with epp.enrollment.verify.  
+**See also:** Accept Candidate Enrollment, Reject Candidate Enrollment, View Candidate Enrollment Detail
 
 ```mermaid
 ---
-title: EPP - Search Pending Enrollment Verifications
+title: EPP - Search and View Candidate Enrollments
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
-    Coordinator->>UI: Navigate to "Candidates" > "Pending Verification"
-    UI->>IAM: Verify permission (epp.enrollment.verify)
-    IAM-->>UI: Permission confirmed with EPP scope
-    
-    UI->>EPPService: GET /candidate-enrollments?status=PendingVerification&eppCode={userEppCode}
-    EPPService-->>UI: List of pending enrollments
-    
-    Coordinator->>UI: Enter filter criteria
-    Note over Coordinator,UI: Program Level, Program Type,<br/>First Name, Last Name,<br/>Student ID, Unique ID
-    
-    Coordinator->>UI: Click "Search"
-    UI->>EPPService: GET /candidate-enrollments?status=PendingVerification&filters={criteria}
-    
-    EPPService->>EPPService: Apply filters to CandidateEnrollment query
-    EPPService->>EPPService: Filter by EPP scope from user context
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
+    Coordinator->>UI: Open "Pending Verification", "Verified Candidates" or "View Enrollment from All EPPs"
+    UI->>EppApi: APP GET /candidate-enrollments
+    Note over UI,EppApi: Pending: status=PendingVerification, caller's EPP<br/>Verified: Enrolled, StudentTeaching, PostStudentTeaching, Placed, Inactive, Rejected, Exited, caller's EPP<br/>All EPPs: candidateId and allEpps=true
+    EppApi-->>UI: List of enrollments
+
+    Coordinator->>UI: Enter filter criteria and click "Search"
+    Note over Coordinator,UI: Program Level, Program Type,<br/>First Name, Last Name,<br/>Student ID, Unique ID,<br/>Status and Enrollment Date Range (Verified only)
+
+    UI->>EppApi: APP GET /candidate-enrollments
+    EppApi->>EppApi: Apply filters to CandidateEnrollment query, filter by EPP scope from user context (not for All EPPs)
+
     alt No results found
-        EPPService-->>UI: Empty result set
-        UI-->>Coordinator: Display "No results found"
+        EppApi-->>UI: Empty result set
     else Results found
-        EPPService-->>UI: Filtered candidate enrollment list
-        UI-->>Coordinator: Display results in table
-        Note over UI: Columns: First Name, Last Name,<br/>Student ID, Unique ID,<br/>Submitted Date, Program Level
+        EppApi-->>UI: Filtered candidate enrollment list
+        Note over UI: Columns: First Name (link), Last Name, Student ID, Unique ID,<br/>Program Level, Program(s), Status, Submitted or Enroll Date,<br/>Exit Date, Exit Reason (Provider for All EPPs)
     end
 ```
 
 **Key Decisions:**
-- **EPP Scope:** Results automatically filtered to coordinator's EPP only
-- **Status Filter:** Hard-coded to `PendingVerification` status
+- **EPP Scope:** Results automatically filtered to coordinator's EPP only (the All EPPs view is the exception)
+- **Status Filter:** Pending Verification is hard-coded to `PendingVerification` status
+- **Multiple Statuses:** Verified Candidates default includes all verified statuses except PendingVerification
+- **Clickable Name:** First Name is hyperlink to candidate detail view
+- **Read-Only:** Coordinator can view but not edit enrollments from other EPPs
+- **Full History:** All EPPs view shows all enrollments regardless of status or EPP
+- **Highlighting:** Current EPP's records visually distinguished
 
 **State Changes:**
 - None (read-only query)
@@ -445,6 +464,7 @@ sequenceDiagram
 **Error Scenarios:**
 - User lacks permission > Access denied
 - Invalid filter values > Validation error
+- No enrollments found > Display empty state message
 
 ---
 
@@ -452,7 +472,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator verifies and accepts candidate enrollment with enrollment date and program details  
 **When:** Candidate's enrollment information has been validated as correct  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.verify (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -460,43 +480,32 @@ title: EPP - Accept Candidate Enrollment
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: Select candidate(s) from Pending Verification list
-    Coordinator->>UI: Click "Accept Enrollment"
-    
-    UI->>IAM: Verify permission (epp.enrollment.verify)
-    IAM-->>UI: Permission confirmed
-    
+    end
+
+    Coordinator->>UI: Select candidate(s) from Pending Verification list and click "Accept Enrollment"
+
     UI->>Coordinator: Prompt for enrollment details
     Note over UI: Enrollment Start Date (required)<br/>Program Level (required)<br/>Program Type (if applicable)
-    
-    Coordinator->>UI: Enter enrollment details
-    Coordinator->>UI: Submit acceptance
-    
-    UI->>EPPService: POST /candidate-enrollments/bulk-accept
-    Note over UI,EPPService: Payload: [candidateIds], enrollmentDate,<br/>programLevel, programType
-    
-    EPPService->>EPPService: For each candidate: validate no duplicate enrollment
-    
+
+    Coordinator->>UI: Enter enrollment details and submit acceptance
+
+    UI->>EppApi: APP POST /candidate-enrollments/bulk-accept
+    Note over UI,EppApi: Payload: [candidateIds], enrollmentDate,<br/>programLevel, programType
+
+    EppApi->>EppApi: For each candidate: validate no duplicate enrollment
+
     alt Duplicate enrollment detected
-        EPPService-->>UI: Error: Enrollment already exists
-        UI-->>Coordinator: Display duplicate error for specific candidates
+        EppApi-->>UI: 400 Enrollment already exists (specific candidates)
     else No duplicates
-        EPPService->>EPPService: Update CandidateEnrollment aggregates
-        Note over EPPService: State: PendingVerification > Enrolled
-        EPPService->>EPPService: Set enrollment date, program details
-        EPPService->>EPPService: Capture audit trail (Modified By, Date)
-        
-        EPPService--)EventBus: CandidateEnrollmentVerified (for each)
-        EventBus--)CommService: Trigger enrollment confirmation email
-        
-        EPPService-->>UI: Enrollments accepted
-        UI-->>Coordinator: Confirmation with count of accepted enrollments
+        EppApi->>EppApi: Update CandidateEnrollment aggregates (PendingVerification > Enrolled), set enrollment date and program details, capture audit trail
+        EppApi--)EventBus: CandidateEnrollmentVerified
+        Note over EventBus: Consumed by Communications (sends enrollment confirmation email to the candidate)
     end
 ```
 
@@ -522,7 +531,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator denies enrollment verification with notification to candidate  
 **When:** Candidate's enrollment information is incorrect or candidate not actually enrolled  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.verify (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -530,33 +539,25 @@ title: EPP - Reject Candidate Enrollment
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: Select candidate(s) from Pending Verification list
-    Coordinator->>UI: Click "Reject Enrollment"
-    
-    UI->>IAM: Verify permission (epp.enrollment.verify)
-    IAM-->>UI: Permission confirmed
-    
+    end
+
+    Coordinator->>UI: Select candidate(s) from Pending Verification list and click "Reject Enrollment"
     UI->>Coordinator: Confirm rejection
     Coordinator->>UI: Confirm rejection
-    
-    UI->>EPPService: POST /candidate-enrollments/bulk-reject
-    Note over UI,EPPService: Payload: [candidateIds]
-    
-    EPPService->>EPPService: Update CandidateEnrollment aggregates
-    Note over EPPService: State: PendingVerification > Rejected
-    EPPService->>EPPService: Capture audit trail (Modified By, Date)
-    
-    EPPService--)EventBus: CandidateEnrollmentRejected (for each)
-    EventBus--)CommService: Trigger rejection notification email
-    
-    EPPService-->>UI: Enrollments rejected
-    UI-->>Coordinator: Confirmation with count of rejected enrollments
+
+    UI->>EppApi: APP POST /candidate-enrollments/bulk-reject
+    Note over UI,EppApi: Payload: [candidateIds]
+
+    EppApi->>EppApi: Update CandidateEnrollment aggregates (PendingVerification > Rejected), capture audit trail
+
+    EppApi--)EventBus: CandidateEnrollmentRejected
+    Note over EventBus: Consumed by Communications (sends rejection notification email to the candidate)
 ```
 
 **Key Decisions:**
@@ -575,70 +576,11 @@ sequenceDiagram
 
 ---
 
-## Search Enrolled Candidates
-
-**What:** EPP Coordinator filters and searches candidates with verified enrollment status  
-**When:** EPP needs to review/manage current enrolled candidates  
-**Who:** EPP Coordinator
-
-```mermaid
----
-title: EPP - Search Enrolled Candidates
----
-sequenceDiagram
-    actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
-    Coordinator->>UI: Navigate to "Candidates" > "Verified Candidates"
-    UI->>IAM: Verify permission (epp.enrollment.view)
-    IAM-->>UI: Permission confirmed with EPP scope
-    
-    UI->>EPPService: GET /candidate-enrollments?status=Enrolled,StudentTeaching,PostStudentTeaching,Placed,Inactive,Rejected,Exited&eppCode={userEppCode}
-    EPPService-->>UI: List of verified enrollments
-    
-    Coordinator->>UI: Enter filter criteria
-    Note over Coordinator,UI: Program Level, Program Type,<br/>First Name, Last Name,<br/>Student ID, Unique ID,<br/>Status, Enrollment Date Range
-    
-    Coordinator->>UI: Click "Search"
-    UI->>EPPService: GET /candidate-enrollments?filters={criteria}
-    
-    EPPService->>EPPService: Apply filters to CandidateEnrollment query
-    EPPService->>EPPService: Filter by EPP scope from user context
-    
-    alt No results found
-        EPPService-->>UI: Empty result set
-        UI-->>Coordinator: Display "No results found"
-    else Results found
-        EPPService-->>UI: Filtered candidate enrollment list
-        UI-->>Coordinator: Display results in table
-        Note over UI: Columns: First Name (link), Last Name,<br/>Student ID, Unique ID,<br/>Program Level, Program(s),<br/>Status, Enroll Date,<br/>Exit Date, Exit Reason
-    end
-```
-
-**Key Decisions:**
-- **EPP Scope:** Results automatically filtered to coordinator's EPP only
-- **Multiple Statuses:** Default includes all verified statuses except PendingVerification
-- **Clickable Name:** First Name is hyperlink to candidate detail view
-
-**State Changes:**
-- None (read-only query)
-
-**Events Published:**
-- None (query operation)
-
-**Error Scenarios:**
-- User lacks permission > Access denied
-- Invalid filter values > Validation error
-
----
-
 ## View Candidate Enrollment Detail
 
 **What:** EPP Coordinator views individual candidate's full enrollment history and programs  
 **When:** Reviewing specific candidate's progress through EPP program  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.view (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -646,30 +588,32 @@ title: EPP - View Candidate Enrollment Detail
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    participant CredService as Credentialing API
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant IamApi as IAM API
+    participant CredApi as Credentialing API
+    end
+
     Coordinator->>UI: Click candidate name from search results
-    UI->>IAM: Verify permission (epp.enrollment.view)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /candidate-enrollments/{enrollmentId}
-    EPPService-->>UI: Candidate enrollment details
-    
-    UI->>IAM: GET /users/{candidateId}
-    IAM-->>UI: Candidate demographics (name, SSN, DOB, Student ID, Unique ID)
-    
-    UI->>CredService: GET /educators/{candidateId}/credentials
-    CredService-->>UI: Credential history (if any)
-    
-    UI->>EPPService: GET /candidate-enrollments/{enrollmentId}/programs
-    EPPService-->>UI: Assigned programs with grade bands
-    
+
+    UI->>EppApi: APP GET /candidate-enrollments/{enrollmentId}
+    EppApi-->>UI: Candidate enrollment details
+
+    UI->>IamApi: APP GET /users/{userId}
+    IamApi-->>UI: Candidate demographics (name, SSN, DOB, Student ID, Unique ID)
+
+    UI->>CredApi: APP GET /educators/{educatorId}/credentials
+    CredApi-->>UI: Credential history (if any)
+
+    UI->>EppApi: APP GET /candidate-enrollments/{enrollmentId}/programs
+    EppApi-->>UI: Assigned programs with grade bands
+
     UI->>Coordinator: Display candidate profile
     Note over UI: Tabs: Education (enrollment info),<br/>Programs (program assignments),<br/>Credentials (credential history)
-    
+
     Note over UI: Education Tab shows:<br/>- Enrollment Date<br/>- Program Level<br/>- EPP Provider<br/>- Status<br/>- Exit Date/Reason (if exited)
 ```
 
@@ -691,100 +635,109 @@ sequenceDiagram
 
 ---
 
-## Manage Candidate Programs
+## Add Candidate Program
 
-**What:** EPP Coordinator adds, edits, or deletes programs assigned to enrolled candidate  
+**What:** EPP Coordinator adds a program assigned to an enrolled candidate (editing a program's grade band is described under Key Decisions)  
 **When:** Candidate adds/changes program concentrations or endorsements  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.edit (scoped to the caller's EPP)  
+**See also:** Remove Candidate Program
 
 ```mermaid
 ---
-title: EPP - Manage Candidate Programs
+title: EPP - Add Candidate Program
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
     Coordinator->>UI: Navigate to candidate detail > Programs tab
-    UI->>IAM: Verify permission (epp.enrollment.edit)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /candidate-enrollments/{enrollmentId}/programs
-    EPPService-->>UI: Current program assignments
-    
-    alt Add Program
-        Coordinator->>UI: Click "Add Program"
-        UI->>EPPService: GET /epp-providers/{eppCode}/approved-programs
-        EPPService-->>UI: Available programs for EPP
-        
-        Coordinator->>UI: Select Program and Grade Band
-        Coordinator->>UI: Click "Confirm"
-        
-        UI->>EPPService: POST /candidate-enrollments/{enrollmentId}/programs
-        
-        EPPService->>EPPService: Check for duplicate program (same program + grade band)
-        alt Duplicate detected
-            EPPService-->>UI: Error: Program already assigned
-            UI-->>Coordinator: Display duplicate error
-        else No duplicate
-            EPPService->>EPPService: Create EnrollmentProgram entity
-            EPPService->>EPPService: Capture audit trail
-            EPPService-->>UI: Program added
-            UI-->>Coordinator: Confirmation
-        end
-        
-    else Edit Program
-        Coordinator->>UI: Click "Edit" on existing program
-        Coordinator->>UI: Update Grade Band
-        Coordinator->>UI: Submit changes
-        
-        UI->>EPPService: PUT /candidate-enrollments/{enrollmentId}/programs/{programId}
-        EPPService->>EPPService: Update EnrollmentProgram
-        EPPService->>EPPService: Capture audit trail
-        EPPService-->>UI: Program updated
-        UI-->>Coordinator: Confirmation
-        
-    else Delete Program
-        Coordinator->>UI: Click "Delete" on program
-        UI->>EPPService: DELETE /candidate-enrollments/{enrollmentId}/programs/{programId}
-        
-        EPPService->>EPPService: Check enrollment status
-        alt Status requires program (StudentTeaching, Placed)
-            EPPService->>EPPService: Check remaining program count
-            alt Last program
-                EPPService-->>UI: Error: At least one program required for current status
-                UI-->>Coordinator: Display error
-            else Other programs exist
-                EPPService->>EPPService: Delete EnrollmentProgram
-                EPPService-->>UI: Program deleted
-                UI-->>Coordinator: Confirmation
-            end
-        else Status does not require program
-            EPPService->>EPPService: Delete EnrollmentProgram
-            EPPService-->>UI: Program deleted
-            UI-->>Coordinator: Confirmation
-        end
+    UI->>EppApi: APP GET /candidate-enrollments/{enrollmentId}/programs
+    EppApi-->>UI: Current program assignments
+
+    Coordinator->>UI: Click "Add Program"
+    UI->>EppApi: APP GET /epp-providers/{eppCode}/approved-programs
+    EppApi-->>UI: Available programs for EPP
+
+    Coordinator->>UI: Select Program and Grade Band and click "Confirm"
+
+    UI->>EppApi: APP POST /candidate-enrollments/{enrollmentId}/programs
+    EppApi->>EppApi: Check for duplicate program (same program + grade band)
+
+    alt Duplicate detected
+        EppApi-->>UI: 400 Program already assigned
+    else No duplicate
+        EppApi->>EppApi: Create EnrollmentProgram entity, capture audit trail
     end
 ```
 
 **Key Decisions:**
 - **Duplicate Prevention:** Cannot add same program + grade band combination twice
-- **Status Validation:** Cannot delete last program if status is StudentTeaching or Placed
 - **EPP Scope:** Can only assign programs the EPP is approved to offer
+- **Edit (not drawn):** A program's grade band is edited with `APP PUT /candidate-enrollments/{enrollmentId}/programs`. The EPP API updates the EnrollmentProgram and captures the audit trail
 
 **State Changes:**
 - EnrollmentProgram: `none` > `Active` (on add)
-- EnrollmentProgram: `Active` > `deleted` (on delete, if allowed)
 
 **Events Published:**
 - None (internal enrollment update only)
 
 **Error Scenarios:**
 - Duplicate program > Block addition
-- Delete last program with status requiring program > Block deletion
 - Invalid program for EPP > Validation error
+
+---
+
+## Remove Candidate Program
+
+**What:** EPP Coordinator deletes a program assigned to an enrolled candidate  
+**When:** Candidate adds/changes program concentrations or endorsements  
+**Who:** EPP Coordinator. Permission: epp.enrollment.edit (scoped to the caller's EPP)  
+**See also:** Add Candidate Program
+
+```mermaid
+---
+title: EPP - Remove Candidate Program
+---
+sequenceDiagram
+    actor Coordinator as EPP Coordinator
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
+    Coordinator->>UI: Navigate to candidate detail > Programs tab
+    UI->>EppApi: APP GET /candidate-enrollments/{enrollmentId}/programs
+    EppApi-->>UI: Current program assignments
+
+    Coordinator->>UI: Click "Delete" on program
+    UI->>EppApi: APP DELETE /candidate-enrollments/{enrollmentId}/programs
+    EppApi->>EppApi: Check enrollment status and remaining program count
+
+    alt Status requires program (StudentTeaching, Placed) and last program
+        EppApi-->>UI: 400 At least one program required for current status
+    else Other programs exist or status does not require program
+        EppApi->>EppApi: Delete EnrollmentProgram
+    end
+```
+
+**Key Decisions:**
+- **Status Validation:** Cannot delete last program if status is StudentTeaching or Placed
+
+**State Changes:**
+- EnrollmentProgram: `Active` > `deleted` (on delete, if allowed)
+
+**Events Published:**
+- None (internal enrollment update only)
+
+**Error Scenarios:**
+- Delete last program with status requiring program > Block deletion
 
 ---
 
@@ -792,7 +745,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator changes candidate status along valid state machine path  
 **When:** Candidate progresses through program milestones  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.edit (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -800,65 +753,34 @@ title: EPP - Update Candidate Enrollment Status
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    participant BRM as Business Rule Engine
-    participant EventBus as Event Bus
-    
-    Coordinator->>UI: Select candidate(s) from Verified Candidates list
-    Coordinator->>UI: Click "Status Update" action
-    
-    UI->>IAM: Verify permission (epp.enrollment.edit)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /candidate-enrollments/{enrollmentId}/available-transitions
-    EPPService->>BRM: Get valid status transitions for current status and EPP type
-    BRM-->>EPPService: Available next statuses
-    EPPService-->>UI: Valid status options
-    
-    Coordinator->>UI: Select new status
-    
-    alt Status = Exited
-        UI->>Coordinator: Prompt for Exit Date and Exit Reason
-        Coordinator->>UI: Enter exit information
-    else Status = Enrolled (from Rejected)
-        UI->>Coordinator: Prompt for Program Details and Enrollment Start Date
-        Coordinator->>UI: Enter enrollment details
+    box Browser
+    participant UI as UI
     end
-    
-    Coordinator->>UI: Submit status update
-    
-    UI->>EPPService: PATCH /candidate-enrollments/bulk-status-update
-    Note over UI,EPPService: Payload: [candidateIds], newStatus,<br/>exitInfo (if applicable),<br/>enrollmentInfo (if applicable)
-    
-    EPPService->>EPPService: For each candidate: validate transition
-    EPPService->>BRM: Validate state machine rules
-    
-    alt Invalid transition
-        BRM-->>EPPService: Validation error
-        EPPService-->>UI: Error: Invalid status transition
-        UI-->>Coordinator: Display error for affected candidates
-    else Valid transition
-        alt New status requires programs (StudentTeaching, Placed)
-            EPPService->>EPPService: Check if candidate has assigned programs
-            alt No programs assigned
-                EPPService-->>UI: Error: At least one program required
-                UI-->>Coordinator: Display error
-            else Programs exist
-                EPPService->>EPPService: Update CandidateEnrollment status
-                EPPService->>EPPService: Capture audit trail
-                EPPService--)EventBus: CandidateStatusChanged
-                EPPService-->>UI: Status updated
-                UI-->>Coordinator: Confirmation
-            end
-        else Status does not require programs
-            EPPService->>EPPService: Update CandidateEnrollment status
-            EPPService->>EPPService: Capture audit trail
-            EPPService--)EventBus: CandidateStatusChanged
-            EPPService-->>UI: Status updated
-            UI-->>Coordinator: Confirmation
-        end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant EventBus as Event Bus
+    end
+
+    Coordinator->>UI: Select candidate(s) from Verified Candidates list and click "Status Update"
+
+    UI->>EppApi: APP GET /candidate-enrollments/{enrollmentId}/available-transitions
+    EppApi-->>UI: Valid status options
+
+    Coordinator->>UI: Select new status
+    Note over UI: Exited prompts for Exit Date and Exit Reason.<br/>Enrolled (from Rejected) prompts for Program Details and Enrollment Start Date
+
+    Coordinator->>UI: Enter required details and submit status update
+
+    UI->>EppApi: APP PATCH /candidate-enrollments/bulk-status-update
+    Note over UI,EppApi: Payload: [candidateIds], newStatus,<br/>exitInfo (if applicable),<br/>enrollmentInfo (if applicable)
+
+    EppApi->>EppApi: For each candidate: validate transition, program requirement and exit information (see Status Rules)
+
+    alt Validation fails
+        EppApi-->>UI: 400 Invalid status transition or missing required data (affected candidates)
+    else Valid
+        EppApi->>EppApi: Update CandidateEnrollment status, capture audit trail
+        EppApi--)EventBus: CandidateStatusChanged
     end
 ```
 
@@ -867,6 +789,15 @@ sequenceDiagram
 - **Program Requirement:** StudentTeaching and Placed statuses require at least one assigned program
 - **Bulk Operation:** Supports single or multiple candidate status updates
 - **Exit Information:** Exit Date and Reason required when transitioning to Exited status
+
+**Status Rules:**
+
+| Rule | Applies when | Outcome if not met |
+|---|---|---|
+| Transition is valid for the current status and EPP type (Traditional vs Alternative) | Every status update | Block update, invalid status transition error |
+| Candidate has at least one assigned program | New status is StudentTeaching or Placed | Block update, at least one program required |
+| Exit Date and Exit Reason provided | New status is Exited | Validation error |
+| Program Details and Enrollment Start Date provided | New status is Enrolled, from Rejected | Validation error |
 
 **State Changes:**
 - CandidateEnrollment: `CurrentStatus` > `NewStatus` (per state machine rules)
@@ -885,7 +816,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator marks candidate as Exited with exit date and reason  
 **When:** Candidate completes EPP program or withdraws  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.enrollment.edit (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -893,42 +824,33 @@ title: EPP - Exit Candidate from Program
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    
-    Coordinator->>UI: Navigate to candidate detail
-    UI->>IAM: Verify permission (epp.enrollment.edit)
-    IAM-->>UI: Permission confirmed
-    
-    Coordinator->>UI: Click "Edit" on enrollment status
+    end
+
+    Coordinator->>UI: Navigate to candidate detail and click "Edit" on enrollment status
     UI->>Coordinator: Display status update modal
-    
+
     Coordinator->>UI: Select "Exited" status
     UI->>Coordinator: Prompt for Exit Date and Exit Reason
     Note over UI: Exit Reason examples:<br/>- Program Completion<br/>- Withdrew<br/>- Transferred to Another EPP<br/>- Other
-    
-    Coordinator->>UI: Enter exit date and reason
-    Coordinator->>UI: Submit status update
-    
-    UI->>EPPService: PATCH /candidate-enrollments/{enrollmentId}/status
-    Note over UI,EPPService: Payload: status="Exited",<br/>exitDate, exitReason
-    
-    EPPService->>EPPService: Validate exit date (not future date)
-    
+
+    Coordinator->>UI: Enter exit date and reason and submit status update
+
+    UI->>EppApi: APP PATCH /candidate-enrollments/{enrollmentId}
+    Note over UI,EppApi: Payload: status="Exited",<br/>exitDate, exitReason
+
+    EppApi->>EppApi: Validate exit date (not future date)
+
     alt Invalid exit date
-        EPPService-->>UI: Validation error
-        UI-->>Coordinator: Display date error
+        EppApi-->>UI: 400 Validation error (exit date)
     else Valid exit date
-        EPPService->>EPPService: Update CandidateEnrollment status
-        Note over EPPService: State: {CurrentStatus} > Exited
-        EPPService->>EPPService: Store ExitInformation value object
-        EPPService->>EPPService: Capture audit trail
-        
-        EPPService--)EventBus: CandidateExited
-        EPPService-->>UI: Candidate exited successfully
-        UI-->>Coordinator: Confirmation
+        EppApi->>EppApi: Update CandidateEnrollment status ({CurrentStatus} > Exited), store ExitInformation value object, capture audit trail
+        EppApi--)EventBus: CandidateExited
     end
 ```
 
@@ -949,124 +871,105 @@ sequenceDiagram
 
 ---
 
-## View Cross-EPP Enrollment History
-
-**What:** EPP Coordinator views candidate's enrollment records at all EPPs  
-**When:** Candidate has transferred or dual-enrolled, EPP needs full context  
-**Who:** EPP Coordinator
-
-```mermaid
----
-title: EPP - View Cross-EPP Enrollment History
----
-sequenceDiagram
-    actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
-    Coordinator->>UI: Navigate to candidate detail
-    Coordinator->>UI: Click "View Enrollment from All EPPs" option
-    
-    UI->>IAM: Verify permission (epp.enrollment.view)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /candidate-enrollments?candidateId={id}&allEpps=true
-    Note over UI,EPPService: This query retrieves enrollments<br/>across all EPPs for this candidate
-    
-    EPPService->>EPPService: Query all CandidateEnrollment records for candidate
-    EPPService-->>UI: Complete enrollment history across EPPs
-    
-    UI->>Coordinator: Display cross-EPP enrollment table
-    Note over UI: Read-only view<br/>Columns: Student ID, Provider,<br/>Program Level, Program(s),<br/>Submitted Date, Enroll Date,<br/>Exit Date, Exit Reason<br/><br/>Current EPP's records highlighted
-```
-
-**Key Decisions:**
-- **Read-Only:** Coordinator can view but not edit enrollments from other EPPs
-- **Full History:** Shows all enrollments regardless of status or EPP
-- **Highlighting:** Current EPP's records visually distinguished
-
-**State Changes:**
-- None (read-only query)
-
-**Events Published:**
-- None (query operation)
-
-**Error Scenarios:**
-- User lacks permission > Access denied
-- No enrollments found > Display empty state message
-
----
-
-## Bulk Upload Candidate Tracking Data
+## Upload Tracking File
 
 **What:** EPP Coordinator or EPP System Admin uploads file with candidate enrollment updates  
 **When:** EPP has batch data from internal student information system  
-**Who:** EPP Coordinator or EPP System Admin
+**Who:** EPP Coordinator or EPP System Admin. Permission: epp.enrollment.bulk-upload (scoped to the caller's EPP)  
+**See also:** Process Tracking File
 
 ```mermaid
 ---
-title: EPP - Bulk Upload Candidate Tracking Data
+title: EPP - Upload Tracking File
 ---
 sequenceDiagram
     actor User as EPP Coordinator/Admin
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant DocService as Document Service
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant DocsApi as Documents API
+    end
+    box Synapse (Azure)
     participant Synapse as Azure Synapse Pipeline
-    participant EventBus as Event Bus
-    
+    end
+
     User->>UI: Navigate to "Candidates" > "Upload"
-    UI->>IAM: Verify permission (epp.enrollment.bulk-upload)
-    IAM-->>UI: Permission confirmed
-    
     User->>UI: Download template file
     UI-->>User: CSV template with required columns
-    
+
     User->>UI: Upload completed file
-    UI->>DocService: POST /documents/staging/upload/request
-    DocService-->>UI: SAS token for staging container
-    
-    UI->>DocService: Upload file to staging blob
-    DocService->>EPPService: POST /candidate-enrollments/bulk-upload/initiate
-    Note over DocService,EPPService: Payload: fileId, eppCode,<br/>uploadedBy, uploadDate
-    
-    EPPService->>EPPService: Create bulk upload job record
-    EPPService--)Synapse: Trigger bulk processing pipeline
-    EPPService-->>UI: Upload initiated - job ID
-    UI-->>User: Upload accepted, processing in background
-    
-    Note over Synapse: Synapse Pipeline processes file:<br/>1. Validate file format<br/>2. Validate Unique IDs exist in IAM<br/>3. Validate EPP program approvals<br/>4. Process valid records<br/>5. Generate error report
-    
-    Synapse->>IAM: GET /users/by-unique-id/{uniqueId} (for each row)
-    IAM-->>Synapse: User validation
-    
-    Synapse->>EPPService: GET /epp-providers/{eppCode}/approved-programs
-    EPPService-->>Synapse: Program validation
-    
-    alt Validation errors found
-        Synapse->>DocService: Upload error report to staging
-        Synapse->>EPPService: POST /candidate-enrollments/bulk-upload/complete
-        Note over Synapse,EPPService: Status: PartialSuccess or Failed
-        
-        EPPService--)EventBus: BulkUploadCompleted
-        EventBus--)User: Email notification with error report link
-    else All records valid
-        Synapse->>EPPService: POST /candidate-enrollments/bulk-create
-        EPPService->>EPPService: Create/update CandidateEnrollment aggregates
-        EPPService->>EPPService: Capture audit trail with bulk upload job ID
-        
-        Synapse->>EPPService: POST /candidate-enrollments/bulk-upload/complete
-        Note over Synapse,EPPService: Status: Success
-        
-        EPPService--)EventBus: BulkUploadCompleted
-        EventBus--)User: Email notification with success summary
-    end
+    UI->>EppApi: APP POST /candidate-enrollments/bulk-upload/initiate
+
+    EppApi->>DocsApi: SVC POST /documents/staging/upload/request
+    DocsApi-->>EppApi: SAS token for staging container
+
+    EppApi->>EppApi: Upload file to staging blob, create bulk upload job record
+    EppApi--)Synapse: Trigger bulk processing pipeline
+    EppApi-->>UI: 202 Upload initiated - job ID
 ```
 
 **Key Decisions:**
 - **Staging Upload:** Files uploaded to staging container for Synapse processing
+
+**State Changes:**
+- BulkUploadJob: `none` > `Pending`
+
+**Events Published:**
+- None (the pipeline run and its completion event are described in Process Tracking File)
+
+**Error Scenarios:**
+- Invalid file format > Reject entire file
+
+---
+
+## Process Tracking File
+
+**What:** The Synapse pipeline validates the uploaded candidate tracking file, applies valid records and reports the result  
+**When:** An EPP Coordinator or EPP System Admin has uploaded a candidate tracking file  
+**Who:** EPP Coordinator or EPP System Admin (initiator). Permission: epp.enrollment.bulk-upload (scoped to the caller's EPP). The pipeline calls the EPP API as a service.  
+**See also:** Upload Tracking File
+
+```mermaid
+---
+title: EPP - Process Tracking File
+---
+sequenceDiagram
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant IamApi as IAM API
+    participant DocsApi as Documents API
+    participant EventBus as Event Bus
+    end
+    box Synapse (Azure)
+    participant Synapse as Azure Synapse Pipeline
+    end
+
+    Note over Synapse: Synapse Pipeline processes file:<br/>1. Validate file format<br/>2. Validate Unique IDs exist in IAM<br/>3. Validate EPP program approvals<br/>4. Process valid records<br/>5. Generate error report
+
+    Synapse->>IamApi: SVC GET /users/by-unique-id/{uniqueId}
+    IamApi-->>Synapse: User validation
+
+    Synapse->>EppApi: SVC GET /epp-providers/{eppCode}/approved-programs
+    EppApi-->>Synapse: Program validation
+
+    alt Validation errors found
+        Synapse->>DocsApi: SVC Upload error report to staging
+        Synapse->>EppApi: SVC POST /candidate-enrollments/bulk-upload/complete
+        Note over Synapse,EppApi: Status: PartialSuccess or Failed
+    else All records valid
+        Synapse->>EppApi: SVC POST /candidate-enrollments/bulk-create
+        EppApi->>EppApi: Create/update CandidateEnrollment aggregates, capture audit trail with bulk upload job ID
+        Synapse->>EppApi: SVC POST /candidate-enrollments/bulk-upload/complete
+        Note over Synapse,EppApi: Status: Success
+    end
+
+    EppApi--)EventBus: BulkUploadCompleted
+    Note over EventBus: Consumed by Communications (emails the uploader the success summary or the error report link)
+```
+
+**Key Decisions:**
 - **Validation Sequence:** Validate Unique IDs first, then program approvals
 - **Partial Success:** System processes valid records even if some rows fail validation
 - **Error Reporting:** Downloadable report identifies failing rows with reasons
@@ -1079,7 +982,6 @@ sequenceDiagram
 - `BulkUploadCompleted` - Triggers notification email with results
 
 **Error Scenarios:**
-- Invalid file format > Reject entire file
 - Unique ID not found in IAM > Skip row, include in error report
 - Program not approved for EPP > Skip row, include in error report
 - Duplicate enrollment > Skip row, include in error report
@@ -1090,7 +992,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator filters credential applications by certificate type, status, candidate info  
 **When:** EPP needs to locate applications requiring review  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.view (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1098,37 +1000,33 @@ title: EPP - Search Credential Applications for Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    end
+
     Coordinator->>UI: Navigate to "Certificate Applications"
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed with EPP scope
-    
-    UI->>EPPService: GET /application-reviews?eppCode={userEppCode}&status=Submitted,Hold
-    EPPService->>CredService: GET /applications?eppCode={eppCode}&status=SubmittedToEpp
-    CredService-->>EPPService: Application IDs requiring EPP review
-    
-    EPPService->>EPPService: Query CredentialApplicationReview for EPP's reviews
-    EPPService-->>UI: List of applications requiring EPP review
-    
-    Coordinator->>UI: Enter filter criteria
-    Note over Coordinator,UI: Certificate Type, Status,<br/>Application #, First Name, Last Name,<br/>SSN, Unique ID, Student ID,<br/>Uses Alternative Pass? (Teacher only)
-    
-    Coordinator->>UI: Click "Search"
-    UI->>EPPService: GET /application-reviews?filters={criteria}
-    
-    EPPService->>EPPService: Apply filters to CredentialApplicationReview query
-    EPPService->>EPPService: Filter by EPP scope from user context
-    
+
+    UI->>EppApi: APP GET /application-reviews
+    EppApi->>CredApi: SVC GET /applications
+    CredApi-->>EppApi: Application IDs requiring EPP review
+
+    EppApi->>EppApi: Query CredentialApplicationReview for EPP's reviews
+    EppApi-->>UI: List of applications requiring EPP review
+
+    Coordinator->>UI: Enter filter criteria and click "Search"
+    Note over Coordinator,UI: Certificate Type, Status,<br/>Application Number, First Name, Last Name,<br/>SSN, Unique ID, Student ID,<br/>Uses Alternative Pass? (Teacher only)
+
+    UI->>EppApi: APP GET /application-reviews
+    EppApi->>EppApi: Apply filters to CredentialApplicationReview query, filter by EPP scope from user context
+
     alt No results found
-        EPPService-->>UI: Empty result set
-        UI-->>Coordinator: Display "No results found"
+        EppApi-->>UI: Empty result set
     else Results found
-        EPPService-->>UI: Filtered application review list
-        UI-->>Coordinator: Display results in table
+        EppApi-->>UI: Filtered application review list
         Note over UI: Columns: Application Number (link),<br/>First Name, Last Name,<br/>Student ID, Unique ID,<br/>Certificate Type, Has Conviction? (red if Yes),<br/>Status, Submitted Date,<br/>Last Modified By, Summary (link)
     end
 ```
@@ -1155,7 +1053,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator views application summary, MTTC results, candidate demographics, review history  
 **When:** EPP needs to assess application before taking action  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.view (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1163,37 +1061,39 @@ title: EPP - View Credential Application Detail for EPP Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
-    participant PPR as Professional Practices API
-    
-    Coordinator->>UI: Click application number from the application list
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /application-reviews/{applicationId}
-    EPPService-->>UI: EPP review record and internal remarks
-    
-    UI->>CredService: GET /applications/{applicationId}
-    CredService-->>UI: Application details
-    
-    UI->>IAM: GET /users/{candidateId}
-    IAM-->>UI: Candidate demographics
-    
-    UI->>CredService: GET /applications/{applicationId}/mttc-results
-    CredService-->>UI: MTTC test results
-    Note over UI: MTTC table shows:<br/>Endorsement Name, Test Code,<br/>Has Passed?, Date Passed, Exam Date
-    
-    opt If Has Conviction flag = true
-        UI->>PPR: GET /educators/{candidateId}/disclosures
-        PPR-->>UI: Conviction disclosure summary (for context)
+    box Browser
+    participant UI as UI
     end
-    
-    UI->>EPPService: GET /application-reviews/{applicationId}/remarks-history
-    EPPService-->>UI: Historical remarks and actions
-    
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    participant IamApi as IAM API
+    participant PprApi as PPR API
+    end
+
+    Coordinator->>UI: Click application number from the application list
+
+    UI->>EppApi: APP GET /application-reviews/{applicationId}
+    EppApi-->>UI: EPP review record and internal remarks
+
+    UI->>CredApi: APP GET /applications/{applicationId}
+    CredApi-->>UI: Application details
+
+    UI->>IamApi: APP GET /users/{userId}
+    IamApi-->>UI: Candidate demographics
+
+    UI->>CredApi: APP GET /applications/{applicationId}/mttc-results
+    CredApi-->>UI: MTTC test results
+    Note over UI: MTTC table shows:<br/>Endorsement Name, Test Code,<br/>Has Passed?, Date Passed, Exam Date
+
+    opt If Has Conviction flag = true
+        UI->>PprApi: APP GET /disclosures
+        PprApi-->>UI: Conviction disclosure summary (for context)
+    end
+
+    UI->>EppApi: APP GET /application-reviews/{applicationId}/remarks-history
+    EppApi-->>UI: Historical remarks and actions
+
     UI->>Coordinator: Display application review screen
     Note over UI: Tabs:<br/>- Details (Personal Info, Application Info)<br/>- MTTC Information<br/>- Internal Remarks<br/>- Audit Log
 ```
@@ -1220,7 +1120,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator holds application with remarks explaining reason  
 **When:** Application needs additional information or clarification  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1228,38 +1128,27 @@ title: EPP - Place Credential Application on Hold
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: View application detail
-    Coordinator->>UI: Select "Hold" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>Coordinator: Prompt for Application Remarks (required)
-    UI->>Coordinator: Prompt for Internal Remarks (optional)
-    
-    Coordinator->>UI: Enter remarks
-    Coordinator->>UI: Submit hold action
-    
-    UI->>EPPService: POST /application-reviews/{applicationId}/hold
-    Note over UI,EPPService: Payload: applicationRemarks,<br/>internalRemarks (optional)
-    
-    EPPService->>EPPService: Update CredentialApplicationReview aggregate
-    Note over EPPService: State: Submitted > Hold
-    EPPService->>EPPService: Store ApplicationRemark (external)
-    EPPService->>EPPService: Store InternalRemark (if provided)
-    EPPService->>EPPService: Capture audit trail
-    
-    EPPService--)EventBus: CredentialApplicationOnHold
-    EventBus--)CommService: Trigger hold notification email to candidate
-    
-    EPPService-->>UI: Application placed on hold
-    UI-->>Coordinator: Confirmation
+    end
+
+    Coordinator->>UI: View application detail and select "Hold" from Action dropdown
+
+    UI->>Coordinator: Prompt for Application Remarks (required) and Internal Remarks (optional)
+
+    Coordinator->>UI: Enter remarks and submit hold action
+
+    UI->>EppApi: APP POST /application-reviews/{applicationId}/hold
+    Note over UI,EppApi: Payload: applicationRemarks,<br/>internalRemarks (optional)
+
+    EppApi->>EppApi: Update CredentialApplicationReview aggregate (Submitted > Hold), store ApplicationRemark (external) and InternalRemark (if provided), capture audit trail
+
+    EppApi--)EventBus: CredentialApplicationOnHold
+    Note over EventBus: Consumed by Communications (sends hold notification email to the candidate)
 ```
 
 **Key Decisions:**
@@ -1283,7 +1172,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator denies application with required remarks  
 **When:** Candidate doesn't meet EPP program requirements  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1291,40 +1180,27 @@ title: EPP - Deny Credential Application
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: View application detail
-    Coordinator->>UI: Select "Deny" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>Coordinator: Prompt for Application Remarks (required)
-    UI->>Coordinator: Prompt for Internal Remarks (optional)
-    
-    Coordinator->>UI: Enter denial remarks
-    Coordinator->>UI: Submit denial
-    
-    UI->>EPPService: POST /application-reviews/{applicationId}/deny
-    Note over UI,EPPService: Payload: applicationRemarks,<br/>internalRemarks (optional)
-    
-    EPPService->>EPPService: Update CredentialApplicationReview aggregate
-    Note over EPPService: State: Submitted > Denied
-    EPPService->>EPPService: Store ApplicationRemark (external)
-    EPPService->>EPPService: Store InternalRemark (if provided)
-    EPPService->>EPPService: Capture audit trail
-    
-    EPPService--)EventBus: CredentialApplicationDenied
-    EventBus--)CredService: Update application status
-    EventBus--)CommService: Trigger denial notification email to candidate
-    
-    EPPService-->>UI: Application denied
-    UI-->>Coordinator: Confirmation
+    end
+
+    Coordinator->>UI: View application detail and select "Deny" from Action dropdown
+
+    UI->>Coordinator: Prompt for Application Remarks (required) and Internal Remarks (optional)
+
+    Coordinator->>UI: Enter denial remarks and submit denial
+
+    UI->>EppApi: APP POST /application-reviews/{applicationId}/deny
+    Note over UI,EppApi: Payload: applicationRemarks,<br/>internalRemarks (optional)
+
+    EppApi->>EppApi: Update CredentialApplicationReview aggregate (Submitted > Denied), store ApplicationRemark (external) and InternalRemark (if provided), capture audit trail
+
+    EppApi--)EventBus: CredentialApplicationDenied
+    Note over EventBus: Consumed by Credentialing (updates application status) and Communications (sends denial notification email to the candidate)
 ```
 
 **Key Decisions:**
@@ -1348,7 +1224,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator cancels application (e.g., candidate withdrew)  
 **When:** Application is no longer being pursued  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1356,34 +1232,23 @@ title: EPP - Cancel Credential Application Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    participant EventBus as Event Bus
-    
-    Coordinator->>UI: View application detail
-    Coordinator->>UI: Select "Cancel" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>Coordinator: Prompt for Application Remarks (required)
-    UI->>Coordinator: Prompt for Internal Remarks (optional)
-    
-    Coordinator->>UI: Enter cancellation reason
-    Coordinator->>UI: Submit cancellation
-    
-    UI->>EPPService: POST /application-reviews/{applicationId}/cancel
-    Note over UI,EPPService: Payload: applicationRemarks,<br/>internalRemarks (optional)
-    
-    EPPService->>EPPService: Update CredentialApplicationReview aggregate
-    Note over EPPService: State: Submitted > Cancelled
-    EPPService->>EPPService: Store ApplicationRemark (external)
-    EPPService->>EPPService: Store InternalRemark (if provided)
-    EPPService->>EPPService: Capture audit trail
-    
-    EPPService-->>UI: Application cancelled
-    UI-->>Coordinator: Confirmation
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
+    Coordinator->>UI: View application detail and select "Cancel" from Action dropdown
+
+    UI->>Coordinator: Prompt for Application Remarks (required) and Internal Remarks (optional)
+
+    Coordinator->>UI: Enter cancellation reason and submit cancellation
+
+    UI->>EppApi: APP POST /application-reviews/{applicationId}/cancel
+    Note over UI,EppApi: Payload: applicationRemarks,<br/>internalRemarks (optional)
+
+    EppApi->>EppApi: Update CredentialApplicationReview aggregate (Submitted > Cancelled), store ApplicationRemark (external) and InternalRemark (if provided), capture audit trail
 ```
 
 **Key Decisions:**
@@ -1403,11 +1268,68 @@ sequenceDiagram
 
 ---
 
+## Load Recommendation Context
+
+**What:** EPP Coordinator opens the recommend action and the EPP API loads the endorsements requested by the candidate, the MTTC results and the endorsements the EPP can recommend  
+**When:** Candidate meets EPP program and assessment requirements  
+**Who:** EPP Coordinator. Permission: epp.applications.recommend (scoped to the caller's EPP)  
+**See also:** Recommend Candidate for Credential
+
+```mermaid
+---
+title: EPP - Load Recommendation Context
+---
+sequenceDiagram
+    actor Coordinator as EPP Coordinator
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    end
+
+    Coordinator->>UI: View application detail and select "Recommend" from Action dropdown
+
+    UI->>EppApi: APP GET /application-reviews/{applicationId}
+    EppApi->>CredApi: SVC GET /applications/{applicationId}/requested-endorsements
+    CredApi-->>EppApi: Endorsements requested by candidate
+    EppApi->>CredApi: SVC GET /applications/{applicationId}/mttc-results
+    CredApi-->>EppApi: MTTC test results
+    EppApi-->>UI: Review record with requested endorsements and MTTC results
+
+    UI->>EppApi: APP GET /epp-providers/{eppCode}/approved-endorsements
+    EppApi-->>UI: Endorsements EPP can recommend
+
+    UI->>Coordinator: Display endorsement selection grid
+    Note over UI: Grid shows:<br/>- Recommend (checkbox)<br/>- Endorsement Name<br/>- Code, Grade Band<br/>- Action by Applicant<br/>- Action (Edit/Add)
+
+    opt Add additional endorsement
+        Coordinator->>UI: Click "Add Endorsement", select endorsement and grade band (EPP approved only)
+    end
+```
+
+**Key Decisions:**
+- **Endorsement Scope:** Only endorsements within EPP's approved scope are offered for selection
+- **Credentialing Reads:** The EPP API reads requested endorsements and MTTC results from the Credentialing API on the caller's behalf
+
+**State Changes:**
+- None (read-only query)
+
+**Events Published:**
+- None (query operation)
+
+**Error Scenarios:**
+- User lacks permission > Access denied
+
+---
+
 ## Recommend Candidate for Credential
 
 **What:** EPP Coordinator recommends application with selected endorsements  
 **When:** Candidate meets EPP program and assessment requirements  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.recommend (scoped to the caller's EPP)  
+**See also:** Load Recommendation Context
 
 ```mermaid
 ---
@@ -1415,82 +1337,34 @@ title: EPP - Recommend Candidate for Credential
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
-    participant BRM as Business Rule Engine
-    participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: View application detail
-    Coordinator->>UI: Select "Recommend" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>CredService: GET /applications/{applicationId}/requested-endorsements
-    CredService-->>UI: Endorsements requested by candidate
-    
-    UI->>CredService: GET /applications/{applicationId}/mttc-results
-    CredService-->>UI: MTTC test results
-    
-    UI->>EPPService: GET /epp-providers/{eppCode}/approved-endorsements
-    EPPService-->>UI: Endorsements EPP can recommend
-    
-    UI->>Coordinator: Display endorsement selection grid
-    Note over UI: Grid shows:<br/>- Recommend (checkbox)<br/>- Endorsement Name<br/>- Code, Grade Band<br/>- Action by Applicant<br/>- Action (Edit/Add)
-    
-    Coordinator->>UI: Select/adjust endorsements to recommend
-    
-    opt Add additional endorsement
-        Coordinator->>UI: Click "Add Endorsement"
-        UI->>Coordinator: Show endorsement picker (EPP approved only)
-        Coordinator->>UI: Select endorsement, grade band
+    box Browser
+    participant UI as UI
     end
-    
-    Coordinator->>UI: Enter Internal Remarks (optional)
-    Coordinator->>UI: Submit recommendation
-    
-    UI->>EPPService: POST /application-reviews/{applicationId}/recommend
-    Note over UI,EPPService: Payload: recommendedEndorsements[],<br/>internalRemarks (optional)
-    
-    EPPService->>EPPService: Validate at least one endorsement selected
-    alt No endorsements selected
-        EPPService-->>UI: Validation error
-        UI-->>Coordinator: Display error - must recommend at least one endorsement
-    else Endorsements selected
-        EPPService->>BRM: Validate endorsements against EPP approved list
-        BRM-->>EPPService: Validation result
-        
-        alt Endorsement not approved for EPP
-            EPPService-->>UI: Validation error
-            UI-->>Coordinator: Display error - endorsement not in EPP scope
-        else All endorsements valid
-            EPPService->>CredService: GET /applications/{applicationId}/mttc-results
-            CredService-->>EPPService: MTTC results
-            
-            EPPService->>BRM: Validate MTTC pass for each endorsement
-            BRM-->>EPPService: MTTC validation result
-            
-            alt MTTC not passed for endorsement
-                EPPService-->>UI: Warning - MTTC not passed
-                UI-->>Coordinator: Display warning (allow override if Alternative Pass)
-            else MTTC passed or Alternative Pass
-                EPPService->>EPPService: Update CredentialApplicationReview aggregate
-                Note over EPPService: State: Submitted > Recommended
-                EPPService->>EPPService: Create RecommendedEndorsement entities
-                EPPService->>EPPService: Store InternalRemark (if provided)
-                EPPService->>EPPService: Capture audit trail
-                
-                EPPService--)EventBus: CredentialApplicationRecommended
-                EventBus--)CredService: Route to payment (in-state) or OEE (out-of-state)
-                EventBus--)CommService: Trigger recommendation confirmation email
-                
-                EPPService-->>UI: Application recommended
-                UI-->>Coordinator: Confirmation
-            end
-        end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    participant EventBus as Event Bus
+    end
+
+    Coordinator->>UI: Select/adjust endorsements to recommend, enter Internal Remarks (optional) and submit recommendation
+
+    UI->>EppApi: APP POST /application-reviews/{applicationId}/recommend
+    Note over UI,EppApi: Payload: recommendedEndorsements[],<br/>internalRemarks (optional)
+
+    EppApi->>EppApi: Validate at least one endorsement selected and all endorsements in EPP approved list (see Recommendation Rules)
+
+    EppApi->>CredApi: SVC GET /applications/{applicationId}/mttc-results
+    CredApi-->>EppApi: MTTC results
+
+    EppApi->>EppApi: Validate MTTC pass for each endorsement
+
+    alt MTTC not passed for endorsement
+        EppApi-->>UI: Warning - MTTC not passed (override allowed if Alternative Pass)
+    else MTTC passed or Alternative Pass
+        EppApi->>EppApi: Update CredentialApplicationReview aggregate (Submitted > Recommended), create RecommendedEndorsement entities, store InternalRemark (if provided), capture audit trail
+
+        EppApi--)EventBus: CredentialApplicationRecommended
+        Note over EventBus: Consumed by Credentialing (routes to payment in-state or OEE out-of-state) and Communications (sends recommendation confirmation email)
     end
 ```
 
@@ -1499,6 +1373,14 @@ sequenceDiagram
 - **MTTC Validation:** System validates MTTC pass status for each endorsement
 - **Alternative Pass Override:** Coordinator can proceed if candidate used alternative assessment pathway
 - **Routing Logic:** In-state applications route to payment; out-of-state to OEE/State Credential Admin for review
+
+**Recommendation Rules:**
+
+| Rule | Applies when | Outcome if not met |
+|---|---|---|
+| At least one endorsement selected | Every recommendation | Validation error |
+| Every endorsement is in the EPP approved list | Every recommendation | Validation error, endorsement not in EPP scope |
+| MTTC passed for each endorsement | Every recommendation | Warning, override allowed if Alternative Pass |
 
 **State Changes:**
 - CredentialApplicationReview: `Submitted` > `Recommended`
@@ -1518,7 +1400,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator adds notes visible only to EPP staff  
 **When:** Documenting internal review discussions or tracking information  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.applications.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1526,33 +1408,26 @@ title: EPP - Add Internal Remarks to Application Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant IAM as Identity & Access API
-    
-    Coordinator->>UI: View application detail
-    Coordinator->>UI: Navigate to "Internal Remarks" tab
-    
-    UI->>IAM: Verify permission (epp.applications.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /application-reviews/{applicationId}/internal-remarks
-    EPPService-->>UI: Existing internal remarks history
-    
-    Coordinator->>UI: Enter new internal remark
-    Coordinator->>UI: Submit remark
-    
-    UI->>EPPService: POST /application-reviews/{applicationId}/internal-remarks
-    Note over UI,EPPService: Payload: remarkText
-    
-    EPPService->>EPPService: Create InternalRemark value object
-    EPPService->>EPPService: Associate with CredentialApplicationReview
-    EPPService->>EPPService: Capture author and timestamp
-    
-    EPPService-->>UI: Remark added
-    UI->>EPPService: GET /application-reviews/{applicationId}/internal-remarks
-    EPPService-->>UI: Updated remarks list
-    UI-->>Coordinator: Display updated remarks
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    end
+
+    Coordinator->>UI: View application detail and navigate to "Internal Remarks" tab
+
+    UI->>EppApi: APP GET /application-reviews/{applicationId}/internal-remarks
+    EppApi-->>UI: Existing internal remarks history
+
+    Coordinator->>UI: Enter new internal remark and submit
+    UI->>EppApi: APP POST /application-reviews/{applicationId}/internal-remarks
+    Note over UI,EppApi: Payload: remarkText
+
+    EppApi->>EppApi: Create InternalRemark value object, associate with CredentialApplicationReview, capture author and timestamp
+
+    UI->>EppApi: APP GET /application-reviews/{applicationId}/internal-remarks
+    EppApi-->>UI: Updated remarks list
 ```
 
 **Key Decisions:**
@@ -1576,7 +1451,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator filters approval applications by category, type, status  
 **When:** EPP needs to review alternative route approval applications  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.approvals.view (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1584,37 +1459,33 @@ title: EPP - Search Approval Applications for Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
-    
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    end
+
     Coordinator->>UI: Navigate to "Certificate Applications" > "Approval" tab
-    UI->>IAM: Verify permission (epp.approvals.review)
-    IAM-->>UI: Permission confirmed with EPP scope
-    
-    UI->>EPPService: GET /approval-application-reviews?eppCode={userEppCode}&status=Submitted
-    EPPService->>CredService: GET /applications/approvals?eppCode={eppCode}
-    CredService-->>EPPService: Approval application IDs requiring EPP review
-    
-    EPPService->>EPPService: Query ApprovalApplicationReview for EPP's reviews
-    EPPService-->>UI: List of approval applications requiring EPP review
-    
-    Coordinator->>UI: Enter filter criteria
-    Note over Coordinator,UI: Status, Application #,<br/>First Name, Last Name,<br/>SSN, Unique ID, Student ID,<br/>Approval Category, Approval Type
-    
-    Coordinator->>UI: Click "Search"
-    UI->>EPPService: GET /approval-application-reviews?filters={criteria}
-    
-    EPPService->>EPPService: Apply filters to ApprovalApplicationReview query
-    EPPService->>EPPService: Filter by EPP scope from user context
-    
+
+    UI->>EppApi: APP GET /approval-application-reviews
+    EppApi->>CredApi: SVC GET /applications/approvals
+    CredApi-->>EppApi: Approval application IDs requiring EPP review
+
+    EppApi->>EppApi: Query ApprovalApplicationReview for EPP's reviews
+    EppApi-->>UI: List of approval applications requiring EPP review
+
+    Coordinator->>UI: Enter filter criteria and click "Search"
+    Note over Coordinator,UI: Status, Application Number,<br/>First Name, Last Name,<br/>SSN, Unique ID, Student ID,<br/>Approval Category, Approval Type
+
+    UI->>EppApi: APP GET /approval-application-reviews
+    EppApi->>EppApi: Apply filters to ApprovalApplicationReview query, filter by EPP scope from user context
+
     alt No results found
-        EPPService-->>UI: Empty result set
-        UI-->>Coordinator: Display "No results found"
+        EppApi-->>UI: Empty result set
     else Results found
-        EPPService-->>UI: Filtered approval application review list
-        UI-->>Coordinator: Display results in table
+        EppApi-->>UI: Filtered approval application review list
         Note over UI: Columns: Application Number (link),<br/>First Name, Last Name,<br/>Student ID, Unique ID,<br/>Approval Type, School District,<br/>Has Conviction? (red if Yes),<br/>Status, Submitted on,<br/>Last Modified By, Summary (link)
     end
 ```
@@ -1640,7 +1511,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator views approval application including acknowledgements, professional practice responses  
 **When:** EPP needs to assess approval application before recommendation/denial  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.approvals.view (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1648,37 +1519,39 @@ title: EPP - View Approval Application Detail for EPP Review
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
-    participant PPR as Professional Practices API
-    participant OrgRef as Organization Reference Data API
-    
-    Coordinator->>UI: Click application number from the approval application list
-    UI->>IAM: Verify permission (epp.approvals.review)
-    IAM-->>UI: Permission confirmed
-    
-    UI->>EPPService: GET /approval-application-reviews/{applicationId}
-    EPPService-->>UI: EPP review record
-    
-    UI->>CredService: GET /applications/approvals/{applicationId}
-    CredService-->>UI: Approval application details
-    
-    UI->>IAM: GET /users/{candidateId}
-    IAM-->>UI: Candidate demographics
-    
-    UI->>OrgRef: GET /organizations/{schoolDistrictCode}
-    OrgRef-->>UI: School district information
-    
-    opt If Has Conviction flag = true
-        UI->>PPR: GET /educators/{candidateId}/disclosures
-        PPR-->>UI: Professional practice responses
+    box Browser
+    participant UI as UI
     end
-    
-    UI->>EPPService: GET /approval-application-reviews/{applicationId}/history
-    EPPService-->>UI: Application action history
-    
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
+    participant CredApi as Credentialing API
+    participant IamApi as IAM API
+    participant OrgApi as Organizations API
+    participant PprApi as PPR API
+    end
+
+    Coordinator->>UI: Click application number from the approval application list
+
+    UI->>EppApi: APP GET /approval-application-reviews/{applicationId}
+    EppApi-->>UI: EPP review record
+
+    UI->>CredApi: APP GET /applications/approvals/{applicationId}
+    CredApi-->>UI: Approval application details
+
+    UI->>IamApi: APP GET /users/{userId}
+    IamApi-->>UI: Candidate demographics
+
+    UI->>OrgApi: APP GET /organizations/{organizationCode}
+    OrgApi-->>UI: School district information
+
+    opt If Has Conviction flag = true
+        UI->>PprApi: APP GET /disclosures
+        PprApi-->>UI: Professional practice responses
+    end
+
+    UI->>EppApi: APP GET /approval-application-reviews/{applicationId}/history
+    EppApi-->>UI: Application action history
+
     UI->>Coordinator: Display approval application review screen
     Note over UI: Sections:<br/>- Applicant Information<br/>- Application Information<br/>- Other Information (School District,<br/>  Program Category, College/University,<br/>  Effective Date)<br/>- Application Acknowledgements<br/>- Professional Practices<br/>- Approval Application History
 ```
@@ -1705,7 +1578,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator recommends approval application (returns to the ISD/School District)  
 **When:** Candidate meets alternative route requirements  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.approvals.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1713,38 +1586,27 @@ title: EPP - Recommend Approval Application
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: View approval application detail
-    Coordinator->>UI: Select "Recommend" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.approvals.review)
-    IAM-->>UI: Permission confirmed
-    
+    end
+
+    Coordinator->>UI: View approval application detail and select "Recommend" from Action dropdown
+
     UI->>Coordinator: Prompt for Remarks (optional)
-    
-    Coordinator->>UI: Enter optional remarks
-    Coordinator->>UI: Submit recommendation
-    
-    UI->>EPPService: POST /approval-application-reviews/{applicationId}/recommend
-    Note over UI,EPPService: Payload: remarks (optional)
-    
-    EPPService->>EPPService: Update ApprovalApplicationReview aggregate
-    Note over EPPService: State: Submitted > Recommended by EPP
-    EPPService->>EPPService: Store ReviewRemark (if provided)
-    EPPService->>EPPService: Capture audit trail
-    
-    EPPService--)EventBus: ApprovalApplicationRecommended
-    EventBus--)CredService: Return application to ISD/School District
-    EventBus--)CommService: Trigger notification to ISD
-    
-    EPPService-->>UI: Approval application recommended
-    UI-->>Coordinator: Confirmation - returned to ISD
+
+    Coordinator->>UI: Enter optional remarks and submit recommendation
+
+    UI->>EppApi: APP POST /approval-application-reviews/{applicationId}/recommend
+    Note over UI,EppApi: Payload: remarks (optional)
+
+    EppApi->>EppApi: Update ApprovalApplicationReview aggregate (Submitted > Recommended by EPP), store ReviewRemark (if provided), capture audit trail
+
+    EppApi--)EventBus: ApprovalApplicationRecommended
+    Note over EventBus: Consumed by Credentialing (returns application to ISD/School District) and Communications (sends notification to ISD)
 ```
 
 **Key Decisions:**
@@ -1767,7 +1629,7 @@ sequenceDiagram
 
 **What:** EPP Coordinator denies approval application with required remarks (returns to the ISD/School District)  
 **When:** Candidate doesn't meet EPP requirements for alternative route  
-**Who:** EPP Coordinator
+**Who:** EPP Coordinator. Permission: epp.approvals.review (scoped to the caller's EPP)
 
 ```mermaid
 ---
@@ -1775,43 +1637,32 @@ title: EPP - Deny Approval Application
 ---
 sequenceDiagram
     actor Coordinator as EPP Coordinator
-    participant UI as EPP UI
-    participant EPPService as EPP API
-    participant CredService as Credentialing API
-    participant IAM as Identity & Access API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant EppApi as EPP API
     participant EventBus as Event Bus
-    participant CommService as Communications API
-    
-    Coordinator->>UI: View approval application detail
-    Coordinator->>UI: Select "Deny" from Action dropdown
-    
-    UI->>IAM: Verify permission (epp.approvals.review)
-    IAM-->>UI: Permission confirmed
-    
+    end
+
+    Coordinator->>UI: View approval application detail and select "Deny" from Action dropdown
+
     UI->>Coordinator: Prompt for Remarks (required)
-    
-    Coordinator->>UI: Enter denial remarks
-    Coordinator->>UI: Submit denial
-    
-    UI->>EPPService: POST /approval-application-reviews/{applicationId}/deny
-    Note over UI,EPPService: Payload: remarks (required)
-    
-    EPPService->>EPPService: Validate remarks provided
+
+    Coordinator->>UI: Enter denial remarks and submit denial
+
+    UI->>EppApi: APP POST /approval-application-reviews/{applicationId}/deny
+    Note over UI,EppApi: Payload: remarks (required)
+
+    EppApi->>EppApi: Validate remarks provided
+
     alt Missing remarks
-        EPPService-->>UI: Validation error
-        UI-->>Coordinator: Display error - remarks required
+        EppApi-->>UI: 400 Validation error (remarks required)
     else Remarks provided
-        EPPService->>EPPService: Update ApprovalApplicationReview aggregate
-        Note over EPPService: State: Submitted > Denied
-        EPPService->>EPPService: Store ReviewRemark
-        EPPService->>EPPService: Capture audit trail
-        
-        EPPService--)EventBus: ApprovalApplicationDenied
-        EventBus--)CredService: Return application to ISD/School District
-        EventBus--)CommService: Trigger notification to ISD with denial remarks
-        
-        EPPService-->>UI: Approval application denied
-        UI-->>Coordinator: Confirmation - returned to ISD with remarks
+        EppApi->>EppApi: Update ApprovalApplicationReview aggregate (Submitted > Denied), store ReviewRemark, capture audit trail
+
+        EppApi--)EventBus: ApprovalApplicationDenied
+        Note over EventBus: Consumed by Credentialing (returns application to ISD/School District) and Communications (sends notification with denial remarks to ISD)
     end
 ```
 

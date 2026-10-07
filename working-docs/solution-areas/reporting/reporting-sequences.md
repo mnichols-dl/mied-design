@@ -10,8 +10,11 @@ This document contains sequence diagrams for all workflows in the Reporting plat
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
 - Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- **actor** = Human only
+- **participant** = Internal service/component or external system (UI, services, Event Bus and external systems are all participants)
+- Participants are grouped with `box`: Browser (UI), MiEdWorkforce (AKS) (services), External (external systems)
+- Every request arrow starts with an API kind tag, then the verb and path from the API catalog: `APP` = Application API (UI to owning API, user delegated token), `SVC` = Service API (API to API, in-cluster mTLS), `EXT` = External API (inbound from an external system), `OUT` = outbound call to an external system. Responses carry no tag.
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
@@ -19,7 +22,7 @@ This document contains sequence diagrams for all workflows in the Reporting plat
 
 **What:** A user views the list of reports available to them, filtered to only those they are authorized to access.  
 **When:** User navigates to the Reports section of the MiEdWorkforce Portal.  
-**Who:** Any authenticated portal user.
+**Who:** Any authenticated portal user. Permission: reporting.catalog.view (system-wide; each report is further gated by its own permission key).
 
 ```mermaid
 ---
@@ -27,16 +30,20 @@ title: Reporting - Browse Report Catalog
 ---
 sequenceDiagram
     actor User
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
-    participant IAM as IAM API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    participant IamApi as IAM API
+    end
 
-    User->>Portal: Navigate to Reports
-    Portal->>ReportingAPI: GET /reports
-    ReportingAPI->>IAM: POST /permissions/check (batch: all report permission keys)
-    IAM-->>ReportingAPI: Permission results per report
-    ReportingAPI-->>Portal: Filtered report catalog (only reports user is authorized for)
-    Portal-->>User: Report list grouped by domain
+    User->>UI: Navigate to Reports
+    UI->>ReportingApi: APP GET /reports
+    ReportingApi->>IamApi: SVC POST /permissions/check (batch: all report permission keys)
+    IamApi-->>ReportingApi: Permission results per report
+    ReportingApi-->>UI: Filtered report catalog (only reports user is authorized for)
+    UI-->>User: Report list grouped by domain
 ```
 
 **Key Decisions:**
@@ -57,7 +64,7 @@ sequenceDiagram
 
 **What:** A user selects a report and the system validates their authorization, resolves organizational context parameters, generates a Power BI embed token, and returns it to the portal for rendering.  
 **When:** User selects a specific report from the catalog.  
-**Who:** Any authenticated portal user who holds the report's declared permission.
+**Who:** Any authenticated portal user who holds the report's declared permission. Permission: reporting.embed-token.generate (not directly assignable; decided by IAM from the report's declared permission key at the caller's organization scope).
 
 ### Happy Path
 
@@ -69,32 +76,38 @@ title: Reporting - Generate Embed Token and View Report - Happy Path
 ---
 sequenceDiagram
     actor User
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
-    participant IAM as IAM API
-    participant OrgAPI as Organizations API
-    participant PowerBI as Power BI Service API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    participant IamApi as IAM API
+    participant OrgApi as Organizations API
+    end
+    box External
+    participant PowerBi as Power BI
+    end
 
-    User->>Portal: Select report
-    Portal->>ReportingAPI: POST /reports/{reportId}/embed-token
+    User->>UI: Select report
+    UI->>ReportingApi: APP POST /reports/{reportDefinitionId}/embed-token
 
-    ReportingAPI->>IAM: POST /permissions/check (report's permissionKey, user, scope)
-    IAM-->>ReportingAPI: Authorized: true, orgScope: { type: District, code: 12345 }
+    ReportingApi->>IamApi: SVC POST /permissions/check (report's permissionKey, user, scope)
+    IamApi-->>ReportingApi: Authorized: true, orgScope: { type: District, code: 12345 }
 
-    ReportingAPI->>OrgAPI: GET /organizations/12345/hierarchy
-    OrgAPI-->>ReportingAPI: Org metadata + ancestor chain
+    ReportingApi->>OrgApi: SVC GET /organizations/{organizationCode}/hierarchy
+    OrgApi-->>ReportingApi: Ancestor chain
 
-    ReportingAPI->>ReportingAPI: Resolve embed parameters against ParameterContract
-    Note over ReportingAPI: UserUniqueId, OrgType, OrgCode, OrgAncestorCodes resolved
+    ReportingApi->>ReportingApi: Resolve embed parameters against ParameterContract
+    Note over ReportingApi: UserUniqueId, OrgType, OrgCode, OrgAncestorCodes resolved
 
-    ReportingAPI->>PowerBI: POST /GenerateToken (workspaceId, reportId, resolved params)
-    PowerBI-->>ReportingAPI: Embed token + expiry
+    ReportingApi->>PowerBi: OUT POST /GenerateToken (workspaceId, reportId, resolved params)
+    PowerBi-->>ReportingApi: Embed token + expiry
 
-    ReportingAPI->>ReportingAPI: Persist EmbedTokenRequest audit record (no token stored)
-    Note over ReportingAPI: outcome: Granted, resolvedParameters snapshot, expiresAt
+    ReportingApi->>ReportingApi: Persist EmbedTokenRequest audit record (no token stored)
+    Note over ReportingApi: outcome: Granted, resolvedParameters snapshot, expiresAt
 
-    ReportingAPI-->>Portal: { embedToken, embedUrl, expiresAt }
-    Portal-->>User: Render embedded Power BI report
+    ReportingApi-->>UI: { embedToken, embedUrl, expiresAt }
+    UI-->>User: Render embedded Power BI report
 ```
 
 **Key Decisions:**
@@ -122,21 +135,25 @@ title: Reporting - Generate Embed Token and View Report - Access Denied
 ---
 sequenceDiagram
     actor User
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
-    participant IAM as IAM API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    participant IamApi as IAM API
+    end
 
-    User->>Portal: Select report (or direct URL access)
-    Portal->>ReportingAPI: POST /reports/{reportId}/embed-token
+    User->>UI: Select report (or direct URL access)
+    UI->>ReportingApi: APP POST /reports/{reportDefinitionId}/embed-token
 
-    ReportingAPI->>IAM: POST /permissions/check (report's permissionKey, user, scope)
-    IAM-->>ReportingAPI: Authorized: false
+    ReportingApi->>IamApi: SVC POST /permissions/check (report's permissionKey, user, scope)
+    IamApi-->>ReportingApi: Authorized: false
 
-    ReportingAPI->>ReportingAPI: Persist EmbedTokenRequest audit record
-    Note over ReportingAPI: outcome: Denied, denialReason: InsufficientPermission
+    ReportingApi->>ReportingApi: Persist EmbedTokenRequest audit record
+    Note over ReportingApi: outcome: Denied, denialReason: InsufficientPermission
 
-    ReportingAPI-->>Portal: 403 Forbidden
-    Portal-->>User: Access denied message
+    ReportingApi-->>UI: 403 Forbidden
+    UI-->>User: Access denied message
 ```
 
 **State Changes:**
@@ -154,24 +171,28 @@ title: Reporting - Generate Embed Token and View Report - Parameter Resolution F
 ---
 sequenceDiagram
     actor User
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
-    participant IAM as IAM API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    participant IamApi as IAM API
+    end
 
-    User->>Portal: Select report
-    Portal->>ReportingAPI: POST /reports/{reportId}/embed-token
+    User->>UI: Select report
+    UI->>ReportingApi: APP POST /reports/{reportDefinitionId}/embed-token
 
-    ReportingAPI->>IAM: POST /permissions/check (permissionKey, user, scope)
-    IAM-->>ReportingAPI: Authorized: true, orgScope: { type: System }
+    ReportingApi->>IamApi: SVC POST /permissions/check (permissionKey, user, scope)
+    IamApi-->>ReportingApi: Authorized: true, orgScope: { type: System }
 
-    ReportingAPI->>ReportingAPI: Attempt to resolve ParameterContract
-    Note over ReportingAPI: OrgCode required; cannot resolve from System-level scope
+    ReportingApi->>ReportingApi: Attempt to resolve ParameterContract
+    Note over ReportingApi: OrgCode required; cannot resolve from System-level scope
 
-    ReportingAPI->>ReportingAPI: Persist EmbedTokenRequest audit record
-    Note over ReportingAPI: outcome: Denied, denialReason: ParameterResolutionFailure
+    ReportingApi->>ReportingApi: Persist EmbedTokenRequest audit record
+    Note over ReportingApi: outcome: Denied, denialReason: ParameterResolutionFailure
 
-    ReportingAPI-->>Portal: 400 Bad Request (required parameter unresolvable)
-    Portal-->>User: "This report requires an organizational context. Select a district or ISD to continue."
+    ReportingApi-->>UI: 400 Bad Request (required parameter unresolvable)
+    UI-->>User: "This report requires an organizational context. Select a district or ISD to continue."
 ```
 
 **Recovery:** The portal should prompt the user to select an organizational context (e.g., via an org picker) and retry the token request with the selected scope included in the request body.
@@ -182,7 +203,7 @@ sequenceDiagram
 
 **What:** An administrator registers a new Power BI report in the application catalog, making it available for embedding once activated.  
 **When:** A new report has been published to the Power BI Service and is ready to be surfaced in the portal.  
-**Who:** System Admin with `reporting.catalog.manage` permission.
+**Who:** System Admin with `reporting.catalog.manage` permission. Permission: reporting.catalog.manage (system-wide).
 
 ```mermaid
 ---
@@ -190,29 +211,33 @@ title: Reporting - Register Report in Catalog
 ---
 sequenceDiagram
     actor Admin
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
-    participant PowerBI as Power BI Service API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    end
+    box External
+    participant PowerBi as Power BI
+    end
 
-    Admin->>Portal: Open Report Catalog admin screen
-    Admin->>Portal: Fill in report metadata (name, domain, permissionKey, workspaceId, reportId, parameterContract)
-    Portal->>ReportingAPI: POST /admin/reports
+    Admin->>UI: Open Report Catalog admin screen
+    Admin->>UI: Fill in report metadata (name, domain, permissionKey, workspaceId, reportId, parameterContract)
+    UI->>ReportingApi: APP POST /admin/reports
 
-    ReportingAPI->>PowerBI: GET /reports/{reportId} (validate report exists in workspace)
-    PowerBI-->>ReportingAPI: Report metadata confirmed
+    ReportingApi->>PowerBi: OUT GET /reports/{reportId} (validate report exists in workspace)
 
-    ReportingAPI->>ReportingAPI: Validate ParameterContract (all parameter names are standard)
-    ReportingAPI->>ReportingAPI: Create ReportDefinition with status: Inactive
+    ReportingApi->>ReportingApi: Validate ParameterContract (all parameter names are standard)
+    ReportingApi->>ReportingApi: Create ReportDefinition with status: Inactive
 
-    ReportingAPI-->>Portal: { reportDefinitionId, status: Inactive }
-    Portal-->>Admin: "Report registered. Set status to Active to make it visible in the portal."
+    ReportingApi-->>UI: { reportDefinitionId, status: Inactive }
+    UI-->>Admin: "Report registered. Set status to Active to make it visible in the portal."
 
-    Note over Admin,Portal: Admin reviews, then activates separately
-    Admin->>Portal: Activate report
-    Portal->>ReportingAPI: PATCH /admin/reports/{reportDefinitionId}/status (Active)
-    ReportingAPI->>ReportingAPI: Update status: Inactive > Active
-    ReportingAPI-->>Portal: 200 OK
-    Portal-->>Admin: Report is now live in the catalog
+    Note over Admin,UI: Admin reviews, then activates separately
+    Admin->>UI: Activate report
+    UI->>ReportingApi: APP PATCH /admin/reports/{reportDefinitionId}/status (Active)
+    ReportingApi->>ReportingApi: Update status: Inactive > Active
+    UI-->>Admin: Report is now live in the catalog
 ```
 
 **Key Decisions:**
@@ -235,7 +260,7 @@ sequenceDiagram
 
 **What:** An admin removes a report from portal visibility. The Power BI report definition is unaffected.  
 **When:** A report is retired, replaced, or temporarily pulled from the portal.  
-**Who:** System Admin with `reporting.catalog.manage` permission.
+**Who:** System Admin with `reporting.catalog.manage` permission. Permission: reporting.catalog.manage (system-wide).
 
 ```mermaid
 ---
@@ -243,18 +268,21 @@ title: Reporting - Deactivate Report
 ---
 sequenceDiagram
     actor Admin
-    participant Portal as MiEdWorkforce Portal
-    participant ReportingAPI as Reporting API
+    box Browser
+    participant UI as UI
+    end
+    box MiEdWorkforce (AKS)
+    participant ReportingApi as Reporting API
+    end
 
-    Admin->>Portal: Select report in catalog admin
-    Admin->>Portal: Deactivate report
-    Portal->>ReportingAPI: PATCH /admin/reports/{reportDefinitionId}/status (Inactive)
+    Admin->>UI: Select report in catalog admin
+    Admin->>UI: Deactivate report
+    UI->>ReportingApi: APP PATCH /admin/reports/{reportDefinitionId}/status (Inactive)
 
-    ReportingAPI->>ReportingAPI: Update status: Active > Inactive
-    Note over ReportingAPI: Existing embed tokens issued before deactivation remain valid until natural expiry
+    ReportingApi->>ReportingApi: Update status: Active > Inactive
+    Note over ReportingApi: Existing embed tokens issued before deactivation remain valid until natural expiry
 
-    ReportingAPI-->>Portal: 200 OK
-    Portal-->>Admin: "Report deactivated. No longer visible in portal."
+    UI-->>Admin: "Report deactivated. No longer visible in portal."
 ```
 
 **Key Decisions:**

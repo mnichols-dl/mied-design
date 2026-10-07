@@ -57,6 +57,8 @@ Identity Administrator review workflow/permissions.
 | **Organization Hierarchy**       | The ISD > District > Building structure with transitive permission inheritance                                                                                                                                                                               |
 | **Authorization**                | The assignment of a role to a user identity at a specified scope (e.g., "Jane Smith is a Staffing Administrator for District 5")                                                                                                                             |
 | **Active Authorization**         | The specific authorization context a user is currently operating under (users may have multiple authorizations but must select one at a time)                                                                                                                |
+| **Principal**                    | Any caller that can hold authorizations: a User (MiLogin identity), a Service (logical service name), or an External Client (OAuth client). All are authorized by the same model, Scope-based RBAC with Permission Authorization.                          |
+| **Service Role**                 | A role granted to a Service principal at System scope, defining the permissions one logical service may exercise against others. Defined in code, mapped to real service identities per environment.                                                          |
 | **Identity Provider**            | The login system the user identity is associated with (MiLogin Citizen, MiLogin Business, MiLogin Worker)                                                                                                                                                    |
 | **Scope Authorization Approver** | The organization admin defined in EEM for the authorization scope requested (e.g., "District Organization Lead Administrator")                                                                                                                               |
 | **Scope-Sensitive Permission**   | A permission that requires an organization context to be evaluated (e.g., `staffing.employee.view` requires knowing WHICH district/building)                                                                                                                 |
@@ -122,13 +124,16 @@ Identity Administrator review workflow/permissions.
 - **Role** (Entity) - Named collection of permissions (system-defined, not user-created)
 - **Permission** (Value Object) - Atomic action grant (domain.resource.action)
 - **ApplicableScopes** (Value Object) - List of scope types at which this role can be assigned (not which permissions it contains)
-- **ApplicableMiLoginTypes** (Value Object) - The MiLogin identity type(s) (Citizen, Business, Worker) this role may be assigned under. Replaces the previously-considered "User Group" concept — see the "No User Group Layer" decision note below.
+- **ApplicablePrincipalTypes** (Value Object) - The principal type(s) (User, Service, ExternalClient) this role may be granted to. Service roles are granted only to Service principals, only at System scope.
+- **ApplicableMiLoginTypes** (Value Object) - For roles grantable to Users, the MiLogin identity type(s) (Citizen, Business, Worker) this role may be assigned under. Replaces the previously-considered "User Group" concept — see the "No User Group Layer" decision note below.
 
 **Key Invariants:**
 - Role names must be unique
 - Permissions within a role must be valid permission identifiers
 - A role can only be assigned to scopes in its ApplicableScopes list
+- A role can only be granted to a principal of one of its ApplicablePrincipalTypes
 - A role can only be assigned to a user authenticated under one of its ApplicableMiLoginTypes (grant-time check; complements the query-time isolation in "MiLogin Context Enforcement" below)
+- A call made by one service on behalf of a user is authorized only if both the calling Service and the User hold the required permission
 - System Administrator roles can only be assigned at System scope
 
 **Key States:** [Active], [Deprecated]

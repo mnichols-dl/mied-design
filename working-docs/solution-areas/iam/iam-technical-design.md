@@ -8,9 +8,21 @@ This document provides technical design details for IAM domain concepts that are
 
 ## Authorization Model
 
-**Model Type:** Hierarchical Role-Based Access Control (Hierarchical RBAC)
+**Model Type:** Scope-based RBAC with Permission Authorization
 
-The IAM domain implements authorization through a hierarchical role-based model where users are assigned roles at specific organizational scopes, with permissions automatically inherited down the organizational hierarchy.
+The IAM domain implements authorization through a role-based model where principals are granted roles at specific organizational scopes, with permissions automatically inherited down the organizational hierarchy. Endpoints authorize on permissions, never on roles or caller type.
+
+This is the single name used for the model throughout the design. "Role + Scope" is accepted shorthand. Authentication and the three kinds of principal (user, service, external client) are described in [Authentication & Authorization Patterns](../../patterns-and-principles/authentication.md).
+
+### Principals
+
+| Principal | Grants live in | Evaluated by |
+| --------- | -------------- | ------------ |
+| User (MiLogin Citizen, Business, Worker) | IAM, through the approval workflow | IAM permission check |
+| External client (OAuth 2.0 client) | IAM, on the client record | IAM permission check |
+| Service (logical service name) | Code, as service roles at system scope | Local lookup in the shared enforcement library; no IAM call |
+
+Roles declare which principal types they may be granted to (`ApplicablePrincipalTypes`, see the IAM domain). Service roles are defined in code alongside other role definitions and mapped to real identities per environment. For delegated service calls both the calling service and the user must be authorized.
 
 ### Core Characteristics
 
@@ -81,7 +93,7 @@ When evaluating whether a user can perform an action, the system considers:
 5. **Request Context** - Which Organization is the user operating on?
 6. **Identity Provider Type** - Is the user authenticated as Citizen, Business, or Worker?
 
-### Why Hierarchical RBAC?
+### Why Scope-based RBAC?
 
 **Business Requirements:**
 - Educational organizations have clear hierarchical structures

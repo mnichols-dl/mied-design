@@ -5,76 +5,54 @@ This document contains sequence diagrams for all workflows in the Communications
 **Conventions:**
 - Solid arrows (`->>`) = Synchronous calls
 - Dashed arrows (`-->>`) = Responses
-- Dotted arrows (`--)`) = Async/fire-and-forget
-- **actor** = Human or external system
-- **participant** = Internal service/component
+- Dotted arrows (`--)`) = Async/fire-and-forget (events)
+- **actor** = Human only
+- **participant** = Every non-human, including internal services, the Event Bus and external systems
+- Participants are grouped in boxes: `Browser` (UI), `MiEdWorkforce (AKS)` (services, Event Bus), `External` (external systems)
+- Every request arrow carries an API-kind tag, then the verb and path from the API spec: `APP` = Application API (UI to owning API), `SVC` = Service API (API to API), `EXT` = External API (external system to an external-facing endpoint), `OUT` = outbound call to an external system. Responses carry no tag.
+- Every application API call is authorized by the owning service through the cached IAM permission check (Service API). It is not drawn unless noted.
 
 ---
 
-## Event-Triggered Email Send
+## Event-Triggered Email Send - Render Email from Event
 
-**What:** Domain event triggers automatic email send using pre-configured template  
+**What:** Domain event triggers automatic email send using pre-configured template; this diagram covers finding the template, resolving variables and rendering  
 **When:** Business event occurs (e.g., credential application approved, payment due)  
 **Who:** System (automated)
 
+See also: Event-Triggered Email Send - Send and Record Email (continues from the rendered email).
+
 ```mermaid
 ---
-title: Communications - Event-Triggered Email Send
+title: Communications - Event-Triggered Email Send - Render Email from Event
 ---
 sequenceDiagram
-    participant Domain as Domain Service
-    participant EventBus
-    participant Comms as Communications Service
-    participant TemplateRepo as Template Repository
-    participant Resolver as Variable Resolver
-    participant Identity
-    participant SendGrid
-    participant InstanceRepo as EmailInstance Repository
-    
-    Domain--)EventBus: Publish event (e.g., CredentialApplicationApproved)
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant CredApi as Credentialing API
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+
+    CredApi--)EventBus: CredentialApplicationApproved
     Note over EventBus: Event payload:<br/>{event_type, application_id, approved_at}
-    
-    EventBus->>Comms: Event received
-    Comms->>Comms: Identify event type
-    Comms->>TemplateRepo: Get active template for event type
-    TemplateRepo-->>Comms: Template (with placeholders)
-    
-    alt No active template for event type
-        Comms->>Comms: Log warning (no template configured)
-        Note over Comms: Silent failure - no email sent<br/>Alert admin if critical event
-    else Template found
-        Comms->>Resolver: Resolve variables for event type
-        Note over Resolver: Event-type-specific resolver:<br/>CredentialApplicationApprovedResolver
-        
-        Resolver->>Domain: GET /api/credentials/applications/{id}
-        Domain-->>Resolver: Application data
-        Resolver->>Identity: GET /api/identity/users/{id}
-        Identity-->>Resolver: User data
-        
-        Resolver->>Resolver: Format values to user-facing strings<br/>e.g., "Jane Doe", "Elementary Education"
-        Resolver-->>Comms: Resolved variables
-        
-        alt Mandatory variable missing/null
-            Comms->>Comms: Block send, log error
-            Comms--)EventBus: EmailSendFailed
-            Note over Comms: Error: Mandatory variable unresolvable
-        else All variables resolved
-            Comms->>Comms: Render email (replace placeholders)
-            Note over Comms: Rendered content:<br/>"Dear Jane Doe, your application<br/>for Elementary Education..."
-            
-            Comms->>Identity: Resolve recipient(s) from template config
-            Identity-->>Comms: Recipient email(s)
-            
-            Comms->>SendGrid: POST /v3/mail/send
-            Note over SendGrid: Email queued for delivery
-            SendGrid-->>Comms: 202 Accepted (message_id)
-            
-            Comms->>InstanceRepo: Store EmailInstance
-            Note over InstanceRepo: Stores ONLY rendered content<br/>NOT event payload or template structure
-            InstanceRepo-->>Comms: instance_id
-            
-            Comms--)EventBus: EmailSent {instance_id, recipients, sent_at}
-        end
+
+    EventBus--)CommApi: CredentialApplicationApproved
+    CommApi->>CommApi: Get active template for event type
+
+    CommApi->>CredApi: SVC GET /applications/{applicationId}
+    CredApi-->>CommApi: Application data
+    CommApi->>IamApi: SVC GET /users/{userId}
+    IamApi-->>CommApi: User data
+
+    CommApi->>CommApi: Format values to user-facing strings<br/>e.g., "Jane Doe", "Elementary Education"
+
+    alt Mandatory variable missing/null
+        CommApi--)EventBus: EmailSendFailed
+        Note over CommApi: Send blocked, error logged
+    else All variables resolved
+        CommApi->>CommApi: Render email (replace placeholders)
+        Note over CommApi: Rendered content:<br/>"Dear Jane Doe, your application<br/>for Elementary Education..."
     end
 ```
 
@@ -82,6 +60,55 @@ sequenceDiagram
 - **Event payload:** Lightweight (IDs only), resolver fetches display data
 - **Variable resolution:** Event-type-specific resolver handles formatting
 - **Silent failure:** No template = no email (prevents spam on misconfigured events)
+
+**State Changes:**
+- None (rendering only)
+
+**Events Published:**
+- `EmailSendFailed` - Variable resolution failed
+
+**Error Scenarios:**
+- No active template > Silent failure, log warning
+- Mandatory variable null > Block send, publish failure event
+
+---
+
+## Event-Triggered Email Send - Send and Record Email
+
+**What:** Resolved and rendered email is sent to the recipient(s) and recorded  
+**When:** Rendering of an event-triggered email has completed  
+**Who:** System (automated)
+
+See also: Event-Triggered Email Send - Render Email from Event (produces the rendered email).
+
+```mermaid
+---
+title: Communications - Event-Triggered Email Send - Send and Record Email
+---
+sequenceDiagram
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant SendGrid
+    end
+
+    CommApi->>IamApi: SVC GET /users/{userId}
+    IamApi-->>CommApi: Recipient email(s)
+    Note over CommApi: Recipients resolved from template config
+
+    CommApi->>SendGrid: OUT POST /v3/mail/send
+    SendGrid-->>CommApi: 202 Accepted (message_id)
+
+    CommApi->>CommApi: Store EmailInstance
+    Note over CommApi: Stores ONLY rendered content<br/>NOT event payload or template structure
+
+    CommApi--)EventBus: EmailSent {instance_id, recipients, sent_at}
+```
+
+**Key Decisions:**
 - **Rendered content only:** EmailInstance stores final output, not intermediate data
 
 **State Changes:**
@@ -89,11 +116,8 @@ sequenceDiagram
 
 **Events Published:**
 - `EmailSent` - Email successfully queued to SendGrid
-- `EmailSendFailed` - Variable resolution failed or SendGrid rejected
 
 **Error Scenarios:**
-- No active template > Silent failure, log warning
-- Mandatory variable null > Block send, publish failure event
 - SendGrid API error > Retry with exponential backoff (max 3 attempts)
 
 ---
@@ -102,7 +126,7 @@ sequenceDiagram
 
 **What:** User composes and sends one-time email using template as starting point  
 **When:** User needs to send custom communication (e.g., follow-up, clarification)  
-**Who:** Credentialing Administrator, Help Desk Staff
+**Who:** Credentialing Administrator, Help Desk Staff; Permission: communications.email.send-manual (plus communications.email.customize for custom subject/body; templates listed per functional area)
 
 ```mermaid
 ---
@@ -110,57 +134,49 @@ title: Communications - Manual Email Send with Template Customization
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant Comms as Communications Service
-    participant TemplateRepo as Template Repository
-    participant Resolver as Variable Resolver
-    participant Identity
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant IamApi as IAM API
+    participant EventBus as Event Bus
+    end
+    box External
     participant SendGrid
-    participant InstanceRepo as EmailInstance Repository
-    participant EventBus
-    
+    end
+
     User->>UI: Navigate to "Send Email"
-    UI->>Comms: GET /api/communications/templates?functional_area=Credentialing
-    Comms->>TemplateRepo: Query active templates
-    TemplateRepo-->>Comms: List of templates
-    Comms-->>UI: Templates with event types
-    
+    UI->>CommApi: APP GET /templates?functionalArea=Credentialing
+    CommApi-->>UI: Templates with event types
+
     User->>UI: Select template (e.g., "Application Approved")
-    UI->>Comms: GET /api/communications/event-types/{event_type}/available-variables
-    Comms-->>UI: Available variables for event type
+    UI->>CommApi: APP GET /event-types/{eventType}/available-variables
+    CommApi-->>UI: Available variables for event type
     Note over UI: Displays variable picker:<br/><<ApplicantName>>, <<CertificateType>>, etc.
-    
+
     User->>UI: Enter context data (e.g., application_id)
-    UI->>Comms: POST /api/communications/preview
+    UI->>CommApi: APP POST /communications/preview
     Note over UI: Request: {template_id, context: {application_id}}
-    
-    Comms->>Resolver: Resolve variables using context
-    Resolver->>Identity: Fetch user data
-    Identity-->>Resolver: User details
-    Resolver-->>Comms: Resolved variables
-    
-    Comms->>Comms: Render preview
-    Comms-->>UI: Preview HTML
-    
+
+    CommApi->>IamApi: SVC GET /users/{userId}
+    IamApi-->>CommApi: User details
+    CommApi-->>UI: Preview HTML
+
     User->>UI: Customize subject/body (optional)
     User->>UI: Enter recipient email, click Send
-    
-    UI->>Comms: POST /api/communications/send-manual
+
+    UI->>CommApi: APP POST /communications/send-manual
     Note over UI: Request: {template_id, context,<br/>custom_subject, custom_body, recipient}
-    
-    Comms->>Comms: Validate permissions
-    Comms->>Comms: Render final email (with customizations)
-    
-    Comms->>SendGrid: POST /v3/mail/send
-    SendGrid-->>Comms: 202 Accepted (message_id)
-    
-    Comms->>InstanceRepo: Store EmailInstance
-    Note over InstanceRepo: Stores rendered content<br/>with user customizations applied
-    InstanceRepo-->>Comms: instance_id
-    
-    Comms--)EventBus: EmailSent {instance_id, sent_by_user_id}
-    Comms-->>UI: Success (instance_id)
-    UI-->>User: Email sent confirmation
+
+    CommApi->>SendGrid: OUT POST /v3/mail/send
+    SendGrid-->>CommApi: 202 Accepted (message_id)
+
+    CommApi->>CommApi: Store EmailInstance
+    Note over CommApi: Stores rendered content<br/>with user customizations applied
+
+    CommApi--)EventBus: EmailSent {instance_id, sent_by_user_id}
+    CommApi-->>UI: Success (instance_id)
 ```
 
 **Key Decisions:**
@@ -182,84 +198,112 @@ sequenceDiagram
 
 ---
 
-## Template Version Update and Activation
+## Template Version Update and Activation - Create Draft Version
 
-**What:** Admin creates new template version and activates it  
+**What:** Admin creates new template version as a draft  
 **When:** Template content needs updating (e.g., policy change, branding update)  
-**Who:** Credentialing Administrator, System Administrator
+**Who:** Credentialing Administrator, System Administrator; Permission: communications.credentials-templates.edit (per functional area of the template)
+
+See also: Template Version Update and Activation - Activate Version (activates the draft).
 
 ```mermaid
 ---
-title: Communications - Template Version Update and Activation
+title: Communications - Template Version Update and Activation - Create Draft Version
 ---
 sequenceDiagram
     actor Admin
+    box Browser
     participant UI
-    participant Comms as Communications Service
-    participant TemplateRepo as Template Repository
-    participant EventBus
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant EventBus as Event Bus
+    end
+
     Admin->>UI: Navigate to Template Management
-    UI->>Comms: GET /api/communications/templates/{template_id}
-    Comms->>TemplateRepo: Get template with all versions
-    TemplateRepo-->>Comms: Template + versions
-    Comms-->>UI: Template details
-    
+    UI->>CommApi: APP GET /templates/{templateId}
+    CommApi-->>UI: Template details (with all versions)
+
     Admin->>UI: Click "Create New Version"
-    UI->>Comms: GET /api/communications/event-types/{event_type}/available-variables
-    Comms-->>UI: Available variables for this template's event type
+    UI->>CommApi: APP GET /event-types/{eventType}/available-variables
+    CommApi-->>UI: Available variables for this template's event type
     Note over UI: Variable picker shows only<br/>context-appropriate variables
-    
+
     Admin->>UI: Edit subject/body, insert variables
     Admin->>UI: Save as Draft
-    
-    UI->>Comms: POST /api/communications/templates/{template_id}/versions
+
+    UI->>CommApi: APP POST /templates/{templateId}/versions
     Note over UI: Request: {subject, body, status: Draft}
-    
-    Comms->>Comms: Validate permissions
-    Comms->>Comms: Validate variable placeholders match event type
-    
-    Comms->>TemplateRepo: Create new TemplateVersion
-    TemplateRepo-->>Comms: version_id
-    
-    Comms--)EventBus: EmailTemplateVersionCreated
-    Comms-->>UI: Success (version_id)
-    
-    Note over Admin,UI: Admin reviews draft, tests with preview
-    
+
+    alt Placeholder not in event type
+        CommApi-->>UI: 400 Bad Request
+    else Placeholders valid
+        CommApi--)EventBus: EmailTemplateVersionCreated
+        CommApi-->>UI: Success (version_id)
+    end
+```
+
+**Key Decisions:**
+- **Draft-then-activate workflow:** Prevents accidental activation of untested content
+- **Variable validation:** System validates placeholders match event type's available variables
+- **Audit trail:** All versions preserved (never deleted)
+
+**State Changes:**
+- TemplateVersion: `None` > `Draft`
+
+**Events Published:**
+- `EmailTemplateVersionCreated` - New draft created
+
+**Error Scenarios:**
+- Invalid variable placeholder (not in event type) > 400 Bad Request
+- Insufficient permissions > 403 Forbidden
+
+---
+
+## Template Version Update and Activation - Activate Version
+
+**What:** Admin activates a draft template version  
+**When:** Admin has reviewed the draft and tested it with preview  
+**Who:** Credentialing Administrator, System Administrator; Permission: communications.credentials-templates.activate (per functional area of the template)
+
+See also: Template Version Update and Activation - Create Draft Version (creates the draft).
+
+```mermaid
+---
+title: Communications - Template Version Update and Activation - Activate Version
+---
+sequenceDiagram
+    actor Admin
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant EventBus as Event Bus
+    end
+
     Admin->>UI: Click "Activate Version"
-    UI->>Comms: POST /api/communications/templates/{template_id}/versions/{version_id}/activate
-    
-    Comms->>Comms: Validate permissions
-    Comms->>TemplateRepo: Begin transaction
-    TemplateRepo->>TemplateRepo: Deactivate current active version
-    TemplateRepo->>TemplateRepo: Set new version as active
-    TemplateRepo->>TemplateRepo: Commit transaction
-    TemplateRepo-->>Comms: Success
-    
-    Note over TemplateRepo: Template now has:<br/>v1.0 (inactive), v2.0 (active)
-    
-    Comms--)EventBus: EmailTemplateActivated {template_id, version_id}
-    Comms-->>UI: Success
-    UI-->>Admin: "Template activated" confirmation
+    UI->>CommApi: APP POST /templates/{templateId}/versions/{versionId}/activate
+
+    CommApi->>CommApi: Deactivate current active version, set new version as active (one transaction)
+    Note over CommApi: Template now has:<br/>v1.0 (inactive), v2.0 (active)
+
+    CommApi--)EventBus: EmailTemplateActivated {template_id, version_id}
+    CommApi-->>UI: Success
 ```
 
 **Key Decisions:**
 - **Single active version:** Activating v2.0 automatically deactivates v1.0
 - **Draft-then-activate workflow:** Prevents accidental activation of untested content
-- **Variable validation:** System validates placeholders match event type's available variables
-- **Audit trail:** All versions preserved (never deleted)
 
 **State Changes:**
 - TemplateVersion: `Draft` > `Active`
 - Previous active version: `Active` > `Inactive`
 
 **Events Published:**
-- `EmailTemplateVersionCreated` - New draft created
 - `EmailTemplateActivated` - Version set as active
 
 **Error Scenarios:**
-- Invalid variable placeholder (not in event type) > 400 Bad Request
 - Insufficient permissions > 403 Forbidden
 - Concurrent activation conflict > 409 Conflict, retry
 
@@ -269,7 +313,7 @@ sequenceDiagram
 
 **What:** User searches sent emails and views full details  
 **When:** Help desk troubleshooting, user inquiry, audit review  
-**Who:** Credentialing Administrator, Help Desk Staff, System Administrator
+**Who:** Credentialing Administrator, Help Desk Staff, System Administrator; Permission: communications.credentials-emails.view-history (functional area scoped) for search, communications.email.view-details for details
 
 ```mermaid
 ---
@@ -277,45 +321,32 @@ title: Communications - Email History Search and Details View
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant Comms as Communications Service
-    participant InstanceRepo as EmailInstance Repository
-    participant Identity
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    end
+
     User->>UI: Navigate to Email History
-    UI->>Comms: GET /api/communications/email-history?functional_area=Credentialing&page=1
-    
-    Comms->>Comms: Validate permissions (functional area scoped)
-    Note over Comms: Checks: communications.credentials-emails.view-history
-    
-    Comms->>InstanceRepo: Query EmailInstances
-    Note over InstanceRepo: SELECT * FROM email_instances<br/>WHERE functional_area='Credentialing'<br/>ORDER BY sent_at DESC<br/>LIMIT 50
-    InstanceRepo-->>Comms: List of instances (metadata only)
-    
-    Comms-->>UI: Email list (sent_at, recipient, subject, status)
+    UI->>CommApi: APP GET /email-history?functionalArea=Credentialing
+    CommApi-->>UI: Email list (sent_at, recipient, subject, status)
+    Note over CommApi: Metadata only, default 50 per page<br/>scoped to the user's functional areas
     UI-->>User: Display searchable table
-    
-    Note over User,UI: User applies filters
-    
+
     User->>UI: Filter by recipient, date range, status
-    UI->>Comms: GET /api/communications/email-history?recipient=jane@example.com&status=Bounced
-    Comms->>InstanceRepo: Query with filters
-    InstanceRepo-->>Comms: Filtered results
-    Comms-->>UI: Updated list
-    
+    UI->>CommApi: APP GET /email-history?recipientEmail=jane@example.com&status=Bounced
+    CommApi-->>UI: Updated list
+
     User->>UI: Click email to view details
-    UI->>Comms: GET /api/communications/email-history/{instance_id}
-    
-    Comms->>Comms: Validate permissions
-    Comms->>InstanceRepo: Get EmailInstance with full content
-    InstanceRepo-->>Comms: Complete instance
-    Note over InstanceRepo: Includes:<br/>- Rendered subject/body<br/>- Delivery events timeline<br/>- Template version used<br/>- Sent by user (if manual)
-    
+    UI->>CommApi: APP GET /email-history/{instanceId}
+    Note over CommApi: Includes:<br/>- Rendered subject/body<br/>- Delivery events timeline<br/>- Template version used<br/>- Sent by user (if manual)
+
     alt Email content archived
-        Comms-->>UI: Instance metadata only (content unavailable)
+        CommApi-->>UI: Instance metadata only (content unavailable)
         Note over UI: Display: "Email content archived<br/>(retention period expired)"
     else Content available
-        Comms-->>UI: Full instance details
+        CommApi-->>UI: Full instance details
         UI-->>User: Display email preview, metadata, delivery timeline
     end
 ```
@@ -339,85 +370,111 @@ sequenceDiagram
 
 ---
 
-## Email Resend with Recipient Override
+## Email Resend with Recipient Override - Load Resend Context
 
-**What:** User resends previously sent email to new/corrected recipient  
+**What:** User opens a previously sent email and the resend form is prepared with the original or current recipient  
 **When:** Email bounced, user provided updated email, help desk escalation  
-**Who:** Credentialing Administrator, Help Desk Staff
+**Who:** Credentialing Administrator, Help Desk Staff; Permission: communications.credentials-emails.view-history and communications.credentials-emails.resend (functional area scoped)
+
+See also: Email Resend with Recipient Override - Resend Email (sends the email).
 
 ```mermaid
 ---
-title: Communications - Email Resend with Recipient Override
+title: Communications - Email Resend with Recipient Override - Load Resend Context
 ---
 sequenceDiagram
     actor User
+    box Browser
     participant UI
-    participant Comms as Communications Service
-    participant InstanceRepo as EmailInstance Repository
-    participant Identity
-    participant SendGrid
-    participant EventBus
-    
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant IamApi as IAM API
+    end
+
     User->>UI: View email details (from history)
-    UI->>Comms: GET /api/communications/email-history/{instance_id}
-    Comms->>InstanceRepo: Get EmailInstance
-    InstanceRepo-->>Comms: Instance details
-    
+    UI->>CommApi: APP GET /email-history/{instanceId}
+
     alt Email content archived
-        Comms-->>UI: Content unavailable (archived)
+        CommApi-->>UI: Content unavailable (archived)
         Note over UI: Resend button disabled<br/>"Content retention period expired"
     else Content available
-        Comms-->>UI: Full instance with content
+        CommApi-->>UI: Full instance with content
         UI-->>User: Display email with "Resend" button enabled
-        
+
         User->>UI: Click "Resend"
-        UI->>Comms: GET /api/communications/email-history/{instance_id}/resend-context
-        
-        Comms->>Comms: Validate resend permissions
-        Comms->>InstanceRepo: Get original recipient user reference
-        InstanceRepo-->>Comms: Original recipient (user_id, email)
-        
-        alt Recipient has user_id reference
-            Comms->>Identity: GET /api/identity/users/{user_id}
-            Identity-->>Comms: Current user email
-            
-            alt Email updated since original send
-                Comms-->>UI: Resend form with hint
-                Note over UI: Pre-filled: old@example.com<br/>Hint: "Replace with current:<br/>new@example.com"
-            else Email unchanged
-                Comms-->>UI: Resend form (original email)
-            end
-        else No user reference (external recipient)
-            Comms-->>UI: Resend form (original email only)
-        end
-        
-        User->>UI: Modify recipient email (or accept default)
-        User->>UI: Click "Send"
-        
-        UI->>Comms: POST /api/communications/email-history/{instance_id}/resend
-        Note over UI: Request: {recipient_email, cc_emails[]}
-        
-        Comms->>Comms: Validate permissions
-        Comms->>InstanceRepo: Get original email content
-        InstanceRepo-->>Comms: Rendered subject/body
-        
-        Comms->>SendGrid: POST /v3/mail/send
-        Note over SendGrid: Uses original rendered content<br/>(no re-resolution)
-        SendGrid-->>Comms: 202 Accepted (new message_id)
-        
-        Comms->>InstanceRepo: Create new EmailInstance
-        Note over InstanceRepo: Links to original instance:<br/>resent_from_instance_id
-        InstanceRepo-->>Comms: new_instance_id
-        
-        Comms--)EventBus: EmailResent {original_instance_id, new_instance_id}
-        Comms-->>UI: Success
-        UI-->>User: "Email resent" confirmation
+        UI->>CommApi: APP GET /email-history/{instanceId}/resend-context
+
+        CommApi->>IamApi: SVC GET /users/{userId}
+        IamApi-->>CommApi: Current user email
+        Note over CommApi: Only when the original recipient has a user reference<br/>(external recipients skip this call)
+
+        CommApi-->>UI: Resend form (original email, with hint if the email was updated since the original send)
+        Note over UI: Example hint: Pre-filled old@example.com<br/>"Replace with current: new@example.com"
     end
 ```
 
 **Key Decisions:**
 - **Content availability:** Resend only available during retention period
 - **Email update detection:** System detects if user's email changed in identity system
+
+**State Changes:**
+- None (read-only operation)
+
+**Events Published:**
+- None
+
+**Error Scenarios:**
+- Content archived > 400 Bad Request "Content no longer available"
+- Insufficient permissions > 403 Forbidden
+
+---
+
+## Email Resend with Recipient Override - Resend Email
+
+**What:** User resends previously sent email to new/corrected recipient  
+**When:** User has reviewed the resend form and clicks Send  
+**Who:** Credentialing Administrator, Help Desk Staff; Permission: communications.credentials-emails.resend (functional area scoped)
+
+See also: Email Resend with Recipient Override - Load Resend Context (prepares the resend form).
+
+```mermaid
+---
+title: Communications - Email Resend with Recipient Override - Resend Email
+---
+sequenceDiagram
+    actor User
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant SendGrid
+    end
+
+    User->>UI: Modify recipient email (or accept default)
+    User->>UI: Click "Send"
+
+    UI->>CommApi: APP POST /email-history/{instanceId}/resend
+    Note over UI: Request: {recipient_email, cc_emails[]}
+
+    CommApi->>CommApi: Get original rendered subject/body
+
+    CommApi->>SendGrid: OUT POST /v3/mail/send
+    Note over SendGrid: Uses original rendered content<br/>(no re-resolution)
+    SendGrid-->>CommApi: 202 Accepted (new message_id)
+
+    CommApi->>CommApi: Create new EmailInstance
+    Note over CommApi: Links to original instance:<br/>resent_from_instance_id
+
+    CommApi--)EventBus: EmailResent {original_instance_id, new_instance_id}
+    CommApi-->>UI: Success (new_instance_id)
+```
+
+**Key Decisions:**
 - **No re-resolution:** Resend uses original rendered content (not re-rendered)
 - **New instance created:** Resend creates new EmailInstance linked to original
 
@@ -445,54 +502,26 @@ sequenceDiagram
 title: Communications - SendGrid Webhook Status Update
 ---
 sequenceDiagram
-    participant SendGrid
+    box MiEdWorkforce (AKS)
     participant Webhook as Webhook Endpoint
-    participant Validator as Signature Validator
-    participant Comms as Communications Service
-    participant InstanceRepo as EmailInstance Repository
-    participant EventBus
-    
-    SendGrid->>Webhook: POST /api/webhooks/sendgrid
+    participant CommApi as Communications API
+    participant EventBus as Event Bus
+    end
+    box External
+    participant SendGrid
+    end
+
+    SendGrid->>Webhook: EXT POST /webhooks/sendgrid
     Note over SendGrid: Event: delivered, bounced, etc.<br/>Includes: message_id, timestamp, status
-    
-    Webhook->>Validator: Validate HMAC signature
-    Note over Validator: Prevents spoofed events<br/>Uses shared secret from Key Vault
-    
+    Note over Webhook: Validates HMAC signature<br/>using shared secret from Key Vault
+
     alt Invalid signature
-        Validator-->>Webhook: Signature mismatch
         Webhook-->>SendGrid: 401 Unauthorized
     else Valid signature
-        Validator-->>Webhook: Signature valid
-        
-        Webhook->>Comms: Process delivery event
-        Comms->>Comms: Extract message_id, status, substatus
-        Comms->>InstanceRepo: Find EmailInstance by message_id
-        
-        alt Instance not found
-            Comms->>Comms: Log warning (orphaned webhook)
-            Note over Comms: Possible race condition:<br/>webhook arrived before instance saved
-            Comms-->>Webhook: 200 OK (idempotent)
-        else Instance found
-            Comms->>InstanceRepo: Check for duplicate event
-            Note over InstanceRepo: Idempotency check:<br/>event_id already processed?
-            
-            alt Duplicate event
-                Comms->>Comms: Log duplicate, skip processing
-                Comms-->>Webhook: 200 OK (already processed)
-            else New event
-                Comms->>InstanceRepo: Add EmailDeliveryEvent
-                Note over InstanceRepo: Event: {status, substatus,<br/>timestamp, raw_payload}
-                
-                Comms->>InstanceRepo: Update instance delivery_status
-                InstanceRepo-->>Comms: Success
-                
-                Comms--)EventBus: Publish appropriate event
-                Note over EventBus: EmailDelivered, EmailBounced,<br/>EmailDeferred, or EmailDropped
-                
-                Comms-->>Webhook: 200 OK
-                Webhook-->>SendGrid: 200 OK
-            end
-        end
+        Webhook->>CommApi: SVC process delivery event
+        CommApi->>CommApi: Find EmailInstance by message_id, skip duplicate events,<br/>add EmailDeliveryEvent, update delivery_status
+        CommApi--)EventBus: EmailDelivered, EmailBounced, EmailDeferred or EmailDropped
+        Note over EventBus: Event chosen from the SendGrid status
     end
 ```
 
@@ -513,7 +542,7 @@ sequenceDiagram
 
 **Error Scenarios:**
 - Invalid signature > 401 Unauthorized (prevents processing)
-- Instance not found > Log warning, return 200 (idempotent)
+- Instance not found > Log warning, return 200 (idempotent); possible race condition, webhook arrived before instance saved
 - Duplicate event > Return 200 (already processed)
 
 ---
@@ -528,55 +557,28 @@ sequenceDiagram
 title: Communications - Email Content Purge Job
 ---
 sequenceDiagram
+    box MiEdWorkforce (AKS)
     participant Scheduler as Kubernetes CronJob
     participant Job as Content Purge Job
-    participant CosmosDB as Cosmos DB (Email Content)
-    participant SQL as SQL Database (Metadata)
-    participant EventBus
+    participant EventBus as Event Bus
     participant Monitoring
-    
+    end
+
     Scheduler->>Job: Trigger daily job (2:00 AM EST)
-    Job->>Job: Load configuration
-    Note over Job: content_retention_days: 90<br/>batch_size: 1000
-    
-    Job->>SQL: Query instances eligible for purge
-    Note over SQL: SELECT instance_id, sent_at<br/>FROM email_instances<br/>WHERE sent_at < NOW() - 90 days<br/>AND content_status = 'Active'<br/>LIMIT 1000
-    SQL-->>Job: Batch of instance IDs
-    
+    Job->>Job: Load configuration and query instances eligible for purge
+    Note over Job: content_retention_days: 90, batch_size: 1000<br/>Eligible: sent_at older than 90 days and content_status Active
+
     loop For each instance in batch
-        Job->>CosmosDB: DELETE email content document
-        Note over CosmosDB: Delete by instance_id<br/>(subject, body_html, body_text)
-        
-        alt Delete successful
-            CosmosDB-->>Job: Success
-            
-            Job->>SQL: Update instance metadata
-            Note over SQL: content_status: Active > Purged<br/>content_purged_at: timestamp
-            SQL-->>Job: Success
-            
+        alt Delete content successful
+            Job->>Job: Delete email content document (Cosmos DB), set content_status Purged (SQL)
             Job--)EventBus: EmailContentPurged {instance_id, purged_at}
-            Job->>Job: Increment success counter
         else Delete failed
-            CosmosDB-->>Job: Error
-            Job->>Job: Log error, increment failure counter
-            Job->>Job: Add to retry queue (max 3 attempts)
+            Job->>Job: Log error, add to retry queue (max 3 attempts)
         end
     end
-    
-    Job->>Job: Calculate batch metrics
-    Note over Job: Processed: 1000<br/>Succeeded: 998<br/>Failed: 2
-    
-    alt Failures exceed threshold (>5%)
-        Job->>Monitoring: Alert administrators
-        Note over Monitoring: Critical: Content purge job failing<br/>Investigate Cosmos DB connectivity
-    end
-    
-    alt More instances to process
-        Job->>Job: Schedule next batch (immediate)
-    else All instances processed
-        Job->>Monitoring: Log completion metrics
-        Job-->>Scheduler: Job complete
-    end
+
+    Job->>Monitoring: Report batch metrics (alert if failures exceed 5%)
+    Note over Job: Next batch starts immediately while more instances remain<br/>When none remain, log completion and finish
 ```
 
 **Key Decisions:**
@@ -617,39 +619,26 @@ sequenceDiagram
 title: Communications - Template Variable Resolution (Internal)
 ---
 sequenceDiagram
-    participant Comms as Communications Service
-    participant Resolver as CredentialApplicationApprovedResolver
-    participant CredAPI as Credentials API
-    participant IdentityAPI as Identity API
-    participant Cache
-    
-    Comms->>Resolver: Resolve variables for event
-    Note over Comms: Event: CredentialApplicationApproved<br/>Context: {application_id: 12345}
-    
-    Resolver->>Resolver: Parse template variables
-    Note over Resolver: Found: <<ApplicantName>>,<br/><<CertificateType>>, <<ApprovalDate>>
-    
-    Resolver->>CredAPI: GET /api/credentials/applications/12345
-    CredAPI-->>Resolver: Application data
-    Note over Resolver: {applicant_id, certificate_type_code,<br/>approved_at, approved_by_id}
-    
-    Resolver->>Cache: Check cache for applicant
-    Cache-->>Resolver: Cache miss
-    
-    Resolver->>IdentityAPI: GET /api/identity/users/{applicant_id}
-    IdentityAPI-->>Resolver: User data
-    Note over Resolver: {first_name: "Jane", last_name: "Doe",<br/>email: "jane.doe@example.com"}
-    
-    Resolver->>Cache: Store user data (TTL: 1 hour)
-    
-    Resolver->>Resolver: Format values to user-facing strings
-    Note over Resolver: ApplicantName: "Jane Doe"<br/>(NOT "janeDoe" or "JANE DOE")<br/><br/>CertificateType: "Elementary Education"<br/>(NOT "elem_ed" or "ELEM_ED")<br/><br/>ApprovalDate: "January 15, 2026"<br/>(NOT "2026-01-15T10:30:00Z")
-    
-    Resolver-->>Comms: Resolved variables map
-    Note over Comms: {<br/>  "ApplicantName": "Jane Doe",<br/>  "CertificateType": "Elementary Education",<br/>  "ApprovalDate": "January 15, 2026"<br/>}
-    
-    Comms->>Comms: Replace placeholders in template
-    Note over Comms: Original:<br/>"Dear <<ApplicantName>>, your<br/>application for <<CertificateType>>..."<br/><br/>Rendered:<br/>"Dear Jane Doe, your application<br/>for Elementary Education..."
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant CredApi as Credentialing API
+    participant IamApi as IAM API
+    end
+
+    CommApi->>CommApi: Resolver parses template variables
+    Note over CommApi: Event: CredentialApplicationApproved<br/>Context: {application_id}<br/>Found: <<ApplicantName>>, <<CertificateType>>, <<ApprovalDate>>
+
+    CommApi->>CredApi: SVC GET /applications/{applicationId}
+    CredApi-->>CommApi: Application data<br/>{applicant_id, certificate_type_code, approved_at, approved_by_id}
+
+    CommApi->>IamApi: SVC GET /users/{userId}
+    IamApi-->>CommApi: User data<br/>{first_name, last_name, email}
+    Note over CommApi: Cache checked first (miss here);<br/>user data stored with TTL 1 hour
+
+    CommApi->>CommApi: Format values to user-facing strings
+    Note over CommApi: ApplicantName: "Jane Doe"<br/>(NOT "janeDoe" or "JANE DOE")<br/><br/>CertificateType: "Elementary Education"<br/>(NOT "elem_ed" or "ELEM_ED")<br/><br/>ApprovalDate: "January 15, 2026"<br/>(NOT "2026-01-15T10:30:00Z")
+
+    CommApi->>CommApi: Replace placeholders in template with resolved variables
 ```
 
 **Key Decisions:**
@@ -672,62 +661,40 @@ sequenceDiagram
 
 ---
 
-## Dashboard Alert Creation and Display
+## Dashboard Alert Creation and Display - Create Alert from Event
 
 **What:** System creates dashboard alert for user  
 **When:** Important action required (e.g., pending authorization, data quality issue)  
 **Who:** System (automated)
 
+See also: Dashboard Alert Creation and Display - Display Alerts (user views the alerts).
+
 ```mermaid
 ---
-title: Communications - Dashboard Alert Creation and Display
+title: Communications - Dashboard Alert Creation and Display - Create Alert from Event
 ---
 sequenceDiagram
-    participant Domain as Domain Service
-    participant EventBus
-    participant Comms as Communications Service
-    participant AlertRepo as Alert Repository
-    participant Dashboard as Dashboard UI
-    participant User
-    
-    Domain--)EventBus: Publish event (e.g., DataQualityIssueDetected)
-    EventBus->>Comms: Event received
-    
-    Comms->>Comms: Check alert template for event type
-    Comms->>Comms: Evaluate alert targeting rules
-    Note over Comms: Target: Users with role<br/>"District Data Steward"<br/>at District XYZ
-    
-    Comms->>Comms: Resolve alert content variables
-    Note over Comms: Alert: "You have 5 data quality<br/>issues requiring attention"
-    
-    Comms->>AlertRepo: Create Alert instances
-    Note over AlertRepo: One alert per targeted user<br/>Status: Active<br/>Expires: 30 days from now
-    AlertRepo-->>Comms: alert_ids[]
-    
-    Comms--)EventBus: DashboardAlertCreated {alert_id, user_id}
-    
-    Note over User,Dashboard: User logs in
-    
-    User->>Dashboard: Access dashboard
-    Dashboard->>Comms: GET /api/communications/alerts?user_id={id}&status=Active
-    
-    Comms->>Comms: Validate user permissions
-    Comms->>AlertRepo: Query active alerts for user
-    Note over AlertRepo: SELECT * FROM alerts<br/>WHERE user_id = {id}<br/>AND status = 'Active'<br/>AND (expiration_date IS NULL<br/>  OR expiration_date > NOW())
-    AlertRepo-->>Comms: List of alerts
-    
-    Comms-->>Dashboard: Alerts with action links
-    Dashboard-->>User: Display alert banner/widget
-    Note over User: Alert: "5 data quality issues<br/>require your attention"<br/>[View Issues]
-    
-    User->>Dashboard: Click alert action link
-    Dashboard->>User: Navigate to target page (e.g., data quality dashboard)
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant DqSvc as Data Quality Service
+    participant EventBus as Event Bus
+    end
+
+    DqSvc--)EventBus: DataQualityIssueDetected
+    EventBus--)CommApi: DataQualityIssueDetected
+
+    CommApi->>CommApi: Check alert template and evaluate alert targeting rules
+    Note over CommApi: Target: Users with role<br/>"District Data Steward"<br/>at District XYZ<br/>Alert: "You have 5 data quality<br/>issues requiring attention"
+
+    CommApi->>CommApi: Create Alert instances
+    Note over CommApi: One alert per targeted user<br/>Status: Active<br/>Expires: 30 days from now
+
+    CommApi--)EventBus: DashboardAlertCreated {alert_id, user_id}
 ```
 
 **Key Decisions:**
 - **Role-based targeting:** Alerts sent to users with specific roles at specific scopes
 - **Automatic expiration:** Alerts expire after configured period (default 30 days)
-- **Action links:** Each alert includes deep link to relevant page
 - **One alert per user:** System creates individual alert instances (not shared)
 
 **State Changes:**
@@ -738,6 +705,52 @@ sequenceDiagram
 
 **Error Scenarios:**
 - No users match targeting rules > Alert template misconfigured, log warning
+
+---
+
+## Dashboard Alert Creation and Display - Display Alerts
+
+**What:** User sees active dashboard alerts when accessing the dashboard  
+**When:** User logs in  
+**Who:** District Data Steward, Authorization Approver, etc.; Permission: communications.alerts.view (own alerts only)
+
+See also: Dashboard Alert Creation and Display - Create Alert from Event (creates the alerts).
+
+```mermaid
+---
+title: Communications - Dashboard Alert Creation and Display - Display Alerts
+---
+sequenceDiagram
+    actor User
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    end
+
+    User->>UI: Access dashboard
+    UI->>CommApi: APP GET /alerts?status=Active
+    Note over CommApi: Active alerts for the calling user<br/>not past expiration_date
+
+    CommApi-->>UI: Alerts with action links
+    UI-->>User: Display alert banner/widget
+    Note over User: Alert: "5 data quality issues<br/>require your attention"<br/>[View Issues]
+
+    User->>UI: Click alert action link
+    Note over UI: Navigates to target page<br/>(e.g., data quality dashboard)
+```
+
+**Key Decisions:**
+- **Action links:** Each alert includes deep link to relevant page
+
+**State Changes:**
+- None (read-only operation)
+
+**Events Published:**
+- None
+
+**Error Scenarios:**
 - User lacks access to action link > Display alert but disable link
 
 ---
@@ -746,7 +759,7 @@ sequenceDiagram
 
 **What:** User completes action and dismisses alert  
 **When:** User clicks alert action link and completes required task  
-**Who:** District Data Steward, Authorization Approver, etc.
+**Who:** District Data Steward, Authorization Approver, etc.; Permission: communications.alerts.view (own alerts; ownership evaluated server side)
 
 ```mermaid
 ---
@@ -754,31 +767,27 @@ title: Communications - User Resolves Dashboard Alert
 ---
 sequenceDiagram
     actor User
-    participant Dashboard
-    participant Comms as Communications Service
-    participant AlertRepo as Alert Repository
-    participant EventBus
-    
-    User->>Dashboard: Complete alert action (e.g., fix data quality issue)
-    Dashboard->>Comms: POST /api/communications/alerts/{alert_id}/resolve
-    Note over Dashboard: Request: {resolution_type: "Completed"}
-    
-    Comms->>Comms: Validate user owns alert
-    Comms->>AlertRepo: Get alert
-    AlertRepo-->>Comms: Alert details
-    
+    box Browser
+    participant UI
+    end
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant EventBus as Event Bus
+    end
+
+    User->>UI: Complete alert action (e.g., fix data quality issue)
+    UI->>CommApi: APP POST /alerts/{alertId}/resolve
+    Note over UI: Request: {resolution_type: "Completed"}
+
     alt User does not own alert
-        Comms-->>Dashboard: 403 Forbidden
+        CommApi-->>UI: 403 Forbidden
     else User owns alert
-        Comms->>AlertRepo: Update alert status
-        Note over AlertRepo: status: Active > Resolved<br/>resolved_at: timestamp<br/>resolved_by: user_id
-        AlertRepo-->>Comms: Success
-        
-        Comms--)EventBus: DashboardAlertResolved {alert_id, user_id}
-        Comms-->>Dashboard: Success
-        
-        Dashboard->>Dashboard: Remove alert from UI
-        Dashboard-->>User: Alert dismissed
+        CommApi->>CommApi: Update alert status
+        Note over CommApi: status: Active > Resolved<br/>resolved_at: timestamp<br/>resolved_by: user_id
+
+        CommApi--)EventBus: DashboardAlertResolved {alert_id, user_id}
+        CommApi-->>UI: Success
+        UI-->>User: Alert dismissed
     end
 ```
 
@@ -812,66 +821,42 @@ sequenceDiagram
 title: Communications - Mass Email with Consolidation
 ---
 sequenceDiagram
-    participant DataQuality as Data Quality Service
-    participant EventBus
-    participant Comms as Communications Service
-    participant Consolidator as Event Consolidator
-    participant TemplateRepo as Template Repository
-    participant Resolver as Variable Resolver
-    participant SendGrid
-    participant InstanceRepo as EmailInstance Repository
-    
-    loop Multiple events over time
-        DataQuality--)EventBus: DataQualityIssueDetected (issue_id: 101)
-        DataQuality--)EventBus: DataQualityIssueDetected (issue_id: 102)
-        DataQuality--)EventBus: DataQualityIssueDetected (issue_id: 103)
+    box MiEdWorkforce (AKS)
+    participant CommApi as Communications API
+    participant DqSvc as Data Quality Service
+    participant EventBus as Event Bus
     end
-    
-    EventBus->>Comms: Events received
-    Comms->>Consolidator: Buffer events
-    Note over Consolidator: Consolidation window: 15 minutes<br/>Group by: recipient_user_id
-    
-    Consolidator->>Consolidator: Wait for window to close
-    Note over Consolidator: Timer started on first event
-    
-    Note over Consolidator: 15 minutes elapsed
-    
-    Consolidator->>Consolidator: Group events by recipient
-    Note over Consolidator: User_123: [101, 102, 103]<br/>User_456: [104, 105]
-    
+    box External
+    participant SendGrid
+    end
+
+    loop Multiple events over time
+        DqSvc--)EventBus: DataQualityIssueDetected {issue_id}
+    end
+
+    EventBus--)CommApi: DataQualityIssueDetected
+    CommApi->>CommApi: Buffer events by recipient_user_id until the consolidation window closes
+    Note over CommApi: Window: 15 minutes, timer started on first event<br/>Grouped, e.g. User_123: [101, 102, 103]
+
     loop For each recipient group
-        Consolidator->>TemplateRepo: Get consolidation template
-        Note over TemplateRepo: Template: "Data Quality Issues Summary"
-        TemplateRepo-->>Consolidator: Template
-        
-        Consolidator->>Resolver: Resolve variables
-        Note over Resolver: <<IssueCount>>: "3"<br/><<IssueList>>: formatted list of issues
-        
-        Resolver->>DataQuality: GET /api/data-quality/issues?ids=101,102,103
-        DataQuality-->>Resolver: Issue details
-        
-        Resolver->>Resolver: Format as user-facing list
-        Note over Resolver: "1. Missing certification date<br/>2. Invalid endorsement code<br/>3. Duplicate employee record"
-        
-        Resolver-->>Consolidator: Resolved variables
-        
-        Consolidator->>Consolidator: Render email
-        Note over Consolidator: "You have 3 data quality issues<br/>requiring your attention:<br/><br/>1. Missing certification date..."
-        
-        Consolidator->>SendGrid: POST /v3/mail/send
-        SendGrid-->>Consolidator: 202 Accepted
-        
-        Consolidator->>InstanceRepo: Store EmailInstance
-        Note over InstanceRepo: Links to all source events:<br/>consolidated_event_ids: [101,102,103]
-        InstanceRepo-->>Consolidator: instance_id
-        
-        Consolidator--)EventBus: EmailSent (consolidated: true)
+        CommApi->>DqSvc: SVC GET /issues?ids=101,102,103
+        DqSvc-->>CommApi: Issue details
+
+        CommApi->>CommApi: Get consolidation template and render email
+        Note over CommApi: "You have 3 data quality issues<br/>requiring your attention:<br/><br/>1. Missing certification date..."
+
+        CommApi->>SendGrid: OUT POST /v3/mail/send
+        SendGrid-->>CommApi: 202 Accepted
+
+        CommApi->>CommApi: Store EmailInstance (consolidated_event_ids: [101,102,103])
+        CommApi--)EventBus: EmailSent (consolidated: true)
     end
 ```
 
 **Key Decisions:**
 - **Consolidation window:** 15 minutes default (configurable per event type)
 - **Grouping key:** Typically recipient user, but can be customized
+- **Consolidation rules:** Events are buffered per recipient; the timer starts on the first event; when the window closes, events are grouped by recipient and one email is rendered per group using the "Data Quality Issues Summary" template with `<<IssueCount>>` and `<<IssueList>>` list variables
 - **Special templates:** Consolidation templates support list variables
 - **Event tracking:** EmailInstance links to all consolidated event IDs
 
@@ -887,7 +872,53 @@ sequenceDiagram
 
 ---
 
-## Integration Flows
+# Notes
+
+## Template Variable Formatting Standards
+
+Proposed home: Communications capability doc.
+
+All variable resolvers must produce user-facing formatted strings. Raw technical values (database codes, ISO timestamps, boolean flags) should never appear in rendered email content.
+
+- **Dates:** Long format — "January 15, 2026"
+- **Names:** "First Last" — never all-caps or last-name-first
+- **Currency:** "$1,234.56"
+- **Credential/Certificate Types:** Human-readable display name — "Elementary Education", never "elem_ed" or "ELEMENTARY_EDUCATION"
+- **Boolean values:** Context-appropriate phrasing — "Yes / No" or "Approved / Denied"
+- **Lists:** Numbered for ordered items, bulleted for unordered; use HTML lists in HTML emails
+
+---
+
+## Event Payload Design Standards
+
+Proposed home: event standards in patterns-and-principles, or the Communications capability doc.
+
+Domain events that trigger communications should carry only IDs and intrinsic core data. Display data (names, labels, formatted values) is the resolver's responsibility, not the event publisher's.
+
+This keeps events lightweight, prevents payload bloat, and ensures emails always use current data at send time rather than data captured when the event was published.
+
+---
+
+## Resend vs. New Send Decision Matrix
+
+Proposed home: Key Decisions of Email Resend, or the Communications capability doc.
+
+| Scenario                           | Action                      | Rationale                                            |
+| ---------------------------------- | --------------------------- | ---------------------------------------------------- |
+| Email bounced (invalid address)    | Resend to corrected address | Content is correct, just wrong recipient             |
+| User claims "never received"       | Resend to same address      | May have been filtered to spam                       |
+| Email content has errors           | Send new email              | Resend uses original rendered content                |
+| New information to communicate     | Send new email              | Resend is retransmission only, not an update         |
+| Forwarding to manager or help desk | Resend with CC              | Shares the exact content originally sent             |
+| Content archived (90+ days)        | Send new email              | Resend unavailable after retention period            |
+| Template has been updated          | Send new email              | Resend uses the version active at original send time |
+| Underlying data has changed        | Send new email              | Resend does not re-resolve variables                 |
+
+---
+
+## Reference Material - Integration Flows (not sequences)
+
+Proposed home: communications-api.yml (endpoint) and the SendGrid section of solution-integrations.md (SendGrid REST and webhook examples). Kept here until moved.
 
 ### Event Type Variable Registry API
 
@@ -895,7 +926,7 @@ sequenceDiagram
 
 **API Endpoint:**
 ```
-GET /api/communications/event-types/{event_type}/available-variables
+GET /event-types/{eventType}/available-variables
 ```
 
 **Example Response:**
@@ -1072,41 +1103,3 @@ class CredentialApplicationApprovedResolver implements IVariableResolver {
   }
 }
 ```
-
----
-
-# Notes
-
-## Template Variable Formatting Standards
-
-All variable resolvers must produce user-facing formatted strings. Raw technical values (database codes, ISO timestamps, boolean flags) should never appear in rendered email content.
-
-- **Dates:** Long format — "January 15, 2026"
-- **Names:** "First Last" — never all-caps or last-name-first
-- **Currency:** "$1,234.56"
-- **Credential/Certificate Types:** Human-readable display name — "Elementary Education", never "elem_ed" or "ELEMENTARY_EDUCATION"
-- **Boolean values:** Context-appropriate phrasing — "Yes / No" or "Approved / Denied"
-- **Lists:** Numbered for ordered items, bulleted for unordered; use HTML lists in HTML emails
-
----
-
-## Event Payload Design Standards
-
-Domain events that trigger communications should carry only IDs and intrinsic core data. Display data (names, labels, formatted values) is the resolver's responsibility, not the event publisher's.
-
-This keeps events lightweight, prevents payload bloat, and ensures emails always use current data at send time rather than data captured when the event was published.
-
----
-
-## Resend vs. New Send Decision Matrix
-
-| Scenario                           | Action                      | Rationale                                            |
-| ---------------------------------- | --------------------------- | ---------------------------------------------------- |
-| Email bounced (invalid address)    | Resend to corrected address | Content is correct, just wrong recipient             |
-| User claims "never received"       | Resend to same address      | May have been filtered to spam                       |
-| Email content has errors           | Send new email              | Resend uses original rendered content                |
-| New information to communicate     | Send new email              | Resend is retransmission only, not an update         |
-| Forwarding to manager or help desk | Resend with CC              | Shares the exact content originally sent             |
-| Content archived (90+ days)        | Send new email              | Resend unavailable after retention period            |
-| Template has been updated          | Send new email              | Resend uses the version active at original send time |
-| Underlying data has changed        | Send new email              | Resend does not re-resolve variables                 |

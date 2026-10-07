@@ -35,16 +35,22 @@
 #   Wrap response in object with data array + PaginationMetadata component.
 #
 # ACCESS CLASSIFICATION (x-access) — required on every operation:
-#   internal-user     End-user accessing through MiLogin user token; includes delegated
-#                     user requests passthrough from other domain services
-#   internal-service  Managed Identity / mTLS; no user token;
-#                     document the expected calling service in the description
-#   external-client   External system's API client
-#   external-public   Unauthenticated; exposed via APIM; use sparingly
+#   application-user     A signed-in person using the MiEdWorkforce UI (MiLogin token);
+#                        includes delegated calls from other services on a user's behalf
+#   application-service  Another MiEdWorkforce service (Service API, mesh only; Istio mTLS
+#                        identity mapped to a logical service name); document the expected
+#                        calling services in the description and say whether each call is
+#                        delegated (user also authorized) or system (service only)
+#   external-client      External system's API client (OAuth 2.0 client credentials via APIM)
+#   external-public      Unauthenticated; exposed via APIM; use sparingly
+#   The values describe the caller, not network location. List more than one when an
+#   operation serves several caller types. See patterns-and-principles/authentication.md.
 #
 # PERMISSIONS (x-permissions-required) — required on every operation:
 #   Array of permission identifiers. All values must exist in
 #   solution-level/solution-permissions.csv. Use [] for external-public only.
+#   Applies to every caller type: users and clients are checked by IAM, services by their
+#   service role. For delegated calls both the service and the user must hold it.
 #
 # SCOPE SENSITIVITY (x-scope-sensitive) — required on every operation:
 #   Declares whether the IAM authorization evaluation for this endpoint considers
@@ -101,7 +107,7 @@ paths:
       summary: List (resources)
       operationId: list(Resources)
       tags: [(Resources)]
-      x-access: internal-user
+      x-access: application-user
       x-permissions-required:
         - (domain).(resource).view
       x-scope-sensitive: true
@@ -149,7 +155,7 @@ paths:
       summary: Create (resource)
       operationId: create(Resource)
       tags: [(Resources)]
-      x-access: internal-user
+      x-access: application-user
       x-permissions-required:
         - (domain).(resource).create
       x-scope-sensitive: true
@@ -186,7 +192,7 @@ paths:
       summary: Get (resource)
       operationId: get(Resource)
       tags: [(Resources)]
-      x-access: internal-user
+      x-access: application-user
       x-permissions-required:
         - (domain).(resource).view
       x-scope-sensitive: false
@@ -211,7 +217,7 @@ paths:
       summary: (Action) (resource)
       operationId: (action)(Resource)
       tags: [(Resources)]
-      x-access: internal-user
+      x-access: application-user
       x-permissions-required:
         - (domain).(resource).(action)
       x-scope-sensitive: false
@@ -257,13 +263,13 @@ paths:
       summary: Get (resource) (projection) (internal service)
       operationId: get(Resource)(Projection)
       tags: [(Resources)]
-      x-access: internal-service
+      x-access: application-service
       x-permissions-required:
         - (domain).(resource).view
       x-scope-sensitive: false
       description: |
         Called by the (consuming-domain) domain to (reason).
-        Not exposed via APIM. Authenticated via Managed Identity / mTLS.
+        Not exposed via APIM. Authenticated by Istio mTLS service identity; the calling service must hold the required permission (state whether the call is delegated or system).
         No user token is present; X-Organization-Context does not apply.
       parameters:
         - $ref: '#/components/parameters/(Resource)Id'
@@ -353,7 +359,7 @@ components:
           type: string
           nullable: true
 
-    # ServiceSummary — leaner projection for internal-service consumers.
+    # ServiceSummary — leaner projection for application-service consumers.
     # Only needed if the consuming service needs different fields than Detail.
     (Resource)ServiceSummary:
       type: object
